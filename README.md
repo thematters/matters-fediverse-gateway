@@ -85,4 +85,4 @@ npm start
 
 ## Acknowledgements
 
-本專案脫胎自 Matters（在乎科技有限公司）內部研發。靜態發佈層基於 [`thematters/ipns-site-generator`](https://github.com/thematters/ipns-site-generator)。
+原始研發：Github [@thematters](https://github.com/thematters)。靜態發佈層基於 [`thematters/ipns-site-generator`](https://github.com/thematters/ipns-site-generator)。

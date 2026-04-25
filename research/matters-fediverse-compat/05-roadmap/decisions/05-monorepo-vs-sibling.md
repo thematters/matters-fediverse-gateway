@@ -1,8 +1,33 @@
 # Decision 05 · gateway-core 倉庫位置
 
-狀態：**待決**
+狀態：**已定 · C → B（G2 啟動後遷移）**
+拍板人：mashbean（總經理）
+拍板日期：2026-04-25
 影響範圍：G2-A 啟動前定案；影響工程協作節奏
 最後更新：2026-04-25
+
+---
+
+## 決議
+
+**首發選 C（個人倉庫先行）**：repo 位於 `mashbean/matters-fediverse-gateway`，public，AGPL-3.0。
+
+**遷移觸發點**：**G2 啟動後遷移**到 `thematters/matters-fediverse-gateway`。使用 `gh repo transfer`，redirect 自動處理。
+
+**授權**：**AGPL-3.0**（與 Mastodon / Misskey / GoToSocial 一致）。
+
+**CLA**：**不要求**。理由：CLA 會勸退外部貢獻者；Matters 已是 AGPL，重要商業選項由授權本身保障；首發優先採用率，不為未來閉源 fork 的可能性付代價。
+
+**理由**：
+- 立即可動，不卡組織內部 IP 歸屬討論
+- AGPL 是 federation 生態慣例，grant 政治正確
+- 不要 CLA 是對社群的善意承諾
+
+**實作狀態**：
+- ✅ 2026-04-25 已建立 `mashbean/matters-fediverse-gateway`，public、AGPL-3.0
+- ⏳ 待 G2 啟動後遷移到 `thematters/matters-fediverse-gateway`
+
+---
 
 ---
 

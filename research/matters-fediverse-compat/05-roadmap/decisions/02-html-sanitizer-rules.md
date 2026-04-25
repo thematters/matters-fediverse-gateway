@@ -1,8 +1,37 @@
 # Decision 02 · Article HTML Sanitizer 規則
 
-狀態：**待決**
+狀態：**已定 · C + ipfs.io + 附原始連結**
+拍板人：mashbean（總經理）
+拍板日期：2026-04-25
 影響範圍：W4a（長文 Article 系統化）動工前必須定案
 最後更新：2026-04-25
+
+---
+
+## 決議
+
+**Sanitizer 規則：選 C（中道）**
+- 保留：`p / br / a / strong / em / s / u / blockquote / pre / code / ul / ol / li / h2 / h3 / h4 / hr`
+- 圖片透過 `Article.attachment` 帶出（`Document` type，含 `mediaType` / `url` / `name`）
+- 影片 / iframe 完全剝除
+- `<a>` 強制 `rel="noopener noreferrer ugc"`
+- 程式碼語言 class 保留（`<pre><code class="language-xxx">`）
+
+**IPFS 圖片**：轉成 `https://ipfs.io/ipfs/<hash>` gateway URL（attachment metadata 仍保留 `ipfs:hash` 供進階實作識別）。
+
+**附「本文於 matters.town 原始連結」**：每篇 Article 末尾自動附上一行純文字 + 連結，引導聯邦讀者回到 Matters 原站閱讀。
+
+**理由**：
+- C 是長文骨架與跨實作相容性的最佳平衡點
+- ipfs.io 是公認 gateway，採用率高、無需自架
+- 末尾原始連結兼顧導流與接受度，是 W4a 最低成本的價值放大
+
+**實作衝擊**：
+- W4a 的 sanitizer 白名單以 C 為基準寫一套 normalize helper
+- IPFS hash → ipfs.io URL 轉換寫成單一 utility，方便日後改 gateway
+- 末尾連結文案待定，建議格式：`──── 本文於 matters.town 原始連結：https://matters.town/@<handle>/<article-id>`
+
+---
 
 ---
 

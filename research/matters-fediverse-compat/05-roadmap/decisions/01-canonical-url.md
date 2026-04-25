@@ -1,8 +1,30 @@
 # Decision 01 · Canonical URL 策略
 
-狀態：**待決**
+狀態：**已定 · A**
+拍板人：mashbean（總經理）
+拍板日期：2026-04-25
 影響範圍：G2-B 啟動前必須定案
 最後更新：2026-04-25
+
+---
+
+## 決議
+
+**選 A**：`acct:user@matters.town`，由主站 `/.well-known/webfinger` 直接回應、背後路由到 gateway。
+
+**理由**：品牌一致最重要；Matters 是長期投資，不接受聯邦上的 actor ID 拆裂成 `webf.matters.town`。一次到位、不分階段。
+
+**實作衝擊**：
+- 主站 nginx / CDN 必須能將 `/.well-known/webfinger`、`/.well-known/host-meta`、`/.well-known/nodeinfo` 與 actor 路徑（如 `/users/<handle>`、`/users/<handle>/inbox`）反代到 gateway-core
+- gateway-core config 中的 `instance.canonicalDomain` 與 actor URL 設為 `matters.town`，不使用 subdomain
+- 既有 `webfDomain` 的實作路線需重新評估或移除
+- G2-A（IPNS 對接）與 G2-B（帳號系統打通）合併視為一次主站 cutover，rollback 方案要更謹慎
+
+**前置條件**：
+- 主站架構審查（nginx 路由、TLS、health check）
+- 與 Matters 主站工程團隊協調 cutover 視窗
+
+---
 
 ---
 

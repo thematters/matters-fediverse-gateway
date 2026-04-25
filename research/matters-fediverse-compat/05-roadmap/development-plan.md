@@ -132,12 +132,27 @@ G3    │                                │████████████
 
 ---
 
-## 八、風險與需要的產品決策
+## 八、產品決策（已定）
 
-1. **canonical URL 決策（G2-B）**：影響品牌、既有 URL 路由、使用者遷移，需儘早定案
-2. **付費文邊界外部呈現**：對聯邦讀者顯示幾段 preview？完全不顯示？需產品 + 法務雙決
-3. **使用者 opt-in vs opt-out**：預設把 26 萬帳號全部推上聯邦，還是作者自行開啟？隱私與 GDPR 影響
-4. **Article HTML sanitizer 規則**：哪些 tag 允許？嵌入 IPFS 圖片怎麼處理？
-5. **與 Matters 既有工程團隊整合**：gateway-core 要不要併入主 monorepo？還是維持 sibling repo？
+五題均於 **2026-04-25** 由 mashbean（總經理）拍板，詳見 [decisions/](decisions/)。
 
-這五題建議在 G1 執行期間（2026-05 ~ 07）逐步定案，最晚 G2 啟動前收斂。
+| # | 主題 | 決議 | 影響工作項目 |
+|---|---|---|---|
+| 01 | Canonical URL 策略 | **A** · `acct:user@matters.town` | G2-B |
+| 02 | Article HTML Sanitizer | **C** · 中道 + ipfs.io gateway + 附原始連結 | W4a |
+| 03 | 付費文外部呈現 | **A** · 完全隱形 | W5 |
+| 04 | 既有使用者聯邦化採用 | **C + D** · 階段 opt-in × per-article 細緻度 | G2-D / G2-E |
+| 05 | gateway-core 倉庫位置 | **C → B** · 個人倉庫先行，G2 啟動後遷移；AGPL-3.0；無 CLA | G2-A |
+
+**對工作項目的具體衝擊**：
+- W4a sanitizer 白名單按 C 實作；IPFS hash → ipfs.io URL 轉換；末尾自動附「本文於 matters.town 原始連結」
+- W5 visibility gate 簡化為 binary：non-public 一律 drop，不做 preview / 標題卡分支
+- G2-A 啟動前 repo 仍位於 `mashbean/matters-fediverse-gateway`，G2 啟動後 `gh repo transfer` 至 `thematters` org
+- G2-B 帳號系統打通直接走 `acct:user@matters.town`，不再分兩階段
+- G2-D pilot 作者由 Matters 內部人工挑選，名單在 G2-D 啟動前另行決議
+- ToS / 隱私政策修訂在 G2 上線前處理，不在 G1 範圍
+
+**仍待後續處理（非首發阻塞）**：
+- G2 上線前的 ToS / 隱私政策修訂
+- G2-D pilot 作者具體名單
+- 階段 3（全開放）前的法務評估與通知緩衝期
