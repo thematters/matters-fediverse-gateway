@@ -1,0 +1,36 @@
+# 治理與營運風險
+
+- Run ID: `20260320_125808`
+- Stage ID: `stage04_governance_ops`
+- 目標: 盤點 moderation、abuse、privacy、legal、paid 與 encrypted content 的風險與控制措施
+
+## 交付項目
+
+- 治理風險 memo
+- 最低控制措施清單
+
+## 使用 Prompt
+
+- 共用底稿: `multi_agent/agents/common_system_prompt.md`
+- 總編排: `multi_agent/agents/orchestrator.md`
+- `governance_risk_analyst`: `multi_agent/agents/governance_risk_analyst.md`
+
+## 輸出模板
+
+- Agent 輸出: `multi_agent/templates/agent_output.md`
+- 交接模板: `multi_agent/templates/handoff.md`
+
+## 可用來源
+
+- 來源清單: `multi_agent/state/source_manifest.json`
+- raw 數量: 5
+- docs 數量: 2
+- processed 數量: 7
+- external/ipns-site-generator 數量: 94
+- 總數: 108
+
+## 備註
+
+- 完成本階段後，使用 `advance` 推進流程
+- 如資料夾新增檔案，先執行 `refresh-sources` 再繼續
+

@@ -1,0 +1,90 @@
+{
+  "instance": {
+    "domain": "staging-gateway.example",
+    "title": "Matters Gateway Staging",
+    "summary": "Staging instance for gateway-core deployment topology verification",
+    "softwareName": "matters-gateway-core",
+    "softwareVersion": "0.1.0",
+    "openRegistrations": false
+  },
+  "actors": {
+    "alice": {
+      "displayName": "Alice Matters",
+      "summary": "Staging author for gateway-core verification",
+      "autoAcceptFollows": true,
+      "staticOutboxFile": "../fixtures/alice-outbox.jsonld",
+      "aliases": [
+        "https://matters.town/@alice"
+      ],
+      "publicKeyPemFile": "./staging-public-key.pem",
+      "privateKeyPemFile": "./staging-private-key.pem"
+    }
+  },
+  "remoteActors": {},
+  "remoteDiscovery": {
+    "cacheTtlMs": 3600000
+  },
+  "delivery": {
+    "maxAttempts": 3,
+    "userAgent": "MattersGatewayCore/0.1.0",
+    "processingLeaseTimeoutMs": 900000
+  },
+  "moderation": {
+    "domainBlocks": [],
+    "actorSuspensions": [],
+    "remoteActorPolicies": [],
+    "evidenceRetentionDays": 365,
+    "rateLimits": {
+      "instanceInbound": {
+        "limit": 120,
+        "windowMs": 60000
+      },
+      "actorInbound": {
+        "limit": 60,
+        "windowMs": 60000
+      },
+      "actorOutbound": {
+        "limit": 30,
+        "windowMs": 60000
+      }
+    }
+  },
+  "runtime": {
+    "storeDriver": "sqlite",
+    "stateFile": "../runtime/staging-state.json",
+    "sqliteFile": "../runtime/staging-state.sqlite",
+    "alerting": {
+      "backupMaxAgeHours": 24,
+      "pendingQueueMaxAgeMinutes": 30,
+      "openDeadLetterThreshold": 0,
+      "openAbuseCaseThreshold": 0,
+      "pendingQueueThreshold": 25,
+      "dispatch": {
+        "webhookUrl": "https://ops.example/runtime-alerts",
+        "webhookBearerTokenFile": "./staging.secrets.example/alert-webhook.token",
+        "slackWebhookUrl": "https://hooks.slack.com/services/xxx/yyy/zzz",
+        "slackChannel": "#gateway-alerts",
+        "slackUsername": "matters-gateway",
+        "slackIconEmoji": ":satellite:",
+        "timeoutMs": 10000
+      }
+    },
+    "metrics": {
+      "dispatch": {
+        "webhookUrl": "https://ops.example/runtime-metrics",
+        "webhookBearerTokenFile": "./staging.secrets.example/metrics-webhook.token",
+        "timeoutMs": 10000
+      }
+    },
+    "logs": {
+      "dispatch": {
+        "webhookUrl": "https://ops.example/runtime-logs",
+        "webhookBearerTokenFile": "./staging.secrets.example/logs-webhook.token",
+        "timeoutMs": 10000,
+        "auditLimit": 200,
+        "traceLimit": 200,
+        "traceEventPrefix": "delivery."
+      }
+    }
+  }
+}

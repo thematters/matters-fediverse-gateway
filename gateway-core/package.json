@@ -1,0 +1,30 @@
+{
+  "name": "matters-gateway-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimum federation gateway slice for Matters instances",
+  "dependencies": {
+    "better-sqlite3": "^12.4.1"
+  },
+  "scripts": {
+    "start": "node src/server.mjs --config ./config/dev.instance.json",
+    "test": "node --test",
+    "backup:sqlite": "node scripts/backup-sqlite.mjs --config ./config/dev.instance.json",
+    "restore:sqlite": "node scripts/restore-sqlite.mjs --config ./config/dev.instance.json",
+    "dispatch:metrics": "node scripts/dispatch-runtime-metrics.mjs --config ./config/dev.instance.json",
+    "dispatch:logs": "node scripts/dispatch-runtime-logs.mjs --config ./config/dev.instance.json",
+    "dispatch:alerts": "node scripts/dispatch-runtime-alerts.mjs --config ./config/dev.instance.json",
+    "drill:observability": "node scripts/run-staging-observability-drill.mjs --config ./config/dev.instance.json --require-sinks",
+    "check:secret-layout": "node scripts/check-secret-layout.mjs --config ./config/dev.instance.json",
+    "check:rollout-artifact": "node scripts/check-rollout-artifact.mjs --env-file ./deploy/matters-gateway-core.env.example",
+    "check:local-sandbox": "node scripts/run-local-sandbox-interop.mjs",
+    "check:mastodon-sandbox": "node scripts/run-mastodon-sandbox-interop.mjs"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.8.0"
+  }
+}

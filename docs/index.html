@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matters Fediverse Gateway</title>
+<meta name="description" content="把 Matters 長文出版層接上 Fediverse 的開源 gateway。讓 Mastodon、Misskey、GoToSocial 使用者能追蹤、閱讀、互動，同時保護付費內容不外流。">
+<meta property="og:title" content="Matters Fediverse Gateway">
+<meta property="og:description" content="長文 × ActivityPub。Matters 對 Fediverse 開放的開源 gateway。">
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --ink:#1a1a1a; --paper:#fafaf7; --line:#e6e3da;
+    --accent:#c8521b; --accent-soft:#f5e6dc;
+    --muted:#6b6b6b; --code-bg:#f1efe9;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,"Helvetica Neue","PingFang TC","Noto Sans TC",sans-serif;
+    color:var(--ink);background:var(--paper);
+    line-height:1.7;font-size:16px;
+  }
+  .wrap{max-width:780px;margin:0 auto;padding:60px 24px 96px}
+  header{margin-bottom:48px}
+  .badge{
+    display:inline-block;font-size:12px;letter-spacing:.08em;
+    padding:4px 10px;border:1px solid var(--accent);color:var(--accent);
+    border-radius:2px;margin-bottom:16px;text-transform:uppercase;
+  }
+  h1{font-size:34px;line-height:1.25;margin:0 0 12px;font-weight:700;letter-spacing:-0.01em}
+  .subtitle{font-size:18px;color:var(--muted);margin:0 0 24px}
+  .demo-note{
+    background:var(--accent-soft);border-left:3px solid var(--accent);
+    padding:12px 16px;font-size:14px;color:#5a3318;border-radius:2px;
+  }
+  h2{font-size:22px;margin:48px 0 12px;letter-spacing:-0.005em;border-bottom:1px solid var(--line);padding-bottom:6px}
+  h3{font-size:16px;margin:24px 0 6px;font-weight:600}
+  p{margin:0 0 14px}
+  a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+  a:hover{text-decoration-thickness:2px}
+  ul{padding-left:22px;margin:0 0 16px}
+  li{margin-bottom:4px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+  @media (max-width:600px){.grid2{grid-template-columns:1fr}}
+  .card{
+    border:1px solid var(--line);padding:14px 16px;border-radius:4px;background:#fff;
+  }
+  .card h3{margin-top:0}
+  code{
+    background:var(--code-bg);padding:1px 6px;border-radius:3px;
+    font-family:"SF Mono",Menlo,monospace;font-size:13px;
+  }
+  pre{
+    background:var(--code-bg);padding:14px 16px;border-radius:4px;
+    font-family:"SF Mono",Menlo,monospace;font-size:13px;
+    overflow-x:auto;line-height:1.5;
+  }
+  .ascii{
+    font-family:"SF Mono",Menlo,monospace;font-size:12px;line-height:1.4;
+    background:#fff;border:1px solid var(--line);padding:16px;border-radius:4px;
+    overflow-x:auto;color:#444;
+  }
+  .stage-list{display:grid;grid-template-columns:auto 1fr auto;gap:8px 16px;align-items:baseline;font-size:14px;margin:8px 0 16px}
+  .stage-list .label{font-family:"SF Mono",Menlo,monospace;color:var(--muted)}
+  .stage-list .name{}
+  .stage-list .status{font-size:12px;padding:1px 8px;border-radius:10px;justify-self:end}
+  .status.done{background:#e1f0e0;color:#1e6b1e}
+  .status.wip{background:#fff5cc;color:#7a5b00}
+  .status.todo{background:#eee;color:#666}
+  table{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0 16px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-weight:600;background:#f5f3ec}
+  footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+  .links a{margin-right:18px;display:inline-block;margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <span class="badge">Demo · 開發中</span>
+  <h1>Matters Fediverse Gateway</h1>
+  <p class="subtitle">把 Matters 的長文，接上 Fediverse 這張聯邦網。</p>
+  <p class="demo-note">這是一個 <strong>nonfunctional demo site</strong>。實際 gateway 服務尚未對外開放，本頁僅作為專案概覽與進度展示。完整原始碼請見 <a href="https://github.com/mashbean/matters-fediverse-gateway">GitHub repo</a>。</p>
+</header>
+
+<section>
+  <h2>這是什麼</h2>
+  <p>Matters 是有十年歷史、超過 26 萬註冊使用者的中文長文平台。Fediverse（聯邦宇宙）則是一張開放的社交聯邦網，Mastodon、Misskey、Threads、GoToSocial 都是它的一部分。</p>
+  <p>這個 gateway 在兩者之間搭一座「大使館」：讓聯邦上的使用者能追蹤 Matters 作者、看到完整長文（以 <code>Article</code> 型別，不縮成微網誌摘要）、按愛心、留言、轉發。這些互動會回傳到 Matters 站內。同時，付費文、加密文、站內私訊不會外流。</p>
+</section>
+
+<section>
+  <h2>架構</h2>
+  <pre class="ascii">┌─────────────────────┐         ┌─────────────────────┐
+│   Matters 主站       │         │ ipns-site-generator │
+│   (matters.town)    │ ─────▶  │  靜態 ActivityPub   │
+└─────────────────────┘         │  WebFinger / outbox │
+                                └──────────┬──────────┘
+                                           │ static bundle
+                                           ▼
+                                ┌─────────────────────┐
+   ◀─── 入站互動 ─────────────  │   gateway-core      │  ── 出站 Article ─▶
+   Mastodon / Misskey           │   (this repo)        │       Fediverse
+   GoToSocial / etc.            │                     │
+                                │  inbox / signatures │
+                                │  followers state    │
+                                │  moderation / ops   │
+                                └─────────────────────┘</pre>
+  <p><strong>靜態 + 動態雙層</strong>：文章本身永遠在 IPFS 上，gateway 當機也讀得到；gateway 只負責「互動」這個動態部分。</p>
+</section>
+
+<section>
+  <h2>目前進度</h2>
+  <div class="stage-list">
+    <span class="label">Stage 01</span><span class="name">Instance Platform</span><span class="status done">完成</span>
+    <span class="label">Stage 02</span><span class="name">Identity & Discovery</span><span class="status done">完成</span>
+    <span class="label">Stage 03</span><span class="name">Gateway Core</span><span class="status wip">進行中</span>
+    <span class="label">Stage 04</span><span class="name">Social Interop</span><span class="status wip">進行中</span>
+    <span class="label">Stage 05</span><span class="name">Moderation & Ops</span><span class="status wip">進行中</span>
+    <span class="label">Stage 06</span><span class="name">Multi-Instance Control Plane</span><span class="status todo">規格完成</span>
+    <span class="label">Stage 07</span><span class="name">Launch Readiness</span><span class="status todo">規格完成</span>
+  </div>
+  <ul>
+    <li>85 組自動化測試通過</li>
+    <li>已與 <code>mastodon.social</code> 完成第一輪黑箱互通驗證</li>
+    <li>SQLite + backup / restore / reconcile / replay 工具鏈到位</li>
+    <li>Webhook 外送：metrics / alerts / logs，含 Slack incoming</li>
+  </ul>
+</section>
+
+<section>
+  <h2>三層目標</h2>
+  <table>
+    <thead><tr><th>目標</th><th>內容</th><th>時程</th></tr></thead>
+    <tbody>
+      <tr><td><strong>G1</strong></td><td>官方聯邦化基礎版（單實例 reference release，三家實作互通）</td><td>3 個月</td></tr>
+      <tr><td><strong>G2</strong></td><td>Matters 主站正式導入（pilot → beta → GA）</td><td>4–6 個月</td></tr>
+      <tr><td><strong>G3</strong></td><td>多站同源驗證（第二個 instance 上線）</td><td>2 個月</td></tr>
+    </tbody>
+  </table>
+  <p>完整藍圖見 <a href="https://github.com/mashbean/matters-fediverse-gateway/blob/main/research/matters-fediverse-compat/05-roadmap/development-plan.md">development-plan</a>。</p>
+</section>
+
+<section>
+  <h2>核心技術決策</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>對外型別 = <code>Article</code></h3>
+      <p>不降級成 <code>Note</code>。長文得到完整 HTML、summary、attachment 的呈現空間，而不是被縮略成微網誌動態。</p>
+    </div>
+    <div class="card">
+      <h3>靜態 + inbox bridge</h3>
+      <p>不做完整聯邦伺服器。文章本身走 IPFS，gateway 只承接互動，故障邊界清楚。</p>
+    </div>
+    <div class="card">
+      <h3>公開內容邊界程式化</h3>
+      <p>付費 / 加密 / 私訊由 visibility gate 在程式碼層級擋住，不靠規範自律。</p>
+    </div>
+    <div class="card">
+      <h3>Container-first 部署</h3>
+      <p>首發提供 reverse proxy / systemd / env 三件組，給小型自架者一條可重現路徑。</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>了解更多</h2>
+  <div class="links">
+    <a href="https://github.com/mashbean/matters-fediverse-gateway">GitHub Repo</a>
+    <a href="https://github.com/mashbean/matters-fediverse-gateway/tree/main/gateway-core">gateway-core 程式碼</a>
+    <a href="https://github.com/mashbean/matters-fediverse-gateway/tree/main/research/matters-fediverse-compat/01-specs">工程規格</a>
+    <a href="https://github.com/mashbean/matters-fediverse-gateway/blob/main/research/matters-fediverse-compat/05-roadmap/development-plan.md">開發藍圖</a>
+    <a href="https://matters.town">Matters.town</a>
+  </div>
+</section>
+
+<footer>
+  <p>授權：<a href="https://github.com/mashbean/matters-fediverse-gateway/blob/main/LICENSE">AGPL-3.0</a> · 維護者：<a href="https://github.com/mashbean">@mashbean</a> · 原始研發：在乎科技有限公司（Matters）</p>
+  <p>本頁為靜態展示頁面，不提供 ActivityPub 端點。</p>
+</footer>
+
+</div>
+</body>
+</html>

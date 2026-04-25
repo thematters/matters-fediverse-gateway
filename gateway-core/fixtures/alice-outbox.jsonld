@@ -1,0 +1,68 @@
+{
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "id": "https://alice-static.example/about.jsonld",
+  "type": "OrderedCollection",
+  "totalItems": 2,
+  "orderedItems": [
+    {
+      "@context": "https://www.w3.org/ns/activitystreams",
+      "type": "Create",
+      "actor": "https://alice-static.example/about.jsonld",
+      "published": "2026-03-19T10:00:00.000Z",
+      "to": [
+        "https://www.w3.org/ns/activitystreams#Public"
+      ],
+      "cc": [
+        "https://alice-static.example/followers.jsonld"
+      ],
+      "object": {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        "id": "https://alice-static.example/1-hello-fediverse/",
+        "type": "Note",
+        "summary": "Matters instance 對外互通的第一個 outbox bridge 範例",
+        "published": "2026-03-19T10:00:00.000Z",
+        "content": "Hello fediverse<br>Matters static outbox 已接到 gateway",
+        "url": "https://alice-static.example/1-hello-fediverse/",
+        "attributedTo": "https://alice-static.example/about.jsonld",
+        "to": [
+          "https://www.w3.org/ns/activitystreams#Public"
+        ],
+        "cc": [],
+        "tag": [
+          "matters",
+          "fediverse"
+        ]
+      }
+    },
+    {
+      "@context": "https://www.w3.org/ns/activitystreams",
+      "type": "Create",
+      "actor": "https://alice-static.example/about.jsonld",
+      "published": "2026-03-20T12:30:00.000Z",
+      "to": [
+        "https://www.w3.org/ns/activitystreams#Public"
+      ],
+      "cc": [
+        "https://alice-static.example/followers.jsonld"
+      ],
+      "object": {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        "id": "https://alice-static.example/2-outbox-bridge/",
+        "type": "Note",
+        "summary": "這篇文章用來驗證 canonical actor 和 followers URL 改寫",
+        "published": "2026-03-20T12:30:00.000Z",
+        "content": "Outbox bridge<br>canonical actor rewrite ready",
+        "url": "https://alice-static.example/2-outbox-bridge/",
+        "attributedTo": "https://alice-static.example/about.jsonld",
+        "to": [
+          "https://www.w3.org/ns/activitystreams#Public"
+        ],
+        "cc": [],
+        "tag": [
+          "bridge",
+          "activitypub"
+        ]
+      }
+    }
+  ]
+}

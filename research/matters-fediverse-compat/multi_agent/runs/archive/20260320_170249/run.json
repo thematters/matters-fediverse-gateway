@@ -1,0 +1,201 @@
+{
+  "run_id": "20260320_170249",
+  "created_at": "2026-03-20T17:02:49+08:00",
+  "updated_at": "2026-03-20T17:02:49+08:00",
+  "status": "active",
+  "current_stage_index": 0,
+  "stages": [
+    {
+      "id": "stage01_instance_platform",
+      "title": "Instance Platform",
+      "objective": "定義 Matters 官方 instance 的平台邊界、對外身分、policy 與 launch baseline",
+      "brief_path": "multi_agent/stage_briefs/stage01_instance_platform.md",
+      "agents": [
+        "planner",
+        "writer",
+        "architect"
+      ],
+      "deliverables": [
+        "stage brief",
+        "instance platform spec",
+        "ADR-001 federation architecture",
+        "ADR-005 instance governance surface"
+      ],
+      "status": "in_progress",
+      "packet_path": "multi_agent/runs/20260320_170249/packets/01_stage01_instance_platform.md",
+      "stage_dir": "multi_agent/runs/20260320_170249/stages/01_stage01_instance_platform",
+      "artifacts": {
+        "brief": "multi_agent/runs/20260320_170249/stages/01_stage01_instance_platform/brief.md",
+        "spec": "multi_agent/runs/20260320_170249/stages/01_stage01_instance_platform/spec.md",
+        "review": "multi_agent/runs/20260320_170249/stages/01_stage01_instance_platform/review.md",
+        "handoff": "multi_agent/runs/20260320_170249/stages/01_stage01_instance_platform/handoff.md"
+      }
+    },
+    {
+      "id": "stage02_identity_and_discovery",
+      "title": "Identity And Discovery",
+      "objective": "固定 actor ID、WebFinger、aliases、followers/following 與 key ownership 規則",
+      "brief_path": "multi_agent/stage_briefs/stage02_identity_and_discovery.md",
+      "agents": [
+        "writer",
+        "architect",
+        "reviewer"
+      ],
+      "deliverables": [
+        "identity and discovery spec",
+        "ADR-002 canonical identity and discovery",
+        "ADR-003 follower state and key ownership",
+        "identity review gate"
+      ],
+      "status": "pending",
+      "packet_path": "multi_agent/runs/20260320_170249/packets/02_stage02_identity_and_discovery.md",
+      "stage_dir": "multi_agent/runs/20260320_170249/stages/02_stage02_identity_and_discovery",
+      "artifacts": {
+        "brief": "multi_agent/runs/20260320_170249/stages/02_stage02_identity_and_discovery/brief.md",
+        "spec": "multi_agent/runs/20260320_170249/stages/02_stage02_identity_and_discovery/spec.md",
+        "review": "multi_agent/runs/20260320_170249/stages/02_stage02_identity_and_discovery/review.md",
+        "handoff": "multi_agent/runs/20260320_170249/stages/02_stage02_identity_and_discovery/handoff.md"
+      }
+    },
+    {
+      "id": "stage03_gateway_core",
+      "title": "Gateway Core",
+      "objective": "定義 federation gateway 的 endpoint surface、queue、signatures、state ownership 與 failure model",
+      "brief_path": "multi_agent/stage_briefs/stage03_gateway_core.md",
+      "agents": [
+        "architect",
+        "implementer",
+        "reviewer",
+        "ops_reviewer"
+      ],
+      "deliverables": [
+        "federation gateway spec",
+        "gateway review gate",
+        "gateway implementation slice",
+        "updated interoperability acceptance plan"
+      ],
+      "status": "pending",
+      "packet_path": "multi_agent/runs/20260320_170249/packets/03_stage03_gateway_core.md",
+      "stage_dir": "multi_agent/runs/20260320_170249/stages/03_stage03_gateway_core",
+      "artifacts": {
+        "brief": "multi_agent/runs/20260320_170249/stages/03_stage03_gateway_core/brief.md",
+        "spec": "multi_agent/runs/20260320_170249/stages/03_stage03_gateway_core/spec.md",
+        "review": "multi_agent/runs/20260320_170249/stages/03_stage03_gateway_core/review.md",
+        "handoff": "multi_agent/runs/20260320_170249/stages/03_stage03_gateway_core/handoff.md"
+      }
+    },
+    {
+      "id": "stage04_social_interop",
+      "title": "Social Interoperability",
+      "objective": "定義 Matters 與外部 instance 之間的 social loop、事件映射與 acceptance criteria",
+      "brief_path": "multi_agent/stage_briefs/stage04_social_interop.md",
+      "agents": [
+        "writer",
+        "architect",
+        "implementer",
+        "reviewer"
+      ],
+      "deliverables": [
+        "social interoperability spec",
+        "ADR-006 longform object mapping",
+        "social loop review gate"
+      ],
+      "status": "pending",
+      "packet_path": "multi_agent/runs/20260320_170249/packets/04_stage04_social_interop.md",
+      "stage_dir": "multi_agent/runs/20260320_170249/stages/04_stage04_social_interop",
+      "artifacts": {
+        "brief": "multi_agent/runs/20260320_170249/stages/04_stage04_social_interop/brief.md",
+        "spec": "multi_agent/runs/20260320_170249/stages/04_stage04_social_interop/spec.md",
+        "review": "multi_agent/runs/20260320_170249/stages/04_stage04_social_interop/review.md",
+        "handoff": "multi_agent/runs/20260320_170249/stages/04_stage04_social_interop/handoff.md"
+      }
+    },
+    {
+      "id": "stage05_moderation_and_ops",
+      "title": "Moderation And Ops",
+      "objective": "定義 moderation、domain policy、abuse handling、delivery retry 與 launch control 面",
+      "brief_path": "multi_agent/stage_briefs/stage05_moderation_and_ops.md",
+      "agents": [
+        "writer",
+        "ops_reviewer",
+        "reviewer",
+        "editor"
+      ],
+      "deliverables": [
+        "moderation and ops spec",
+        "ADR-004 public content boundary",
+        "operations review gate"
+      ],
+      "status": "pending",
+      "packet_path": "multi_agent/runs/20260320_170249/packets/05_stage05_moderation_and_ops.md",
+      "stage_dir": "multi_agent/runs/20260320_170249/stages/05_stage05_moderation_and_ops",
+      "artifacts": {
+        "brief": "multi_agent/runs/20260320_170249/stages/05_stage05_moderation_and_ops/brief.md",
+        "spec": "multi_agent/runs/20260320_170249/stages/05_stage05_moderation_and_ops/spec.md",
+        "review": "multi_agent/runs/20260320_170249/stages/05_stage05_moderation_and_ops/review.md",
+        "handoff": "multi_agent/runs/20260320_170249/stages/05_stage05_moderation_and_ops/handoff.md"
+      }
+    },
+    {
+      "id": "stage06_multi_instance_control_plane",
+      "title": "Multi-Instance Control Plane",
+      "objective": "定義 instance registry、per-instance config、namespace isolation、policy scope 與 shared service 邊界",
+      "brief_path": "multi_agent/stage_briefs/stage06_multi_instance_control_plane.md",
+      "agents": [
+        "planner",
+        "architect",
+        "ops_reviewer",
+        "reviewer"
+      ],
+      "deliverables": [
+        "multi-instance control plane spec",
+        "multi-instance isolation review gate",
+        "execution plan update"
+      ],
+      "status": "pending",
+      "packet_path": "multi_agent/runs/20260320_170249/packets/06_stage06_multi_instance_control_plane.md",
+      "stage_dir": "multi_agent/runs/20260320_170249/stages/06_stage06_multi_instance_control_plane",
+      "artifacts": {
+        "brief": "multi_agent/runs/20260320_170249/stages/06_stage06_multi_instance_control_plane/brief.md",
+        "spec": "multi_agent/runs/20260320_170249/stages/06_stage06_multi_instance_control_plane/spec.md",
+        "review": "multi_agent/runs/20260320_170249/stages/06_stage06_multi_instance_control_plane/review.md",
+        "handoff": "multi_agent/runs/20260320_170249/stages/06_stage06_multi_instance_control_plane/handoff.md"
+      }
+    },
+    {
+      "id": "stage07_launch_readiness",
+      "title": "Launch Readiness",
+      "objective": "整合 launch gate、測試矩陣、runbook 與下一輪工程 task，讓後續 agent 可直接進入實作",
+      "brief_path": "multi_agent/stage_briefs/stage07_launch_readiness.md",
+      "agents": [
+        "planner",
+        "editor",
+        "reviewer",
+        "ops_reviewer"
+      ],
+      "deliverables": [
+        "updated next steps",
+        "engineering task seeds",
+        "launch readiness handoff"
+      ],
+      "status": "pending",
+      "packet_path": "multi_agent/runs/20260320_170249/packets/07_stage07_launch_readiness.md",
+      "stage_dir": "multi_agent/runs/20260320_170249/stages/07_stage07_launch_readiness",
+      "artifacts": {
+        "brief": "multi_agent/runs/20260320_170249/stages/07_stage07_launch_readiness/brief.md",
+        "spec": "multi_agent/runs/20260320_170249/stages/07_stage07_launch_readiness/spec.md",
+        "review": "multi_agent/runs/20260320_170249/stages/07_stage07_launch_readiness/review.md",
+        "handoff": "multi_agent/runs/20260320_170249/stages/07_stage07_launch_readiness/handoff.md"
+      }
+    }
+  ],
+  "source_counts": {
+    "raw": 5,
+    "docs": 8,
+    "processed": 9,
+    "outputs": 10,
+    "multi_agent/stage_briefs": 7,
+    "../../external/ipns-site-generator/src": 51,
+    "total": 90
+  }
+}

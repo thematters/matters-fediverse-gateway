@@ -1,0 +1,65 @@
+{
+  "instance": {
+    "domain": "matters.example",
+    "title": "Matters Sandbox",
+    "summary": "Development instance for the Matters gateway core minimum slice",
+    "softwareName": "matters-gateway-core",
+    "softwareVersion": "0.1.0",
+    "openRegistrations": false
+  },
+  "actors": {
+    "alice": {
+      "displayName": "Alice Matters",
+      "summary": "Sandbox author for gateway-core development",
+      "autoAcceptFollows": true,
+      "staticOutboxFile": "../fixtures/alice-outbox.jsonld",
+      "aliases": [
+        "https://matters.town/@alice",
+        "https://ipns.example/ipns/alice"
+      ],
+      "publicKeyPemFile": "./dev-public-key.pem",
+      "privateKeyPemFile": "./dev-private-key.pem"
+    }
+  },
+  "remoteActors": {},
+  "remoteDiscovery": {
+    "cacheTtlMs": 3600000
+  },
+  "delivery": {
+    "maxAttempts": 2,
+    "userAgent": "MattersGatewayCore/0.1.0",
+    "processingLeaseTimeoutMs": 900000
+  },
+  "moderation": {
+    "domainBlocks": [],
+    "actorSuspensions": [],
+    "remoteActorPolicies": [],
+    "evidenceRetentionDays": 365,
+    "rateLimits": {
+      "instanceInbound": {
+        "limit": 120,
+        "windowMs": 60000
+      },
+      "actorInbound": {
+        "limit": 60,
+        "windowMs": 60000
+      },
+      "actorOutbound": {
+        "limit": 30,
+        "windowMs": 60000
+      }
+    }
+  },
+  "runtime": {
+    "storeDriver": "sqlite",
+    "stateFile": "../runtime/dev-state.json",
+    "sqliteFile": "../runtime/dev-state.sqlite",
+    "alerting": {
+      "backupMaxAgeHours": 24,
+      "pendingQueueMaxAgeMinutes": 30,
+      "openDeadLetterThreshold": 0,
+      "openAbuseCaseThreshold": 0,
+      "pendingQueueThreshold": 25
+    }
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "run_id": "20260320_125854",
+  "created_at": "2026-03-20T12:58:54+08:00",
+  "updated_at": "2026-03-20T13:48:12+08:00",
+  "status": "completed",
+  "current_stage_index": 6,
+  "stages": [
+    {
+      "id": "stage01_bootstrap",
+      "title": "來源盤點與問題定稿",
+      "objective": "確認研究問題、來源群、交付物與第一輪工作分解",
+      "agents": [
+        "bootstrap_coordinator",
+        "upstream_inventory_analyst"
+      ],
+      "deliverables": [
+        "研究問題定稿",
+        "來源清單",
+        "第一輪工作分解"
+      ],
+      "status": "completed",
+      "packet_path": "multi_agent/runs/20260320_125854/packets/01_stage01_bootstrap.md"
+    },
+    {
+      "id": "stage02_upstream_inventory",
+      "title": "Matters 現況盤點",
+      "objective": "盤點 ipns-site-generator、現有靜態 ActivityPub surface、網址與身分線索",
+      "agents": [
+        "upstream_inventory_analyst"
+      ],
+      "deliverables": [
+        "upstream audit",
+        "Matters 現況摘要",
+        "未解問題清單"
+      ],
+      "status": "completed",
+      "packet_path": "multi_agent/runs/20260320_125854/packets/02_stage02_upstream_inventory.md"
+    },
+    {
+      "id": "stage03_protocol_gap",
+      "title": "協定缺口分析",
+      "objective": "把現況對照完整 federation 所需能力，產出 protocol gap matrix",
+      "agents": [
+        "protocol_gap_analyst"
+      ],
+      "deliverables": [
+        "protocol gap matrix",
+        "最小補強清單"
+      ],
+      "status": "completed",
+      "packet_path": "multi_agent/runs/20260320_125854/packets/03_stage03_protocol_gap.md"
+    },
+    {
+      "id": "stage04_governance_ops",
+      "title": "治理與營運風險",
+      "objective": "盤點 moderation、abuse、privacy、legal、paid 與 encrypted content 的風險與控制措施",
+      "agents": [
+        "governance_risk_analyst"
+      ],
+      "deliverables": [
+        "治理風險 memo",
+        "最低控制措施清單"
+      ],
+      "status": "completed",
+      "packet_path": "multi_agent/runs/20260320_125854/packets/04_stage04_governance_ops.md"
+    },
+    {
+      "id": "stage05_architecture_options",
+      "title": "架構選項比較",
+      "objective": "比較 Static publisher only、Static publisher + inbox bridge、Full dynamic federation layer",
+      "agents": [
+        "architecture_analyst"
+      ],
+      "deliverables": [
+        "架構比較表",
+        "推薦路線草案"
+      ],
+      "status": "completed",
+      "packet_path": "multi_agent/runs/20260320_125854/packets/05_stage05_architecture_options.md"
+    },
+    {
+      "id": "stage06_recommendation",
+      "title": "整合建議與後續 task",
+      "objective": "整合研究結果，形成 feasibility memo、next steps 與 prototype backlog",
+      "agents": [
+        "synthesis_editor"
+      ],
+      "deliverables": [
+        "feasibility memo",
+        "next steps",
+        "prototype backlog"
+      ],
+      "status": "completed",
+      "packet_path": "multi_agent/runs/20260320_125854/packets/06_stage06_recommendation.md"
+    }
+  ],
+  "source_counts": {
+    "raw": 5,
+    "docs": 2,
+    "processed": 9,
+    "../../external/ipns-site-generator/src": 51,
+    "total": 67
+  }
+}

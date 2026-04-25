@@ -1,0 +1,491 @@
+{
+  "generated_at": "2026-03-20T17:06:37+08:00",
+  "directories": {
+    "raw": [
+      {
+        "path": "raw/doi-10.1145-3678610.3678624-crossref.json",
+        "kind": "json",
+        "size_bytes": 5472
+      },
+      {
+        "path": "raw/doi-10.1145-3678610.3678624-semanticscholar.json",
+        "kind": "json",
+        "size_bytes": 2186
+      },
+      {
+        "path": "raw/matters-lab-meson-article.html",
+        "kind": "html",
+        "size_bytes": 17854
+      },
+      {
+        "path": "raw/paper-metadata.md",
+        "kind": "text",
+        "size_bytes": 866
+      },
+      {
+        "path": "raw/source-manifest.md",
+        "kind": "text",
+        "size_bytes": 935
+      }
+    ],
+    "docs": [
+      {
+        "path": "docs/adr/ADR-001-federation-architecture.md",
+        "kind": "text",
+        "size_bytes": 458
+      },
+      {
+        "path": "docs/adr/ADR-002-canonical-identity-and-discovery.md",
+        "kind": "text",
+        "size_bytes": 753
+      },
+      {
+        "path": "docs/adr/ADR-003-follower-state-and-key-ownership.md",
+        "kind": "text",
+        "size_bytes": 533
+      },
+      {
+        "path": "docs/adr/ADR-004-public-content-boundary.md",
+        "kind": "text",
+        "size_bytes": 401
+      },
+      {
+        "path": "docs/adr/ADR-005-instance-governance-surface.md",
+        "kind": "text",
+        "size_bytes": 495
+      },
+      {
+        "path": "docs/adr/ADR-006-longform-object-mapping.md",
+        "kind": "text",
+        "size_bytes": 523
+      },
+      {
+        "path": "docs/sources-index.md",
+        "kind": "text",
+        "size_bytes": 603
+      },
+      {
+        "path": "docs/upstream-audit-ipns-site-generator.md",
+        "kind": "text",
+        "size_bytes": 1201
+      }
+    ],
+    "processed": [
+      {
+        "path": "processed/architecture-options/comparison.md",
+        "kind": "text",
+        "size_bytes": 1861
+      },
+      {
+        "path": "processed/governance-risk/memo.md",
+        "kind": "text",
+        "size_bytes": 2707
+      },
+      {
+        "path": "processed/identity-url-strategy/notes.md",
+        "kind": "text",
+        "size_bytes": 1781
+      },
+      {
+        "path": "processed/interoperability-test/plan.md",
+        "kind": "text",
+        "size_bytes": 1228
+      },
+      {
+        "path": "processed/protocol-gap/concrete-gaps.md",
+        "kind": "text",
+        "size_bytes": 2368
+      },
+      {
+        "path": "processed/protocol-gap/matrix.md",
+        "kind": "text",
+        "size_bytes": 3859
+      },
+      {
+        "path": "processed/upstream-inventory/activitypub-input-map.md",
+        "kind": "text",
+        "size_bytes": 1903
+      },
+      {
+        "path": "processed/upstream-inventory/findings.md",
+        "kind": "text",
+        "size_bytes": 5579
+      },
+      {
+        "path": "processed/upstream-inventory/summary.md",
+        "kind": "text",
+        "size_bytes": 1830
+      }
+    ],
+    "outputs": [
+      {
+        "path": "outputs/engineering-task-seeds.md",
+        "kind": "text",
+        "size_bytes": 1235
+      },
+      {
+        "path": "outputs/feasibility-memo.md",
+        "kind": "text",
+        "size_bytes": 2522
+      },
+      {
+        "path": "outputs/federation-gateway-spec.md",
+        "kind": "text",
+        "size_bytes": 1867
+      },
+      {
+        "path": "outputs/identity-discovery-spec.md",
+        "kind": "text",
+        "size_bytes": 2315
+      },
+      {
+        "path": "outputs/identity-foundation-spec.md",
+        "kind": "text",
+        "size_bytes": 2724
+      },
+      {
+        "path": "outputs/instance-delivery-plan.md",
+        "kind": "text",
+        "size_bytes": 1579
+      },
+      {
+        "path": "outputs/instance-platform-spec.md",
+        "kind": "text",
+        "size_bytes": 1386
+      },
+      {
+        "path": "outputs/launch-readiness-checklist.md",
+        "kind": "text",
+        "size_bytes": 854
+      },
+      {
+        "path": "outputs/moderation-and-ops-spec.md",
+        "kind": "text",
+        "size_bytes": 971
+      },
+      {
+        "path": "outputs/multi-instance-control-plane-spec.md",
+        "kind": "text",
+        "size_bytes": 950
+      },
+      {
+        "path": "outputs/next-steps.md",
+        "kind": "text",
+        "size_bytes": 861
+      },
+      {
+        "path": "outputs/prototype-backlog.md",
+        "kind": "text",
+        "size_bytes": 1023
+      },
+      {
+        "path": "outputs/social-interoperability-spec.md",
+        "kind": "text",
+        "size_bytes": 1253
+      }
+    ],
+    "multi_agent/stage_briefs": [
+      {
+        "path": "multi_agent/stage_briefs/stage01_instance_platform.md",
+        "kind": "text",
+        "size_bytes": 556
+      },
+      {
+        "path": "multi_agent/stage_briefs/stage02_identity_and_discovery.md",
+        "kind": "text",
+        "size_bytes": 508
+      },
+      {
+        "path": "multi_agent/stage_briefs/stage03_gateway_core.md",
+        "kind": "text",
+        "size_bytes": 545
+      },
+      {
+        "path": "multi_agent/stage_briefs/stage04_social_interop.md",
+        "kind": "text",
+        "size_bytes": 519
+      },
+      {
+        "path": "multi_agent/stage_briefs/stage05_moderation_and_ops.md",
+        "kind": "text",
+        "size_bytes": 521
+      },
+      {
+        "path": "multi_agent/stage_briefs/stage06_multi_instance_control_plane.md",
+        "kind": "text",
+        "size_bytes": 589
+      },
+      {
+        "path": "multi_agent/stage_briefs/stage07_launch_readiness.md",
+        "kind": "text",
+        "size_bytes": 527
+      }
+    ],
+    "../../external/ipns-site-generator/src": [
+      {
+        "path": "external/ipns-site-generator/src/__tests__/__snapshots__/makeArticlePage.test.js.snap",
+        "kind": "snap",
+        "size_bytes": 66164
+      },
+      {
+        "path": "external/ipns-site-generator/src/__tests__/__snapshots__/makeHomepage.test.js.snap",
+        "kind": "snap",
+        "size_bytes": 135990
+      },
+      {
+        "path": "external/ipns-site-generator/src/__tests__/__snapshots__/utils.test.js.snap",
+        "kind": "snap",
+        "size_bytes": 3580
+      },
+      {
+        "path": "external/ipns-site-generator/src/__tests__/makeArticlePage.test.ts",
+        "kind": "ts",
+        "size_bytes": 1812
+      },
+      {
+        "path": "external/ipns-site-generator/src/__tests__/makeHomepage.test.ts",
+        "kind": "ts",
+        "size_bytes": 1883
+      },
+      {
+        "path": "external/ipns-site-generator/src/__tests__/utils/index.ts",
+        "kind": "ts",
+        "size_bytes": 379
+      },
+      {
+        "path": "external/ipns-site-generator/src/__tests__/utils/setupEnv.ts",
+        "kind": "ts",
+        "size_bytes": 317
+      },
+      {
+        "path": "external/ipns-site-generator/src/__tests__/utils/snapshotResolver.ts",
+        "kind": "ts",
+        "size_bytes": 721
+      },
+      {
+        "path": "external/ipns-site-generator/src/__tests__/utils.test.ts",
+        "kind": "ts",
+        "size_bytes": 518
+      },
+      {
+        "path": "external/ipns-site-generator/src/index.ts",
+        "kind": "ts",
+        "size_bytes": 113
+      },
+      {
+        "path": "external/ipns-site-generator/src/makeArticlePage/getAsset.ts",
+        "kind": "ts",
+        "size_bytes": 1360
+      },
+      {
+        "path": "external/ipns-site-generator/src/makeArticlePage/index.ts",
+        "kind": "ts",
+        "size_bytes": 3017
+      },
+      {
+        "path": "external/ipns-site-generator/src/makeHomepage/index.ts",
+        "kind": "ts",
+        "size_bytes": 5412
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/index.ts",
+        "kind": "ts",
+        "size_bytes": 726
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/mock.ts",
+        "kind": "ts",
+        "size_bytes": 6961
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/utils.ts",
+        "kind": "ts",
+        "size_bytes": 1110
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/article/content.njk",
+        "kind": "njk",
+        "size_bytes": 114
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/article/header.njk",
+        "kind": "njk",
+        "size_bytes": 559
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/article/index.njk",
+        "kind": "njk",
+        "size_bytes": 793
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/article/scripts/decrypt.njk",
+        "kind": "njk",
+        "size_bytes": 917
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/article/scripts/inputUI.njk",
+        "kind": "njk",
+        "size_bytes": 425
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/article/scripts/listener.njk",
+        "kind": "njk",
+        "size_bytes": 753
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/article/styles.njk",
+        "kind": "njk",
+        "size_bytes": 2414
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/homepage/articleDigest.njk",
+        "kind": "njk",
+        "size_bytes": 287
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/homepage/header.njk",
+        "kind": "njk",
+        "size_bytes": 218
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/homepage/index.njk",
+        "kind": "njk",
+        "size_bytes": 659
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/homepage/rss.xml.njk",
+        "kind": "njk",
+        "size_bytes": 1049
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/homepage/styles.njk",
+        "kind": "njk",
+        "size_bytes": 599
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/byline.njk",
+        "kind": "njk",
+        "size_bytes": 457
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/icons/back.njk",
+        "kind": "njk",
+        "size_bytes": 617
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/icons/rss.njk",
+        "kind": "njk",
+        "size_bytes": 1520
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/icons/themeSwitchDark.njk",
+        "kind": "njk",
+        "size_bytes": 431
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/icons/themeSwitchLight.njk",
+        "kind": "njk",
+        "size_bytes": 459
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/meta.njk",
+        "kind": "njk",
+        "size_bytes": 979
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/rssEntrances.njk",
+        "kind": "njk",
+        "size_bytes": 620
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/scripts/clipboard.njk",
+        "kind": "njk",
+        "size_bytes": 825
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/scripts/ga.njk",
+        "kind": "njk",
+        "size_bytes": 245
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/scripts/rssEntrances.njk",
+        "kind": "njk",
+        "size_bytes": 1263
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/scripts/theme.njk",
+        "kind": "njk",
+        "size_bytes": 459
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/styles/base.njk",
+        "kind": "njk",
+        "size_bytes": 3114
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/styles/byline.njk",
+        "kind": "njk",
+        "size_bytes": 335
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/styles/index.njk",
+        "kind": "njk",
+        "size_bytes": 233
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/styles/layout.njk",
+        "kind": "njk",
+        "size_bytes": 113
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/styles/rssEntrances.njk",
+        "kind": "njk",
+        "size_bytes": 735
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/styles/theme.njk",
+        "kind": "njk",
+        "size_bytes": 496
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/styles/themeSwitch.njk",
+        "kind": "njk",
+        "size_bytes": 255
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/styles/variables.njk",
+        "kind": "njk",
+        "size_bytes": 863
+      },
+      {
+        "path": "external/ipns-site-generator/src/render/views/shared/themeSwitch.njk",
+        "kind": "njk",
+        "size_bytes": 307
+      },
+      {
+        "path": "external/ipns-site-generator/src/types.ts",
+        "kind": "ts",
+        "size_bytes": 1126
+      },
+      {
+        "path": "external/ipns-site-generator/src/utils/encrypt.ts",
+        "kind": "ts",
+        "size_bytes": 809
+      },
+      {
+        "path": "external/ipns-site-generator/src/utils/index.ts",
+        "kind": "ts",
+        "size_bytes": 4805
+      }
+    ]
+  },
+  "counts": {
+    "raw": 5,
+    "docs": 8,
+    "processed": 9,
+    "outputs": 13,
+    "multi_agent/stage_briefs": 7,
+    "../../external/ipns-site-generator/src": 51,
+    "total": 93
+  }
+}

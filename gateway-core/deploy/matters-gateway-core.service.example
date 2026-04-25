@@ -1,0 +1,17 @@
+[Unit]
+Description=Matters Gateway Core
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/matters-gateway/matters-gateway-core.env
+WorkingDirectory=${WORKDIR}
+ExecStart=/usr/bin/env node src/server.mjs --config ${CONFIG_PATH} --host ${HOST} --port ${PORT}
+Restart=always
+RestartSec=5
+StandardOutput=append:${LOG_DIR}/gateway-core.out.log
+StandardError=append:${LOG_DIR}/gateway-core.err.log
+
+[Install]
+WantedBy=multi-user.target

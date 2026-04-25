@@ -1,0 +1,40 @@
+staging-gateway.example {
+  encode zstd gzip
+
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "same-origin"
+  }
+
+  @wellKnown path /.well-known/*
+  handle @wellKnown {
+    reverse_proxy 127.0.0.1:8787
+  }
+
+  handle_path /users/* {
+    reverse_proxy 127.0.0.1:8787
+  }
+
+  handle /nodeinfo/* {
+    reverse_proxy 127.0.0.1:8787
+  }
+
+  handle /admin/* {
+    reverse_proxy 127.0.0.1:8787
+  }
+
+  handle /jobs/* {
+    reverse_proxy 127.0.0.1:8787
+  }
+
+  handle {
+    reverse_proxy 127.0.0.1:8787
+  }
+
+  log {
+    output file /var/log/caddy/matters-gateway-core.access.log
+    format json
+  }
+}

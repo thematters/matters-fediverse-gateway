@@ -1,0 +1,38 @@
+{
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "id": "https://example.eth.limo/about.jsonld",
+  "type": "OrderedCollection",
+  "totalItems": 1,
+  "orderedItems": [
+    {
+      "@context": "https://www.w3.org/ns/activitystreams",
+      "type": "Create",
+      "actor": "https://example.eth.limo/about.jsonld",
+      "published": "2025-03-20T10:00:00.000Z",
+      "to": [
+        "https://www.w3.org/ns/activitystreams#Public"
+      ],
+      "cc": [
+        "https://example.eth.limo/followers.jsonld"
+      ],
+      "object": {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        "id": "https://example.eth.limo/1-example-post/",
+        "type": "Note",
+        "summary": "Example summary",
+        "published": "2025-03-20T10:00:00.000Z",
+        "content": "Example title<br>Example summary",
+        "url": "https://example.eth.limo/1-example-post/",
+        "attributedTo": "https://example.eth.limo/about.jsonld",
+        "to": [
+          "https://www.w3.org/ns/activitystreams#Public"
+        ],
+        "cc": [],
+        "tag": [
+          "matters",
+          "fediverse"
+        ]
+      }
+    }
+  ]
+}
