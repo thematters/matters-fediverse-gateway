@@ -8,101 +8,162 @@
 <meta property="og:title" content="Matters Fediverse Gateway">
 <meta property="og:description" content="長文 × ActivityPub。Matters 對 Fediverse 開放的開源 gateway。">
 <meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
 <style>
+  /* Matters Design System tokens (DS 1.5 / Matters 2.0 New Palette)
+     Source: thematters/design-system tokens/tokens.json (2026-04-24) */
   :root{
-    --ink:#1a1a1a; --paper:#fafaf7; --line:#e6e3da;
-    --accent:#c8521b; --accent-soft:#f5e6dc;
-    --muted:#6b6b6b; --code-bg:#f1efe9;
+    /* brand */
+    --color-primary: #7258FF;        /* logo purple */
+    --color-secondary: #C3F432;      /* logo lime */
+    --color-primary-100: #EAE7FF;
+    --color-primary-700: #5A43E5;
+    /* greys */
+    --color-black: #333333;
+    --color-grey-darker: #808080;
+    --color-grey-dark: #999C9D;
+    --color-grey-light: #DDDDDD;
+    --color-grey-lighter: #F7F7F7;
+    --color-grey-hover: #EDEDED;
+    --color-white: #FFFFFF;
+    /* function */
+    --color-positive: #5C9969;
+    --color-warn: #DBA34F;
+    /* fonts */
+    --font-ui: "PingFang TC", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Microsoft JhengHei", sans-serif;
+    --font-reading: "Noto Serif TC", "Songti TC", "Source Han Serif TC", serif;
+    --font-mono: "SF Mono", Menlo, Consolas, monospace;
+    /* spacing 8-pt grid */
+    --sp4: 4px; --sp8: 8px; --sp16: 16px; --sp24: 24px; --sp32: 32px; --sp48: 48px; --sp64: 64px;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{
-    font-family:-apple-system,"Helvetica Neue","PingFang TC","Noto Sans TC",sans-serif;
-    color:var(--ink);background:var(--paper);
+    font-family:var(--font-ui);
+    color:var(--color-black);background:var(--color-white);
     line-height:1.7;font-size:16px;
+    -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:780px;margin:0 auto;padding:60px 24px 96px}
-  header{margin-bottom:48px}
+  .wrap{max-width:780px;margin:0 auto;padding:var(--sp64) var(--sp24) 96px}
+
+  /* header / brand */
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:var(--sp32)}
+  .brand .logo{height:24px;width:auto;color:var(--color-black)}
+  .brand .divider{color:var(--color-grey-light)}
+  .brand .product{font-size:13px;color:var(--color-grey-darker);letter-spacing:.02em}
+
+  header{margin-bottom:var(--sp48)}
   .badge{
-    display:inline-block;font-size:12px;letter-spacing:.08em;
-    padding:4px 10px;border:1px solid var(--accent);color:var(--accent);
-    border-radius:2px;margin-bottom:16px;text-transform:uppercase;
+    display:inline-block;font-size:12px;letter-spacing:.08em;font-weight:600;
+    padding:4px 10px;background:var(--color-primary-100);color:var(--color-primary-700);
+    border-radius:12px;margin-bottom:var(--sp16);text-transform:uppercase;
   }
-  h1{font-size:34px;line-height:1.25;margin:0 0 12px;font-weight:700;letter-spacing:-0.01em}
-  .subtitle{font-size:18px;color:var(--muted);margin:0 0 24px}
+  h1{
+    font-family:var(--font-reading);
+    font-size:36px;line-height:1.3;margin:0 0 12px;font-weight:700;letter-spacing:-0.01em;
+  }
+  .subtitle{font-size:18px;color:var(--color-grey-darker);margin:0 0 var(--sp24)}
   .demo-note{
-    background:var(--accent-soft);border-left:3px solid var(--accent);
-    padding:12px 16px;font-size:14px;color:#5a3318;border-radius:2px;
+    background:var(--color-grey-lighter);border-left:3px solid var(--color-primary);
+    padding:12px var(--sp16);font-size:14px;color:var(--color-black);border-radius:4px;
   }
-  h2{font-size:22px;margin:48px 0 12px;letter-spacing:-0.005em;border-bottom:1px solid var(--line);padding-bottom:6px}
-  h3{font-size:16px;margin:24px 0 6px;font-weight:600}
+
+  h2{
+    font-family:var(--font-reading);
+    font-size:22px;margin:var(--sp48) 0 12px;font-weight:700;letter-spacing:-0.005em;
+    border-bottom:1px solid var(--color-grey-light);padding-bottom:8px;
+  }
+  h3{font-size:15px;margin:var(--sp24) 0 6px;font-weight:600}
   p{margin:0 0 14px}
-  a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+  a{color:var(--color-primary);text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
   a:hover{text-decoration-thickness:2px}
-  ul{padding-left:22px;margin:0 0 16px}
+  ul{padding-left:22px;margin:0 0 var(--sp16)}
   li{margin-bottom:4px}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp16);margin:var(--sp16) 0}
   @media (max-width:600px){.grid2{grid-template-columns:1fr}}
   .card{
-    border:1px solid var(--line);padding:14px 16px;border-radius:4px;background:#fff;
+    border:1px solid var(--color-grey-light);padding:14px var(--sp16);border-radius:8px;
+    background:var(--color-white);
   }
-  .card h3{margin-top:0}
+  .card h3{margin-top:0;color:var(--color-primary-700)}
+
   code{
-    background:var(--code-bg);padding:1px 6px;border-radius:3px;
-    font-family:"SF Mono",Menlo,monospace;font-size:13px;
+    background:var(--color-grey-lighter);padding:1px 6px;border-radius:3px;
+    font-family:var(--font-mono);font-size:13px;color:var(--color-primary-700);
   }
   pre{
-    background:var(--code-bg);padding:14px 16px;border-radius:4px;
-    font-family:"SF Mono",Menlo,monospace;font-size:13px;
+    background:var(--color-grey-lighter);padding:14px var(--sp16);border-radius:8px;
+    font-family:var(--font-mono);font-size:13px;
     overflow-x:auto;line-height:1.5;
   }
   .ascii{
-    font-family:"SF Mono",Menlo,monospace;font-size:12px;line-height:1.4;
-    background:#fff;border:1px solid var(--line);padding:16px;border-radius:4px;
-    overflow-x:auto;color:#444;
+    font-family:var(--font-mono);font-size:12px;line-height:1.45;
+    background:var(--color-white);border:1px solid var(--color-grey-light);
+    padding:var(--sp16);border-radius:8px;overflow-x:auto;color:var(--color-grey-darker);
   }
-  .stage-list{display:grid;grid-template-columns:auto 1fr auto;gap:8px 16px;align-items:baseline;font-size:14px;margin:8px 0 16px}
-  .stage-list .label{font-family:"SF Mono",Menlo,monospace;color:var(--muted)}
-  .stage-list .name{}
-  .stage-list .status{font-size:12px;padding:1px 8px;border-radius:10px;justify-self:end}
-  .status.done{background:#e1f0e0;color:#1e6b1e}
-  .status.wip{background:#fff5cc;color:#7a5b00}
-  .status.todo{background:#eee;color:#666}
-  table{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0 16px}
-  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
-  th{font-weight:600;background:#f5f3ec}
-  footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+
+  .stage-list{
+    display:grid;grid-template-columns:auto 1fr auto;gap:8px var(--sp16);
+    align-items:baseline;font-size:14px;margin:8px 0 var(--sp16);
+  }
+  .stage-list .label{font-family:var(--font-mono);color:var(--color-grey-dark);font-size:12px}
+  .stage-list .status{font-size:12px;padding:1px 10px;border-radius:12px;justify-self:end;font-weight:600}
+  .status.done{background:#E8F5E8;color:var(--color-positive)}
+  .status.wip{background:#FFF8E1;color:var(--color-warn)}
+  .status.todo{background:var(--color-grey-hover);color:var(--color-grey-darker)}
+
+  table{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0 var(--sp16)}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--color-grey-light);vertical-align:top}
+  th{font-weight:600;background:var(--color-grey-lighter);color:var(--color-black)}
+
+  footer{
+    margin-top:var(--sp64);padding-top:var(--sp24);
+    border-top:1px solid var(--color-grey-light);
+    font-size:13px;color:var(--color-grey-darker);
+  }
+  footer p{margin:0 0 6px}
   .links a{margin-right:18px;display:inline-block;margin-bottom:6px}
 </style>
 </head>
 <body>
 <div class="wrap">
 
+<div class="brand">
+  <a href="https://matters.town" aria-label="Matters" style="display:inline-flex">
+    <img class="logo" src="static/matters-logo.svg" alt="Matters" height="24">
+  </a>
+  <span class="divider">/</span>
+  <span class="product">Fediverse Gateway</span>
+</div>
+
 <header>
   <span class="badge">Demo · 開發中</span>
-  <h1>Matters Fediverse Gateway</h1>
-  <p class="subtitle">把 Matters 的長文，接上 Fediverse 這張聯邦網。</p>
+  <h1>把 Matters 的長文，接上 Fediverse 這張聯邦網。</h1>
+  <p class="subtitle">一座小而清楚的「大使館」，讓 Mastodon、Misskey、GoToSocial 的使用者讀到、追蹤、互動。</p>
   <p class="demo-note">這是一個 <strong>nonfunctional demo site</strong>。實際 gateway 服務尚未對外開放，本頁僅作為專案概覽與進度展示。完整原始碼請見 <a href="https://github.com/mashbean/matters-fediverse-gateway">GitHub repo</a>。</p>
 </header>
 
 <section>
   <h2>這是什麼</h2>
   <p>Matters 是有十年歷史、超過 26 萬註冊使用者的中文長文平台。Fediverse（聯邦宇宙）則是一張開放的社交聯邦網，Mastodon、Misskey、Threads、GoToSocial 都是它的一部分。</p>
-  <p>這個 gateway 在兩者之間搭一座「大使館」：讓聯邦上的使用者能追蹤 Matters 作者、看到完整長文（以 <code>Article</code> 型別，不縮成微網誌摘要）、按愛心、留言、轉發。這些互動會回傳到 Matters 站內。同時，付費文、加密文、站內私訊不會外流。</p>
+  <p>這個 gateway 在兩者之間搭一座大使館：讓聯邦上的使用者能追蹤 Matters 作者、看到完整長文（以 <code>Article</code> 型別，不縮成微網誌摘要）、按愛心、留言、轉發。這些互動會回傳到 Matters 站內。同時，付費文、加密文、站內私訊不會外流。</p>
 </section>
 
 <section>
   <h2>架構</h2>
   <pre class="ascii">┌─────────────────────┐         ┌─────────────────────┐
-│   Matters 主站       │         │ ipns-site-generator │
-│   (matters.town)    │ ─────▶  │  靜態 ActivityPub   │
+│   Matters 主站      │         │ ipns-site-generator │
+│   (matters.town)    │ ──────▶ │  靜態 ActivityPub   │
 └─────────────────────┘         │  WebFinger / outbox │
                                 └──────────┬──────────┘
                                            │ static bundle
                                            ▼
                                 ┌─────────────────────┐
-   ◀─── 入站互動 ─────────────  │   gateway-core      │  ── 出站 Article ─▶
-   Mastodon / Misskey           │   (this repo)        │       Fediverse
+   ◀─── 入站互動 ──────────────  │   gateway-core      │  ── 出站 Article ─▶
+   Mastodon / Misskey           │   (this repo)       │       Fediverse
    GoToSocial / etc.            │                     │
                                 │  inbox / signatures │
                                 │  followers state    │
@@ -115,10 +176,10 @@
   <h2>目前進度</h2>
   <div class="stage-list">
     <span class="label">Stage 01</span><span class="name">Instance Platform</span><span class="status done">完成</span>
-    <span class="label">Stage 02</span><span class="name">Identity & Discovery</span><span class="status done">完成</span>
+    <span class="label">Stage 02</span><span class="name">Identity &amp; Discovery</span><span class="status done">完成</span>
     <span class="label">Stage 03</span><span class="name">Gateway Core</span><span class="status wip">進行中</span>
     <span class="label">Stage 04</span><span class="name">Social Interop</span><span class="status wip">進行中</span>
-    <span class="label">Stage 05</span><span class="name">Moderation & Ops</span><span class="status wip">進行中</span>
+    <span class="label">Stage 05</span><span class="name">Moderation &amp; Ops</span><span class="status wip">進行中</span>
     <span class="label">Stage 06</span><span class="name">Multi-Instance Control Plane</span><span class="status todo">規格完成</span>
     <span class="label">Stage 07</span><span class="name">Launch Readiness</span><span class="status todo">規格完成</span>
   </div>
@@ -178,7 +239,7 @@
 
 <footer>
   <p>授權：<a href="https://github.com/mashbean/matters-fediverse-gateway/blob/main/LICENSE">AGPL-3.0</a> · 維護者：<a href="https://github.com/mashbean">@mashbean</a> · 原始研發：Github <a href="https://github.com/thematters">@thematters</a></p>
-  <p>本頁為靜態展示頁面，不提供 ActivityPub 端點。</p>
+  <p>視覺採用 Matters Design System 1.5（Matters 2.0 New Palette）。本頁為靜態展示，不提供 ActivityPub 端點。</p>
 </footer>
 
 </div>
