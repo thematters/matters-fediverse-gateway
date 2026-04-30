@@ -146,7 +146,7 @@ function actorDocument(base, request, env) {
       id: `${actor}#main-key`,
       owner: actor,
       publicKeyPem:
-        "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBALeg6nXAgK1jIS3g9R4J/fQKdemoOnly\nActivityPubGatewayPublicKeyPlaceholderDoNotUseForProductionCAwEAAQ==\n-----END PUBLIC KEY-----",
+        "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjxk5vrkfCOSMDqY5uyLj\nn362WeowOlzbHOBkZ6xvUd3XiK5rZvpdh44vCO4wrP+sJB4lM5XmWvF6ovuXLQFY\nlSBFIYNOO/d0Tb36vSQI6iP3p4evJ2rBFq1XB7L+iwTNYgTOQKNPTm4GtSRiKO4j\nG9OAOVGWj5l+IaBwvle+j/tc/cFjB6mkLkcPpWFAMaowZZB4w1vBnEuPwAslXKr8\nif2dnlz2evdgwYcydF2duIt2WqPC+FoGEzXneXkJooJflF5exsTbWcAyFaGdatRG\n6MhotmpLoAdmsHlcwYCJcgjLX9uNc4k8rVmUKnlMfuqUgEw2MyH/KyPPHqLnmbPY\nRwIDAQAB\n-----END PUBLIC KEY-----",
     },
     endpoints: {
       sharedInbox: `${base}/inbox`,
