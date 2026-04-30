@@ -4,6 +4,10 @@ compatibility_date = "2026-04-30"
 account_id = "757aaed316df635d8deb63859258808c"
 workers_dev = true
 
+[[routes]]
+pattern = "gateway-demo.matters.town"
+custom_domain = true
+
 [vars]
 MATTERS_PROFILE_URL = "https://matters.town"
 PROJECT_DOCS_URL = "https://thematters.github.io/matters-fediverse-gateway/"

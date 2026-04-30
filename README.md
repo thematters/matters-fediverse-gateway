@@ -4,8 +4,8 @@ An open-source ActivityPub gateway that connects Matters' long-form publishing l
 
 > **Status**: G1 in development. Single-instance reference release planned for July 2026.
 > **Demo / docs**: <https://thematters.github.io/matters-fediverse-gateway/>
-> **Live Worker demo**: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev>
-> **Public demo actor**: `acct:matters@matters-fediverse-gateway-demo.matters-lab.workers.dev`
+> **Live Worker demo**: <https://gateway-demo.matters.town>
+> **Public demo actor**: `acct:matters@gateway-demo.matters.town`
 > **Source**: <https://github.com/thematters/matters-fediverse-gateway>
 
 ## Why
@@ -29,14 +29,14 @@ Matters is a long-running, open-source, interoperable IPFS-protocol publishing s
 
 The live Cloudflare Worker demo serves ActivityPub and NodeInfo JSON with the expected content types:
 
-- WebFinger: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/.well-known/webfinger?resource=acct:matters@matters-fediverse-gateway-demo.matters-lab.workers.dev>
-- Actor: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/users/matters>
-- Outbox: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/users/matters/outbox>
-- Article: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/articles/matters-main-site-open-social-demo>
-- ActivityPub seed manifest: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/seed/activitypub-manifest.json>
-- ActivityPub seed outbox: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/seed/outbox.jsonld>
-- NodeInfo discovery: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/.well-known/nodeinfo>
-- NodeInfo 2.1: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/nodeinfo/2.1>
+- WebFinger: <https://gateway-demo.matters.town/.well-known/webfinger?resource=acct:matters@gateway-demo.matters.town>
+- Actor: <https://gateway-demo.matters.town/users/matters>
+- Outbox: <https://gateway-demo.matters.town/users/matters/outbox>
+- Article: <https://gateway-demo.matters.town/articles/matters-main-site-open-social-demo>
+- ActivityPub seed manifest: <https://gateway-demo.matters.town/seed/activitypub-manifest.json>
+- ActivityPub seed outbox: <https://gateway-demo.matters.town/seed/outbox.jsonld>
+- NodeInfo discovery: <https://gateway-demo.matters.town/.well-known/nodeinfo>
+- NodeInfo 2.1: <https://gateway-demo.matters.town/nodeinfo/2.1>
 
 These static GitHub Pages endpoints demonstrate the same read-side federation surface and ActivityPub seed bundle for a demo actor. They are not a production gateway and do not expose a public POST inbox.
 
@@ -61,7 +61,7 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 - First Mastodon sandbox black-box interoperability check completed
 - 85 automated tests passing in the latest recorded local verification snapshot
 - Public static ActivityPub prototype endpoints and seed bundle live under `thematters.github.io`
-- Cloudflare Worker edge demo is deployed under `matters-lab.workers.dev`
+- Cloudflare Worker edge demo is deployed under `gateway-demo.matters.town`
 
 ## G1 roadmap, May-July 2026
 

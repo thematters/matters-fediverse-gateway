@@ -19,13 +19,13 @@ The Worker can also be used as the edge in front of a future `gateway-core` runt
 The current public Worker demo is:
 
 ```text
-https://matters-fediverse-gateway-demo.matters-lab.workers.dev
+https://gateway-demo.matters.town
 ```
 
 The demo actor is:
 
 ```text
-acct:matters@matters-fediverse-gateway-demo.matters-lab.workers.dev
+acct:matters@gateway-demo.matters.town
 ```
 
 ## Local Development
@@ -47,7 +47,13 @@ By default this deploys to a `workers.dev` hostname:
 https://matters-fediverse-gateway-demo.<account>.workers.dev
 ```
 
-The current `wrangler.toml` pins deployment to the Matters Lab Cloudflare account by `account_id`.
+The current `wrangler.toml` pins deployment to the Matters Lab Cloudflare account by `account_id` and keeps the verified custom Worker domain:
+
+```toml
+[[routes]]
+pattern = "gateway-demo.matters.town"
+custom_domain = true
+```
 
 ### Cloudflare API Token
 
@@ -58,7 +64,7 @@ Create a Cloudflare user API token with these permissions:
 - User / User Details / Read
 - User / Memberships / Read
 
-Scope account resources to `Matters Lab`. No zone permission is required for the `workers.dev` demo. Add Zone / Workers Routes / Edit only when binding a custom route or custom domain.
+Scope account resources to `Matters Lab`. No zone permission is required for a `workers.dev`-only demo. For the current `gateway-demo.matters.town` custom domain, future Wrangler deploys may also need Zone / Workers Routes / Edit for the `matters.town` zone.
 
 Use the token as an environment variable and do not commit it:
 
@@ -68,7 +74,7 @@ CLOUDFLARE_API_TOKEN=... npm run deploy
 
 ## Demo Endpoints
 
-Replace `<worker-origin>` with the deployed Worker origin. For the live demo, `<worker-origin>` is `https://matters-fediverse-gateway-demo.matters-lab.workers.dev`.
+Replace `<worker-origin>` with the deployed Worker origin. For the live demo, `<worker-origin>` is `https://gateway-demo.matters.town`.
 
 - `<worker-origin>/.well-known/webfinger?resource=acct:matters@<worker-host>`
 - `<worker-origin>/.well-known/nodeinfo`

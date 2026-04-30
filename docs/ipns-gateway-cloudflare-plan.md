@@ -149,7 +149,7 @@ The Worker should not contain federation business logic. Its job is edge routing
 - Add CORS only for safe read endpoints.
 - Hide admin endpoints from the public internet unless explicitly allowed by operator auth.
 
-The repository now includes a deployed Worker demo under `cloudflare-worker/`: `https://matters-fediverse-gateway-demo.matters-lab.workers.dev`. It serves a Matters main-site example, exposes the seed bundle shape, and can later forward dynamic POST traffic to `gateway-core` through `GATEWAY_CORE_ORIGIN`.
+The repository now includes a deployed Worker demo under `cloudflare-worker/`: `https://gateway-demo.matters.town`. It serves a Matters main-site example, exposes the seed bundle shape, and can later forward dynamic POST traffic to `gateway-core` through `GATEWAY_CORE_ORIGIN`.
 
 ## Worker Routes
 
