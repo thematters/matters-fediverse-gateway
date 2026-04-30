@@ -1,158 +1,189 @@
-# Matters × Fediverse 開發藍圖
+# Matters x Fediverse Development Roadmap
 
-最後更新：2026-04-25
-決策前提：長文以 `Article` 對外聯邦；Matters 官方主導，不是第三方提案
+Last updated: 2026-04-30
 
----
-
-## 一、專案本質（白話版）
-
-Matters 是長文寫作平台。Fediverse 是一張開放的聯邦網（Mastodon、Threads、Misskey 都在上面）。本專案在 Matters 前面架一座「大使館」（代號 `gateway-core`），讓：
-
-- 外部聯邦用戶能追蹤 Matters 作者、看到新文章、留言、按愛心、轉發
-- 這些互動能回傳到 Matters 站內
-- **長文以 `Article` 格式原樣對外**（不是縮成微網誌摘要）
-- 付費文、加密文、私訊**不外流**，只提供導流連結
+Decision premise: long-form publishing federates as ActivityPub `Article`; Matters is the official operator of the first gateway deployment, not a third-party proposer.
 
 ---
 
-## 二、目標三層
+## 1. Project Nature
 
-### G1 ── 官方聯邦化基礎版
-**一句話**：讓 Matters 官方有一套自己能跑、也能給別人重用的聯邦 gateway 首發。
-**可交付成果**：一個可在 staging 環境實跑、能跟 Mastodon / Misskey / GoToSocial 三方雙向互通、含完整海關（moderation）與值班（observability）的 reference release + 使用者應變手冊。
-**時程**：3 個月（2026-05 ~ 2026-07）
-**工程人力**：1 FTE 後端 + 0.25 FTE ops review
-**估計成本**：NT$450k–600k（純工程） ≈ €13k–17k
+Matters is a long-form writing platform. The Fediverse is an open federated network that includes Mastodon, Threads, Misskey, GoToSocial, and other interoperable services. This project places an official gateway in front of Matters, code-named `gateway-core`, so that:
 
-### G2 ── Matters 主站正式導入
-**一句話**：把大使館真的接到 matters.town，讓 26 萬使用者可以被聯邦看見、也能從聯邦看外面。
-**可交付成果**：matters.town 的作者帳號可被 `@user@matters.town` 解析；Matters App/Web 顯示來自聯邦的回覆與追蹤；分階段 pilot → beta → GA。
-**時程**：4–6 個月（2026-08 ~ 2026-12 / 2027-01）
-**工程人力**：1 FTE 後端 + 0.5 FTE 前端 + 0.5 FTE PM/Ops
-**估計成本**：NT$2.0M–3.0M ≈ €55k–85k（屬 Matters 自身產品投資，不進 grant 範圍）
+- Fediverse users can discover Matters authors, follow them, receive new public articles, reply, like, and boost.
+- Those interactions can flow back into Matters.
+- Long-form writing is exposed as ActivityPub `Article` objects, not collapsed into microblog excerpts.
+- Paid, encrypted, private, and message-like content does not federate; at most, it can be represented by safe navigation links where the product policy allows it.
 
-### G3 ── 多站同源驗證
-**一句話**：證明這套 gateway 真的可以給第二個站用（例如試跑一個中文獨立媒體 pilot 或社群 instance）。
-**可交付成果**：第二個 test instance 成功對外聯邦，registry 與命名空間隔離經真機驗收，launch harness 可重跑。
-**時程**：2 個月（可與 G2 中後段並行，約 2026-10 ~ 2026-11）
-**工程人力**：1 FTE 後端
-**估計成本**：NT$300k–400k ≈ €8k–12k
+The first public prototype is available at `https://gateway-demo.matters.town` and demonstrates WebFinger, ActivityPub actor, outbox, Article, ActivityPub seed bundle, and NodeInfo endpoints.
 
 ---
 
-## 三、G1 範圍定案（根據「長文 + 官方主導」準則重排）
+## 2. Three Product Goals
 
-### ✅ G1 必做（七項）
+### G1 - Official Federation Reference Release
 
-| # | 工作項目 | 人週 | 白話說明 |
-|---|---|---|---|
-| W1 | 真環境值班演習 | 1 | 在實際 staging 把 alerts/metrics/logs webhook 全接一次，產 drill report |
-| W3 | Misskey + GoToSocial 互通驗證 | 1 | 除 Mastodon 外再驗兩個主要實作，確保不只綁單一鄰國 |
-| **W4a** | **長文 Article 系統化** | **2.5** | 定案：對外用 `Article`；實作 HTML sanitizer、summary/excerpt 策略、attachment 對映、canonical URL 引流 |
-| W5 | 付費/加密/私密邊界程式化 | 1.5 | 在 static outbox bridge 入口加 visibility gate、補單測、admin 可視化 |
-| W6 | 金鑰輪替流程 | 1 | gateway 支援 key overlap window、rotation script、runbook |
-| W2 | 資料一致性掃描 | 1 | followers / inbound object 的 reconcile + 差異報表 |
-| W8 | 應變手冊 + 桌面演練 | 1 | Launch runbook、incident playbook、rollback plan 三份，跑一次演練 |
+One-line goal: give Matters an official federation gateway that Matters can run itself and other publishers can inspect, reuse, and self-host.
 
-**小計：9 人週 ≈ 2.25 個月 工程 + 2 週 review/buffer = 3 個月**
+Deliverable: a staging-ready reference release that interoperates bidirectionally with Mastodon, Misskey, and GoToSocial, includes a full moderation boundary, and ships with observability and incident runbooks.
 
-### 🚫 不放 G1
+Timeline: 3 months, May 2026 to July 2026.
 
-- W7 舊欄位清理：技術債，放 G2 清
-- Prometheus / OTLP / PagerDuty exporter：webhook 已夠，staging drill 跑完再判斷
-- Multi-instance registry：留 G3
-- 對接真實 matters.town 前端：留 G2
+Engineering staffing: 1 FTE backend engineer plus 0.25 FTE ops review.
 
-### ⚠️ G1 隱性前提（影響成本）
+Estimated cost: NT$450k-600k, approximately EUR 13k-17k for engineering only.
 
-- Matters 需提供：staging 環境（1 台 VM、一個 subdomain、TLS）、`ipns-site-generator` 測試 bundle
-- 一個「測試 Matters 作者」身分，開放 2–3 位真人作者試跑 W3 互通
+### G2 - Matters Production Integration
 
----
+One-line goal: connect the gateway to `matters.town` so Matters' community of more than 280,000 registered users can be discoverable from the Fediverse and interact with external federated users.
 
-## 四、G2 工作拆解（先列，細節在進入 G2 階段再定）
+Deliverable: Matters author accounts resolve as `@user@matters.town`; Matters Web/App surfaces Fediverse replies and follows; rollout moves from selected-author pilot to beta to broader availability.
 
-| 階段 | 工作 | 工程週 |
-|---|---|---|
-| G2-A | 對接真實 IPNS 輸出（取代 fixture） | 2–3 |
-| G2-B | **canonical URL 策略定案** + 帳號系統打通 | 4–6 |
-| G2-C | Matters App / Web 的聯邦互動顯示（前端工程） | 8–12 |
-| G2-D | Pilot alpha（50–100 位邀請作者試跑） | 4–6 |
-| G2-E | Beta → GA rollout + 使用者遷移溝通 | 4–8 |
+Timeline: 4-6 months, August 2026 to December 2026 or January 2027.
 
-**關鍵產品決策（G2-B）**：
-- 選項 A：`acct:user@matters.town`（品牌一致、對外認知高；需改動主站 WebFinger 入口）
-- 選項 B：`acct:user@webf.matters.town`（降低主站改動、可獨立開關；但品牌拆裂）
-- **建議**：長期走 A；G2-B 分兩階段，先 B 後 A
+Engineering staffing: 1 FTE backend engineer, 0.5 FTE frontend engineer, and 0.5 FTE PM/Ops.
+
+Estimated cost: NT$2.0M-3.0M, approximately EUR 55k-85k. This is a Matters product investment and is outside the core grant scope.
+
+### G3 - Second-Instance Reuse Validation
+
+One-line goal: prove the gateway can serve a second independent publishing site, such as a Chinese-language independent media pilot or community instance.
+
+Deliverable: a second test instance federates publicly; registry and namespace isolation pass black-box validation; launch harnesses can be rerun.
+
+Timeline: 2 months, potentially in parallel with the later part of G2, around October 2026 to November 2026.
+
+Engineering staffing: 1 FTE backend engineer.
+
+Estimated cost: NT$300k-400k, approximately EUR 8k-12k.
 
 ---
 
-## 五、G3 工作拆解
+## 3. G1 Scope
 
-| 階段 | 工作 | 工程週 |
-|---|---|---|
-| G3-A | Stage 06 規格落地：instance registry / per-instance config / namespace isolation | 3 |
-| G3-B | 第二個 test instance 架設 + 黑箱驗收 | 2 |
-| G3-C | Launch harness 可重跑（discovery / follow / social / boundary / moderation 五類） | 2 |
-| G3-D | 文件與 reference deployment package | 1 |
+G1 is scoped around long-form `Article` federation and official Matters operation.
 
-**小計：8 人週 ≈ 2 個月**
+### Required G1 Work
+
+| # | Work Item | Person-Weeks | Plain-English Description |
+|---|---|---:|---|
+| W1 | Staging observability drill | 1 | Connect alerts, metrics, logs, and webhooks in a real staging environment and produce a drill report. |
+| W3 | Misskey and GoToSocial interoperability | 1 | Validate two additional major Fediverse implementations beyond Mastodon. |
+| W4a | Long-form Article systematization | 2.5 | Finalize `Article` as the public object type; implement HTML sanitizer policy, summary/excerpt strategy, attachment mapping, and canonical URL handling. |
+| W5 | Paid/encrypted/private boundary enforcement | 1.5 | Add a visibility gate at the static outbox bridge, cover it with tests, and make the admin state inspectable. |
+| W6 | Key rotation flow | 1 | Support key overlap windows, rotation scripts, and operator runbooks. |
+| W2 | Consistency scan | 1 | Reconcile followers and inbound objects, then produce difference reports. |
+| W8 | Incident runbooks and tabletop drill | 1 | Ship launch runbook, incident playbook, rollback plan, and one tabletop drill. |
+
+Subtotal: 9 person-weeks, roughly 2.25 months of engineering plus 2 weeks of review/buffer, for a 3-month G1 delivery window.
+
+### Out of G1 Scope
+
+- W7 legacy field cleanup: useful technical debt, but not launch-critical.
+- Prometheus, OTLP, and PagerDuty exporters: webhooks are sufficient until the staging drill proves otherwise.
+- Multi-instance registry: reserved for G3.
+- Real `matters.town` frontend integration: reserved for G2.
+
+### Hidden G1 Prerequisites
+
+Matters must provide:
+
+- A staging environment: one VM, one subdomain, and TLS.
+- An `ipns-site-generator` test bundle.
+- One test Matters author identity.
+- Two or three real author accounts for W3 interoperability trials, if available.
 
 ---
 
-## 六、時間軸總覽
+## 4. G2 Work Breakdown
 
+Detailed G2 planning should be finalized when G2 starts. The current estimate is:
+
+| Phase | Work | Engineering Weeks |
+|---|---|---:|
+| G2-A | Connect real IPNS output instead of fixtures | 2-3 |
+| G2-B | Finalize canonical URL strategy and connect the account system | 4-6 |
+| G2-C | Surface federated interactions in Matters Web/App | 8-12 |
+| G2-D | Pilot alpha with 50-100 invited authors | 4-6 |
+| G2-E | Beta to GA rollout and user migration communication | 4-8 |
+
+Key product decision for G2-B:
+
+- Option A: `acct:user@matters.town`. This has the strongest brand and user recognition, but requires touching the main site's WebFinger path.
+- Option B: `acct:user@webf.matters.town`. This is easier to isolate and switch off, but splits the public identity.
+
+Decision: use Option A for the long-term canonical identity. Earlier notes considered a B-to-A migration path, but the current decision is to implement `acct:user@matters.town` directly when G2 starts.
+
+---
+
+## 5. G3 Work Breakdown
+
+| Phase | Work | Engineering Weeks |
+|---|---|---:|
+| G3-A | Implement Stage 06: instance registry, per-instance config, and namespace isolation | 3 |
+| G3-B | Deploy second test instance and run black-box acceptance | 2 |
+| G3-C | Make launch harness rerunnable across discovery, follow, social, boundary, and moderation checks | 2 |
+| G3-D | Package documentation and reference deployment | 1 |
+
+Subtotal: 8 person-weeks, roughly 2 months.
+
+---
+
+## 6. Timeline
+
+```text
+2026  | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec | Jan 2027 |
+G1    |====================|                                      |
+G2    |                    |=================================     |
+G3    |                                |=============             |
 ```
-2026  │ May │ Jun │ Jul │ Aug │ Sep │ Oct │ Nov │ Dec │ Jan27 │
-G1    │████████████████████│                                   │
-G2    │                    │█████████████████████████████████  │
-G3    │                                │█████████████          │
-```
 
-**關鍵里程碑**：
-- 2026-05 月底：W1 + W3 完成，對外可宣告「三方互通驗證通過」
-- 2026-07 月底：G1 完工，reference release 發佈；grant 期中交付節點
-- 2026-10：G2 pilot alpha（首批作者試跑）
-- 2026-11：G3 完工，第二 instance 驗收
-- 2026-12 ~ 2027-01：G2 GA；grant 結案
+Key milestones:
+
+- End of May 2026: W1 and W3 complete; Matters can state that multi-implementation interoperability checks have passed.
+- End of July 2026: G1 complete; reference release published; grant mid-point delivery milestone.
+- October 2026: G2 pilot alpha with the first selected authors.
+- November 2026: G3 complete; second instance accepted.
+- December 2026 to January 2027: G2 general availability and grant closeout.
 
 ---
 
-## 七、總成本估計
+## 7. Cost Estimate
 
-| 項目 | 工程週 | 成本（NT$） | 成本（EUR） | 資金來源 |
-|---|---|---|---|---|
-| G1 | 9 + buffer | 450k–600k | €13k–17k | Grant + Matters 自籌 |
-| G2 | 22–35 | 2.0M–3.0M | €55k–85k | Matters 產品投資 |
-| G3 | 8 | 300k–400k | €8k–12k | Grant + Matters 自籌 |
-| **合計** | **39–52** | **NT$2.8M–4.0M** | **€76k–114k** | |
+| Item | Engineering Weeks | Cost (NT$) | Cost (EUR) | Funding Source |
+|---|---:|---:|---:|---|
+| G1 | 9 plus buffer | 450k-600k | EUR 13k-17k | Grant plus Matters co-funding |
+| G2 | 22-35 | 2.0M-3.0M | EUR 55k-85k | Matters product investment |
+| G3 | 8 | 300k-400k | EUR 8k-12k | Grant plus Matters co-funding |
+| Total | 39-52 | NT$2.8M-4.0M | EUR 76k-114k | Mixed |
 
-**Grant 可申請範圍（G1 + G3 + 文件/釋出）**：約 €30k–35k，仍在 NLnet NGI Fediversity / Commons 常見核銷範圍內。
+Grant-suitable scope: G1, G3, documentation, release packaging, and interoperability validation. A realistic grant request is approximately EUR 30k-35k, within the common range for NLnet NGI Fediversity / Commons-style public-interest infrastructure work.
 
 ---
 
-## 八、產品決策（已定）
+## 8. Product Decisions
 
-五題均於 **2026-04-25** 由 mashbean（總經理）拍板，詳見 [decisions/](decisions/)。
+The following decisions were made on 2026-04-25 by mashbean, General Manager of Matters. See `decisions/` for the original decision notes.
 
-| # | 主題 | 決議 | 影響工作項目 |
+| # | Topic | Decision | Affected Work |
 |---|---|---|---|
-| 01 | Canonical URL 策略 | **A** · `acct:user@matters.town` | G2-B |
-| 02 | Article HTML Sanitizer | **C** · 中道 + ipfs.io gateway + 附原始連結 | W4a |
-| 03 | 付費文外部呈現 | **A** · 完全隱形 | W5 |
-| 04 | 既有使用者聯邦化採用 | **C + D** · 階段 opt-in × per-article 細緻度 | G2-D / G2-E |
-| 05 | gateway-core 倉庫位置 | **C → B** · 個人倉庫先行，G2 啟動後遷移；AGPL-3.0；無 CLA | G2-A |
+| 01 | Canonical URL strategy | Use `acct:user@matters.town` | G2-B |
+| 02 | Article HTML sanitizer | Balanced sanitizer policy; use `ipfs.io` gateway for IPFS links; include original Matters link | W4a |
+| 03 | Paid article external representation | Fully invisible to federation | W5 |
+| 04 | Existing-user federation adoption | Staged opt-in plus per-article granularity | G2-D / G2-E |
+| 05 | Gateway repository location | Public AGPL-3.0 repository under `thematters/matters-fediverse-gateway`; no CLA for the current release | G1 / G2-A |
 
-**對工作項目的具體衝擊**：
-- W4a sanitizer 白名單按 C 實作；IPFS hash → ipfs.io URL 轉換；末尾自動附「本文於 matters.town 原始連結」
-- W5 visibility gate 簡化為 binary：non-public 一律 drop，不做 preview / 標題卡分支
-- G2-A 啟動前 repo 仍位於 `mashbean/matters-fediverse-gateway`，G2 啟動後 `gh repo transfer` 至 `thematters` org
-- G2-B 帳號系統打通直接走 `acct:user@matters.town`，不再分兩階段
-- G2-D pilot 作者由 Matters 內部人工挑選，名單在 G2-D 啟動前另行決議
-- ToS / 隱私政策修訂在 G2 上線前處理，不在 G1 範圍
+Implementation impact:
 
-**仍待後續處理（非首發阻塞）**：
-- G2 上線前的 ToS / 隱私政策修訂
-- G2-D pilot 作者具體名單
-- 階段 3（全開放）前的法務評估與通知緩衝期
+- W4a sanitizer allowlist follows the balanced policy; IPFS hashes are converted to `ipfs.io` URLs where appropriate; public articles include an original `matters.town` link.
+- W5 visibility gate is binary for the first release: non-public content is dropped and does not produce preview cards or title-only federation objects.
+- G2-A now starts from the public `thematters/matters-fediverse-gateway` repository.
+- G2-B connects the account system directly to `acct:user@matters.town`.
+- G2-D pilot authors will be manually selected by Matters before the pilot starts.
+- Terms of Service and privacy policy updates are handled before G2 production launch, not inside G1.
+
+Still pending, but not blocking the first reference release:
+
+- Terms of Service and privacy policy revisions before G2 launch.
+- Final G2-D pilot author list.
+- Legal review and notification buffer before full open availability.
