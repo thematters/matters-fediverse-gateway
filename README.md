@@ -4,6 +4,7 @@
 
 > **Status**: G1 開發中（單實例 reference release，預計 2026-07 完工）
 > **Demo / Docs**: <https://mashbean.github.io/matters-fediverse-gateway/>
+> **Public demo actor**: `acct:alice@mashbean.github.io`
 
 ---
 
@@ -32,6 +33,15 @@ Matters 是有十年歷史、26 萬註冊使用者的長文平台，已在內部
 - Observability：metrics / alerts / logs webhook 外送 + Slack incoming
 - 與 mastodon.social 完成第一輪黑箱互通驗證
 - 85 組自動化測試通過
+- 公開靜態 ActivityPub prototype endpoints 已上線，可檢查 WebFinger、actor、outbox、Article 與 NodeInfo
+
+公開 demo endpoints：
+
+- WebFinger: <https://mashbean.github.io/.well-known/webfinger?resource=acct:alice@mashbean.github.io>
+- Actor: <https://mashbean.github.io/users/alice.json>
+- Outbox: <https://mashbean.github.io/users/alice/outbox>
+- Article: <https://mashbean.github.io/articles/matters-open-social-demo>
+- NodeInfo: <https://mashbean.github.io/nodeinfo/2.1>
 
 ## G1 路線（2026-05 ~ 2026-07）
 
