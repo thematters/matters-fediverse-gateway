@@ -4,7 +4,8 @@ An open-source ActivityPub gateway that connects Matters' long-form publishing l
 
 > **Status**: G1 in development. Single-instance reference release planned for July 2026.
 > **Demo / docs**: <https://thematters.github.io/matters-fediverse-gateway/>
-> **Public demo actor**: `acct:matters@thematters.github.io`
+> **Live Worker demo**: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev>
+> **Public demo actor**: `acct:matters@matters-fediverse-gateway-demo.matters-lab.workers.dev`
 > **Source**: <https://github.com/thematters/matters-fediverse-gateway>
 
 ## Why
@@ -26,7 +27,18 @@ Matters is a long-running, open-source, interoperable IPFS-protocol publishing s
 
 ## Public demo endpoints
 
-These static endpoints demonstrate the read-side federation surface for a demo actor. They are not a production gateway and do not expose a public POST inbox.
+The live Cloudflare Worker demo serves ActivityPub and NodeInfo JSON with the expected content types:
+
+- WebFinger: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/.well-known/webfinger?resource=acct:matters@matters-fediverse-gateway-demo.matters-lab.workers.dev>
+- Actor: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/users/matters>
+- Outbox: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/users/matters/outbox>
+- Article: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/articles/matters-main-site-open-social-demo>
+- ActivityPub seed manifest: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/seed/activitypub-manifest.json>
+- ActivityPub seed outbox: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/seed/outbox.jsonld>
+- NodeInfo discovery: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/.well-known/nodeinfo>
+- NodeInfo 2.1: <https://matters-fediverse-gateway-demo.matters-lab.workers.dev/nodeinfo/2.1>
+
+These static GitHub Pages endpoints demonstrate the same read-side federation surface and ActivityPub seed bundle for a demo actor. They are not a production gateway and do not expose a public POST inbox.
 
 - WebFinger: <https://thematters.github.io/.well-known/webfinger?resource=acct:matters@thematters.github.io>
 - Actor: <https://thematters.github.io/users/matters.json>
@@ -49,7 +61,7 @@ These static endpoints demonstrate the read-side federation surface for a demo a
 - First Mastodon sandbox black-box interoperability check completed
 - 85 automated tests passing in the latest recorded local verification snapshot
 - Public static ActivityPub prototype endpoints and seed bundle live under `thematters.github.io`
-- Cloudflare Worker edge demo is implemented and passes Wrangler dry-run packaging
+- Cloudflare Worker edge demo is deployed under `matters-lab.workers.dev`
 
 ## G1 roadmap, May-July 2026
 

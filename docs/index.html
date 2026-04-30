@@ -391,7 +391,7 @@
   <span class="badge">Functional demo · in development</span>
   <h1>Bring Matters long-form publishing into the Fediverse.</h1>
   <p class="subtitle">A small, inspectable gateway for Mastodon, Misskey, GoToSocial, and other ActivityPub implementations to discover, read, follow, and interact with public Matters articles.</p>
-  <p class="demo-note">This page uses Matters main-site publishing as the case study. It links to public ActivityPub prototype endpoints plus an ActivityPub seed bundle that models the output expected from <code>thematters/ipns-site-generator</code>. Source code is available in the <a href="https://github.com/thematters/matters-fediverse-gateway">GitHub repository</a>.</p>
+  <p class="demo-note">This page uses Matters main-site publishing as the case study. It links to a live Cloudflare Worker ActivityPub demo, static prototype endpoints, and an ActivityPub seed bundle that models the output expected from <code>thematters/ipns-site-generator</code>. Source code is available in the <a href="https://github.com/thematters/matters-fediverse-gateway">GitHub repository</a>.</p>
 </header>
 
 <section>
@@ -439,21 +439,23 @@
 
 <section>
   <h2>Try the prototype</h2>
-  <p>These public endpoints demonstrate the read-side federation surface. The demo actor is <code>acct:matters@thematters.github.io</code>. The demo article is represented as an ActivityPub <code>Article</code>, not reduced to a short-form note.</p>
+  <p>The live Cloudflare Worker demo demonstrates the read-side federation surface with ActivityPub and NodeInfo JSON served from an edge runtime. The demo actor is <code>acct:matters@matters-fediverse-gateway-demo.matters-lab.workers.dev</code>. The demo article is represented as an ActivityPub <code>Article</code>, not reduced to a short-form note.</p>
   <table>
     <thead><tr><th>Endpoint</th><th>URL</th></tr></thead>
     <tbody>
-      <tr><td>WebFinger</td><td><a href="https://thematters.github.io/.well-known/webfinger?resource=acct:matters@thematters.github.io">/.well-known/webfinger?resource=acct:matters@thematters.github.io</a></td></tr>
-      <tr><td>Actor</td><td><a href="https://thematters.github.io/users/matters.json">/users/matters.json</a></td></tr>
-      <tr><td>Outbox</td><td><a href="https://thematters.github.io/users/matters/outbox">/users/matters/outbox</a></td></tr>
-      <tr><td>Article</td><td><a href="https://thematters.github.io/articles/matters-main-site-open-social-demo">/articles/matters-main-site-open-social-demo</a></td></tr>
-      <tr><td>Seed manifest</td><td><a href="https://thematters.github.io/seed/activitypub-manifest.json">/seed/activitypub-manifest.json</a></td></tr>
-      <tr><td>Seed outbox</td><td><a href="https://thematters.github.io/seed/outbox.jsonld">/seed/outbox.jsonld</a></td></tr>
-      <tr><td>NodeInfo discovery</td><td><a href="https://thematters.github.io/.well-known/nodeinfo">/.well-known/nodeinfo</a></td></tr>
-      <tr><td>NodeInfo 2.1</td><td><a href="https://thematters.github.io/nodeinfo/2.1">/nodeinfo/2.1</a></td></tr>
+      <tr><td>Worker root</td><td><a href="https://matters-fediverse-gateway-demo.matters-lab.workers.dev/">matters-fediverse-gateway-demo.matters-lab.workers.dev</a></td></tr>
+      <tr><td>WebFinger</td><td><a href="https://matters-fediverse-gateway-demo.matters-lab.workers.dev/.well-known/webfinger?resource=acct:matters@matters-fediverse-gateway-demo.matters-lab.workers.dev">/.well-known/webfinger?resource=acct:matters@matters-fediverse-gateway-demo.matters-lab.workers.dev</a></td></tr>
+      <tr><td>Actor</td><td><a href="https://matters-fediverse-gateway-demo.matters-lab.workers.dev/users/matters">/users/matters</a></td></tr>
+      <tr><td>Outbox</td><td><a href="https://matters-fediverse-gateway-demo.matters-lab.workers.dev/users/matters/outbox">/users/matters/outbox</a></td></tr>
+      <tr><td>Article</td><td><a href="https://matters-fediverse-gateway-demo.matters-lab.workers.dev/articles/matters-main-site-open-social-demo">/articles/matters-main-site-open-social-demo</a></td></tr>
+      <tr><td>Seed manifest</td><td><a href="https://matters-fediverse-gateway-demo.matters-lab.workers.dev/seed/activitypub-manifest.json">/seed/activitypub-manifest.json</a></td></tr>
+      <tr><td>Seed outbox</td><td><a href="https://matters-fediverse-gateway-demo.matters-lab.workers.dev/seed/outbox.jsonld">/seed/outbox.jsonld</a></td></tr>
+      <tr><td>NodeInfo discovery</td><td><a href="https://matters-fediverse-gateway-demo.matters-lab.workers.dev/.well-known/nodeinfo">/.well-known/nodeinfo</a></td></tr>
+      <tr><td>NodeInfo 2.1</td><td><a href="https://matters-fediverse-gateway-demo.matters-lab.workers.dev/nodeinfo/2.1">/nodeinfo/2.1</a></td></tr>
     </tbody>
   </table>
-  <p>This static GitHub Pages prototype is not a production service. It does not expose a public POST inbox and does not accept real user content. The repository also includes a Cloudflare Worker edge demo for correct ActivityPub content types, edge routing, and future signed inbox pass-through to <code>gateway-core</code>.</p>
+  <p>The static GitHub Pages prototype remains available for the seed-bundle surface: <a href="https://thematters.github.io/.well-known/webfinger?resource=acct:matters@thematters.github.io">WebFinger</a>, <a href="https://thematters.github.io/users/matters.json">actor</a>, <a href="https://thematters.github.io/users/matters/outbox">outbox</a>, <a href="https://thematters.github.io/articles/matters-main-site-open-social-demo">Article</a>, <a href="https://thematters.github.io/seed/activitypub-manifest.json">seed manifest</a>, <a href="https://thematters.github.io/seed/outbox.jsonld">seed outbox</a>, and <a href="https://thematters.github.io/nodeinfo/2.1">NodeInfo</a>.</p>
+  <p>This is not a production service. It does not accept real user content. The Worker currently demonstrates ActivityPub content types, edge routing, seed bundle exposure, and the future signed inbox pass-through path to <code>gateway-core</code>.</p>
 </section>
 
 <section>
@@ -510,7 +512,7 @@ Mastodon / Misskey / GoToSocial / other Fediverse servers</pre>
   </div>
   <ul>
     <li>Public ActivityPub prototype endpoints are live: WebFinger, actor, outbox, Article, seed bundle, and NodeInfo.</li>
-    <li>Cloudflare Worker edge implementation is included for correct ActivityPub content types, edge routing, and future runtime pass-through.</li>
+    <li>Cloudflare Worker edge implementation is deployed for correct ActivityPub content types, edge routing, seed bundle exposure, and future runtime pass-through.</li>
     <li>85 automated tests passed in the latest recorded local verification snapshot.</li>
     <li>First black-box interoperability check with <code>mastodon.social</code> completed.</li>
     <li>SQLite persistence plus backup, restore, reconcile, and replay tooling are in place.</li>
@@ -557,6 +559,7 @@ Mastodon / Misskey / GoToSocial / other Fediverse servers</pre>
   <h2>Learn more</h2>
   <div class="links">
     <a href="https://github.com/thematters/matters-fediverse-gateway">GitHub repository</a>
+    <a href="https://matters-fediverse-gateway-demo.matters-lab.workers.dev">Live Worker demo</a>
     <a href="https://github.com/thematters/matters-fediverse-gateway/tree/main/gateway-core">gateway-core source</a>
     <a href="https://github.com/thematters/matters-fediverse-gateway/tree/main/cloudflare-worker">Cloudflare Worker source</a>
     <a href="https://github.com/thematters/matters-fediverse-gateway/blob/main/docs/ipns-gateway-cloudflare-plan.md">IPNS gateway plan</a>
@@ -568,7 +571,7 @@ Mastodon / Misskey / GoToSocial / other Fediverse servers</pre>
 
 <footer>
   <p>License: <a href="https://github.com/thematters/matters-fediverse-gateway/blob/main/LICENSE">AGPL-3.0</a> · Maintainer: <a href="https://github.com/thematters">@thematters</a></p>
-  <p>Visual system: Matters Design System 1.5. This page is a prototype overview; the public demo endpoint is <a href="https://thematters.github.io/.well-known/webfinger?resource=acct:matters@thematters.github.io">acct:matters@thematters.github.io</a>.</p>
+  <p>Visual system: Matters Design System 1.5. This page is a prototype overview; the live public demo endpoint is <a href="https://matters-fediverse-gateway-demo.matters-lab.workers.dev/.well-known/webfinger?resource=acct:matters@matters-fediverse-gateway-demo.matters-lab.workers.dev">acct:matters@matters-fediverse-gateway-demo.matters-lab.workers.dev</a>.</p>
 </footer>
 
 </div>

@@ -1,6 +1,7 @@
 name = "matters-fediverse-gateway-demo"
 main = "src/index.js"
 compatibility_date = "2026-04-30"
+account_id = "757aaed316df635d8deb63859258808c"
 workers_dev = true
 
 [vars]
