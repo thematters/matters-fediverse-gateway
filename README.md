@@ -4,7 +4,7 @@ An open-source ActivityPub gateway that connects Matters' long-form publishing l
 
 > **Status**: G1 in development. Single-instance reference release planned for July 2026.
 > **Demo / docs**: <https://thematters.github.io/matters-fediverse-gateway/>
-> **Public demo actor**: `acct:alice@thematters.github.io`
+> **Public demo actor**: `acct:matters@thematters.github.io`
 > **Source**: <https://github.com/thematters/matters-fediverse-gateway>
 
 ## Why
@@ -18,6 +18,7 @@ Matters is a long-running Chinese-language writing platform with more than 260,0
 | Path | Purpose |
 | --- | --- |
 | [`gateway-core/`](gateway-core/) | Node.js runtime for WebFinger, ActivityPub inbox/outbox, HTTP Signatures, followers state, moderation, persistence, and observability |
+| [`cloudflare-worker/`](cloudflare-worker/) | Cloudflare Worker edge demo for ActivityPub content types, route handling, seed bundle exposure, and future `gateway-core` pass-through |
 | [`research/matters-fediverse-compat/`](research/matters-fediverse-compat/) | Research, feasibility notes, ADRs, specs, runtime slices, operator notes, and roadmap |
 | [`docs/tasks/`](docs/tasks/) | Handoff task files for G1 delivery work |
 | [`docs/`](docs/) | GitHub Pages demo and project overview |
@@ -27,10 +28,12 @@ Matters is a long-running Chinese-language writing platform with more than 260,0
 
 These static endpoints demonstrate the read-side federation surface for a demo actor. They are not a production gateway and do not expose a public POST inbox.
 
-- WebFinger: <https://thematters.github.io/.well-known/webfinger?resource=acct:alice@thematters.github.io>
-- Actor: <https://thematters.github.io/users/alice.json>
-- Outbox: <https://thematters.github.io/users/alice/outbox>
-- Article: <https://thematters.github.io/articles/matters-open-social-demo>
+- WebFinger: <https://thematters.github.io/.well-known/webfinger?resource=acct:matters@thematters.github.io>
+- Actor: <https://thematters.github.io/users/matters.json>
+- Outbox: <https://thematters.github.io/users/matters/outbox>
+- Article: <https://thematters.github.io/articles/matters-main-site-open-social-demo>
+- ActivityPub seed manifest: <https://thematters.github.io/seed/activitypub-manifest.json>
+- ActivityPub seed outbox: <https://thematters.github.io/seed/outbox.jsonld>
 - NodeInfo discovery: <https://thematters.github.io/.well-known/nodeinfo>
 - NodeInfo 2.1: <https://thematters.github.io/nodeinfo/2.1>
 
@@ -45,7 +48,8 @@ These static endpoints demonstrate the read-side federation surface for a demo a
 - Observability: metrics, alerts, logs, webhook dispatch, and Slack incoming webhook support
 - First Mastodon sandbox black-box interoperability check completed
 - 85 automated tests passing in the latest recorded local verification snapshot
-- Public static ActivityPub prototype endpoints live under `thematters.github.io`
+- Public static ActivityPub prototype endpoints and seed bundle live under `thematters.github.io`
+- Cloudflare Worker edge demo is implemented and passes Wrangler dry-run packaging
 
 ## G1 roadmap, May-July 2026
 
@@ -79,7 +83,11 @@ Matters main platform
         |
         v
 ipns-site-generator
-static public article bundle / static ActivityPub surface
+static public article bundle / ActivityPub seed bundle
+        |
+        v
+Cloudflare Worker
+edge routing / content types / cached reads / signed POST pass-through
         |
         v
 gateway-core

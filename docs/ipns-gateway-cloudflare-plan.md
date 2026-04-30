@@ -149,6 +149,8 @@ The Worker should not contain federation business logic. Its job is edge routing
 - Add CORS only for safe read endpoints.
 - Hide admin endpoints from the public internet unless explicitly allowed by operator auth.
 
+The repository now includes a deployable Worker demo under `cloudflare-worker/`. It serves a Matters main-site example, exposes the seed bundle shape, and can later forward dynamic POST traffic to `gateway-core` through `GATEWAY_CORE_ORIGIN`.
+
 ## Worker Routes
 
 Read endpoints:
@@ -188,7 +190,8 @@ For ActivityPub reads:
 For inbox POST:
 
 - preserve raw request body
-- preserve `Signature`, `Date`, `Digest`, `Host`, and `Content-Type`
+- preserve `Signature`, `Date`, `Digest`, and `Content-Type`
+- pass the public host through `x-forwarded-host` and `x-original-url`; if the origin verifier requires the literal public `Host`, run `gateway-core` behind a tunnel or origin route that preserves that host
 - reject bodies above the configured size limit
 - do not decompress, reserialize, or normalize JSON at the edge
 - forward `cf-connecting-ip` or a configured client IP header for rate-limit evidence

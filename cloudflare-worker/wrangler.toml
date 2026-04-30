@@ -1,0 +1,8 @@
+name = "matters-fediverse-gateway-demo"
+main = "src/index.js"
+compatibility_date = "2026-04-30"
+workers_dev = true
+
+[vars]
+MATTERS_PROFILE_URL = "https://matters.town"
+PROJECT_DOCS_URL = "https://thematters.github.io/matters-fediverse-gateway/"

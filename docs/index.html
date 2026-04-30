@@ -21,8 +21,9 @@
     --space-sp64: 64px;
     --space-sp80: 80px;
     --font-family-mono: "SF Mono", Menlo, Consolas, monospace;
-    --radius-card: 16px;
+    --radius-card: 8px;
     --radius-pill: 999px;
+    --space-sp20: 20px;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -56,7 +57,7 @@
   .brand .divider{color:var(--color-grey-grey-light);font-weight:300}
   .brand .product{
     font-size:13px;line-height:18px;font-weight:500;
-    color:var(--color-grey-grey-darker);letter-spacing:.04em;
+    color:var(--color-grey-grey-darker);letter-spacing:0;
   }
 
   /* hero */
@@ -66,13 +67,13 @@
     padding:4px var(--space-sp10);
     background:var(--color-primary-100);color:var(--color-primary-700);
     border-radius:var(--radius-pill);
-    font-size:12px;line-height:18px;font-weight:600;letter-spacing:.08em;
+    font-size:12px;line-height:18px;font-weight:600;letter-spacing:0;
     text-transform:uppercase;
     margin-bottom:var(--space-sp16);
   }
   .hero h1{
     font-family:var(--font-family-reading);
-    font-size:32px;line-height:54px;letter-spacing:1.2px;
+    font-size:32px;line-height:54px;letter-spacing:0;
     font-weight:600;
     margin:0 0 var(--space-sp12);
     color:var(--color-grey-black);
@@ -103,7 +104,7 @@
   section{margin-bottom:var(--space-sp48)}
   h2{
     font-family:var(--font-family-ui);
-    font-size:24px;line-height:36px;font-weight:600;letter-spacing:-0.005em;
+    font-size:24px;line-height:36px;font-weight:600;letter-spacing:0;
     margin:0 0 var(--space-sp16);padding-bottom:var(--space-sp8);
     color:var(--color-grey-black);
     border-bottom:1px solid var(--color-grey-grey-light);
@@ -220,6 +221,129 @@
   .card p{margin:0;font-size:14px;line-height:22px;color:var(--color-grey-grey-darker)}
   .card code{font-size:12px}
 
+  /* visual flow */
+  .flow{
+    display:grid;
+    grid-template-columns:repeat(5, minmax(0, 1fr));
+    gap:var(--space-sp10);
+    margin:var(--space-sp20) 0 var(--space-sp16);
+  }
+  @media (max-width:760px){.flow{grid-template-columns:1fr}}
+  .flow-step{
+    min-height:168px;
+    border:1px solid var(--color-grey-grey-light);
+    border-radius:var(--radius-card);
+    padding:var(--space-sp14);
+    background:var(--color-grey-white);
+    display:flex;
+    flex-direction:column;
+    gap:var(--space-sp8);
+    position:relative;
+  }
+  .flow-step::after{
+    content:"";
+    position:absolute;
+    right:-9px;
+    top:50%;
+    width:16px;
+    height:1px;
+    background:var(--color-grey-grey-light);
+  }
+  .flow-step:last-child::after{display:none}
+  @media (max-width:760px){
+    .flow-step{min-height:0}
+    .flow-step::after{
+      right:auto;
+      top:auto;
+      left:24px;
+      bottom:-9px;
+      width:1px;
+      height:16px;
+    }
+  }
+  .flow-icon{
+    width:36px;
+    height:36px;
+    border-radius:8px;
+    background:var(--color-primary-0);
+    color:var(--color-brand-new-purple);
+    display:grid;
+    place-items:center;
+  }
+  .flow-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .flow-step h3{
+    margin:0;
+    font-size:15px;
+    line-height:22px;
+  }
+  .flow-step p{
+    margin:0;
+    font-size:13px;
+    line-height:20px;
+    color:var(--color-grey-grey-darker);
+  }
+  .flow-step code{font-size:11px}
+
+  .effect-strip{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:var(--space-sp12);
+    margin:var(--space-sp16) 0;
+  }
+  @media (max-width:640px){.effect-strip{grid-template-columns:1fr}}
+  .effect{
+    border:1px solid var(--color-grey-grey-light);
+    border-radius:var(--radius-card);
+    padding:var(--space-sp14);
+    background:var(--color-grey-grey-lighter);
+  }
+  .effect strong{
+    display:block;
+    font-size:14px;
+    line-height:22px;
+    margin-bottom:var(--space-sp4);
+  }
+  .effect span{
+    display:block;
+    font-size:13px;
+    line-height:20px;
+    color:var(--color-grey-grey-darker);
+  }
+
+  .bundle-list{
+    display:grid;
+    gap:var(--space-sp8);
+    margin:var(--space-sp16) 0;
+  }
+  .bundle-row{
+    display:grid;
+    grid-template-columns:190px 1fr;
+    gap:var(--space-sp12);
+    align-items:start;
+    border-bottom:1px solid var(--color-grey-grey-light);
+    padding:var(--space-sp10) 0;
+  }
+  @media (max-width:640px){.bundle-row{grid-template-columns:1fr}}
+  .bundle-row strong{
+    font-size:14px;
+    line-height:22px;
+  }
+  .bundle-row span{
+    font-size:14px;
+    line-height:22px;
+    color:var(--color-grey-grey-darker);
+  }
+
+  .callout{
+    border:1px solid var(--color-secondary-200);
+    border-radius:var(--radius-card);
+    padding:var(--space-sp14) var(--space-sp16);
+    background:var(--color-secondary-0);
+    font-size:14px;
+    line-height:22px;
+    color:var(--color-grey-black);
+  }
+
   /* link grid */
   .links{
     display:flex;flex-wrap:wrap;gap:var(--space-sp8) var(--space-sp16);
@@ -266,50 +390,110 @@
 <header class="hero">
   <span class="badge">Functional demo · in development</span>
   <h1>Bring Matters long-form publishing into the Fediverse.</h1>
-  <p class="subtitle">A small, inspectable gateway for Mastodon, Misskey, GoToSocial, and other ActivityPub implementations to discover, read, follow, and interact with Matters authors.</p>
-  <p class="demo-note">This page links to public ActivityPub prototype endpoints: WebFinger, actor, outbox, Article, and NodeInfo. The full bidirectional gateway runtime is still in G1 development; the current demo validates how public long-form articles can be discovered and represented. Source code is available in the <a href="https://github.com/thematters/matters-fediverse-gateway">GitHub repository</a>.</p>
+  <p class="subtitle">A small, inspectable gateway for Mastodon, Misskey, GoToSocial, and other ActivityPub implementations to discover, read, follow, and interact with public Matters articles.</p>
+  <p class="demo-note">This page uses Matters main-site publishing as the case study. It links to public ActivityPub prototype endpoints plus an ActivityPub seed bundle that models the output expected from <code>thematters/ipns-site-generator</code>. Source code is available in the <a href="https://github.com/thematters/matters-fediverse-gateway">GitHub repository</a>.</p>
 </header>
 
 <section>
   <h2>What it is</h2>
   <p>Matters is a long-running Chinese-language writing platform with more than 260,000 registered users. The Fediverse is an open social network of interoperable servers and applications, including Mastodon, Misskey, GoToSocial, Threads, and others.</p>
-  <p>Matters Fediverse Gateway connects those two worlds. It lets Fediverse users follow Matters authors, read full public long-form articles as ActivityPub <code>Article</code> objects, reply, like, and boost. Those interactions can flow back into Matters. Paid articles, encrypted articles, private content, and messages stay outside federation.</p>
+  <p>Matters Fediverse Gateway connects those two worlds. It lets Fediverse users follow Matters publishing, read full public long-form articles as ActivityPub <code>Article</code> objects, reply, like, and boost. Those interactions can flow back into Matters. Paid articles, encrypted articles, private content, and messages stay outside federation.</p>
+</section>
+
+<section>
+  <h2>Matters main-site flow</h2>
+  <p>The concrete case is the Matters main site. A public article starts on <code>matters.town</code>, moves through the IPFS/IPNS-oriented static publisher, becomes an ActivityPub seed bundle, and is then canonicalized by the gateway for discovery and interaction.</p>
+  <div class="flow" aria-label="Matters publishing to Fediverse flow">
+    <div class="flow-step">
+      <span class="flow-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg></span>
+      <h3>Matters public article</h3>
+      <p>Author publishes a public long-form article on <code>matters.town</code>.</p>
+    </div>
+    <div class="flow-step">
+      <span class="flow-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5"/></svg></span>
+      <h3>IPNS static output</h3>
+      <p><code>ipns-site-generator</code> emits durable public article files and feeds.</p>
+    </div>
+    <div class="flow-step">
+      <span class="flow-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5z"/><path d="M14 4v5h5M8 13h8M8 17h6"/></svg></span>
+      <h3>ActivityPub seed bundle</h3>
+      <p>The static layer emits <code>manifest</code>, seed actor, and seed outbox.</p>
+    </div>
+    <div class="flow-step">
+      <span class="flow-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M7 7v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7"/><path d="M9 7V5h6v2"/></svg></span>
+      <h3>Gateway runtime</h3>
+      <p><code>gateway-core</code> owns identity, inbox, delivery, moderation, and recovery.</p>
+    </div>
+    <div class="flow-step">
+      <span class="flow-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/></svg></span>
+      <h3>Fediverse reach</h3>
+      <p>Fediverse users discover, follow, read, reply, like, and boost.</p>
+    </div>
+  </div>
+  <div class="effect-strip">
+    <div class="effect"><strong>For writers</strong><span>Long-form work gets social reach without surrendering archive durability.</span></div>
+    <div class="effect"><strong>For readers</strong><span>Articles appear inside existing Fediverse clients as first-class <code>Article</code> objects.</span></div>
+    <div class="effect"><strong>For operators</strong><span>Moderation, delivery state, keys, and recovery stay in a dedicated runtime.</span></div>
+  </div>
 </section>
 
 <section>
   <h2>Try the prototype</h2>
-  <p>These public endpoints demonstrate the read-side federation surface. The demo actor is <code>acct:alice@thematters.github.io</code>. The demo article is represented as an ActivityPub <code>Article</code>, not reduced to a short-form note.</p>
+  <p>These public endpoints demonstrate the read-side federation surface. The demo actor is <code>acct:matters@thematters.github.io</code>. The demo article is represented as an ActivityPub <code>Article</code>, not reduced to a short-form note.</p>
   <table>
     <thead><tr><th>Endpoint</th><th>URL</th></tr></thead>
     <tbody>
-      <tr><td>WebFinger</td><td><a href="https://thematters.github.io/.well-known/webfinger?resource=acct:alice@thematters.github.io">/.well-known/webfinger?resource=acct:alice@thematters.github.io</a></td></tr>
-      <tr><td>Actor</td><td><a href="https://thematters.github.io/users/alice.json">/users/alice.json</a></td></tr>
-      <tr><td>Outbox</td><td><a href="https://thematters.github.io/users/alice/outbox">/users/alice/outbox</a></td></tr>
-      <tr><td>Article</td><td><a href="https://thematters.github.io/articles/matters-open-social-demo">/articles/matters-open-social-demo</a></td></tr>
+      <tr><td>WebFinger</td><td><a href="https://thematters.github.io/.well-known/webfinger?resource=acct:matters@thematters.github.io">/.well-known/webfinger?resource=acct:matters@thematters.github.io</a></td></tr>
+      <tr><td>Actor</td><td><a href="https://thematters.github.io/users/matters.json">/users/matters.json</a></td></tr>
+      <tr><td>Outbox</td><td><a href="https://thematters.github.io/users/matters/outbox">/users/matters/outbox</a></td></tr>
+      <tr><td>Article</td><td><a href="https://thematters.github.io/articles/matters-main-site-open-social-demo">/articles/matters-main-site-open-social-demo</a></td></tr>
+      <tr><td>Seed manifest</td><td><a href="https://thematters.github.io/seed/activitypub-manifest.json">/seed/activitypub-manifest.json</a></td></tr>
+      <tr><td>Seed outbox</td><td><a href="https://thematters.github.io/seed/outbox.jsonld">/seed/outbox.jsonld</a></td></tr>
       <tr><td>NodeInfo discovery</td><td><a href="https://thematters.github.io/.well-known/nodeinfo">/.well-known/nodeinfo</a></td></tr>
       <tr><td>NodeInfo 2.1</td><td><a href="https://thematters.github.io/nodeinfo/2.1">/nodeinfo/2.1</a></td></tr>
     </tbody>
   </table>
-  <p>This is not a production service. It does not expose a public POST inbox and does not accept real user content. The G1 next step is to connect this public surface to the deployable <code>gateway-core</code> runtime and complete staging drills plus multi-implementation interoperability checks.</p>
+  <p>This static GitHub Pages prototype is not a production service. It does not expose a public POST inbox and does not accept real user content. The repository also includes a Cloudflare Worker edge demo for correct ActivityPub content types, edge routing, and future signed inbox pass-through to <code>gateway-core</code>.</p>
+</section>
+
+<section>
+  <h2>ActivityPub seed bundle</h2>
+  <p>The seed bundle is the contract between <code>ipns-site-generator</code> and <code>gateway-core</code>. The static publisher should only emit public data that is safe to federate. The gateway then rewrites that seed into canonical ActivityPub identity and runtime state.</p>
+  <div class="bundle-list">
+    <div class="bundle-row"><strong><code>activitypub-manifest.json</code></strong><span>Declares generator version, source actor, canonical gateway actor, listed files, and the public-only visibility boundary.</span></div>
+    <div class="bundle-row"><strong><code>about.jsonld</code></strong><span>Represents the static source actor before gateway canonicalization. Personal static sites can use this directly; Matters production should use the gateway actor.</span></div>
+    <div class="bundle-row"><strong><code>outbox.jsonld</code></strong><span>Contains public <code>Create</code> activities whose objects are <code>Article</code>, with canonical links back to Matters public articles.</span></div>
+    <div class="bundle-row"><strong>Gateway rewrite</strong><span>Rewrites actor, outbox, followers, audience, and key references to the runtime actor, while preserving article content, summary, tags, attachments, and canonical URL.</span></div>
+  </div>
+  <p class="callout">The public boundary is part of the data contract: paid, encrypted, private, draft, and message-like content must be excluded before the seed bundle is generated.</p>
 </section>
 
 <section>
   <h2>Architecture</h2>
-  <pre class="ascii">┌─────────────────────┐         ┌─────────────────────┐
-│   Matters platform  │         │ ipns-site-generator │
-│   (matters.town)    │ ──────▶ │  static ActivityPub │
-└─────────────────────┘         │  WebFinger / outbox │
-                                └──────────┬──────────┘
-                                           │ static bundle
-                                           ▼
-                                ┌─────────────────────┐
-   ◀─── inbound social ────────  │   gateway-core      │  ── outbound Article ─▶
-   Mastodon / Misskey           │   (this repo)       │       Fediverse
-   GoToSocial / etc.            │                     │
-                                │  inbox / signatures │
-                                │  followers state    │
-                                │  moderation / ops   │
-                                └─────────────────────┘</pre>
+  <pre class="ascii">matters.town public article
+        |
+        v
+ipns-site-generator
+        |
+        +-- HTML / RSS / JSON Feed / IPFS-IPNS output
+        |
+        +-- ActivityPub seed bundle
+              |
+              v
+Cloudflare Worker edge
+        |
+        +-- WebFinger / NodeInfo / cached actor reads
+        |
+        +-- signed inbox pass-through
+              |
+              v
+gateway-core runtime
+        |
+        +-- HTTP signatures / followers / delivery queue
+        +-- moderation / audit / alerts / recovery
+              |
+              v
+Mastodon / Misskey / GoToSocial / other Fediverse servers</pre>
   <p><strong>Static + dynamic split</strong>: public article output remains durable through the IPFS/IPNS-oriented publishing layer. The gateway handles the dynamic social layer: discovery, inbox handling, followers, delivery state, moderation, and recovery. The proposed integration contract and Worker deployment path are documented in the <a href="https://github.com/thematters/matters-fediverse-gateway/blob/main/docs/ipns-gateway-cloudflare-plan.md">IPNS gateway plan</a>.</p>
 </section>
 
@@ -325,7 +509,8 @@
     <span class="label">Stage 07</span><span class="name">Launch Readiness</span><span class="status todo">specified</span>
   </div>
   <ul>
-    <li>Public ActivityPub prototype endpoints are live: WebFinger, actor, outbox, Article, and NodeInfo.</li>
+    <li>Public ActivityPub prototype endpoints are live: WebFinger, actor, outbox, Article, seed bundle, and NodeInfo.</li>
+    <li>Cloudflare Worker edge implementation is included for correct ActivityPub content types, edge routing, and future runtime pass-through.</li>
     <li>85 automated tests passed in the latest recorded local verification snapshot.</li>
     <li>First black-box interoperability check with <code>mastodon.social</code> completed.</li>
     <li>SQLite persistence plus backup, restore, reconcile, and replay tooling are in place.</li>
@@ -373,6 +558,7 @@
   <div class="links">
     <a href="https://github.com/thematters/matters-fediverse-gateway">GitHub repository</a>
     <a href="https://github.com/thematters/matters-fediverse-gateway/tree/main/gateway-core">gateway-core source</a>
+    <a href="https://github.com/thematters/matters-fediverse-gateway/tree/main/cloudflare-worker">Cloudflare Worker source</a>
     <a href="https://github.com/thematters/matters-fediverse-gateway/blob/main/docs/ipns-gateway-cloudflare-plan.md">IPNS gateway plan</a>
     <a href="https://github.com/thematters/matters-fediverse-gateway/tree/main/research/matters-fediverse-compat/01-specs">Engineering specs</a>
     <a href="https://github.com/thematters/matters-fediverse-gateway/blob/main/research/matters-fediverse-compat/05-roadmap/development-plan.md">Roadmap</a>
@@ -382,7 +568,7 @@
 
 <footer>
   <p>License: <a href="https://github.com/thematters/matters-fediverse-gateway/blob/main/LICENSE">AGPL-3.0</a> · Maintainer: <a href="https://github.com/thematters">@thematters</a></p>
-  <p>Visual system: Matters Design System 1.5. This page is a prototype overview; the public demo endpoint is <a href="https://thematters.github.io/.well-known/webfinger?resource=acct:alice@thematters.github.io">acct:alice@thematters.github.io</a>.</p>
+  <p>Visual system: Matters Design System 1.5. This page is a prototype overview; the public demo endpoint is <a href="https://thematters.github.io/.well-known/webfinger?resource=acct:matters@thematters.github.io">acct:matters@thematters.github.io</a>.</p>
 </footer>
 
 </div>
