@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Matters Fediverse Gateway</title>
-<meta name="description" content="把 Matters 長文出版層接上 Fediverse 的開源 gateway。讓 Mastodon、Misskey、GoToSocial 使用者能追蹤、閱讀、互動，同時保護付費內容不外流。">
+<meta name="description" content="An open-source ActivityPub gateway that connects Matters long-form publishing to the Fediverse while keeping paid, encrypted, and private content outside federation.">
 <meta property="og:title" content="Matters Fediverse Gateway">
-<meta property="og:description" content="長文 × ActivityPub。Matters 對 Fediverse 開放的開源 gateway。">
+<meta property="og:description" content="Long-form publishing x ActivityPub. An open gateway from Matters to the Fediverse.">
 <meta property="og:type" content="website">
 <link rel="icon" type="image/svg+xml" href="static/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -264,124 +264,125 @@
 </div>
 
 <header class="hero">
-  <span class="badge">Functional demo · 開發中</span>
-  <h1>把 Matters 的長文，接上 Fediverse 這張聯邦網。</h1>
-  <p class="subtitle">一座小而清楚的「大使館」，讓 Mastodon、Misskey、GoToSocial 的使用者讀到、追蹤、互動。</p>
-  <p class="demo-note">本頁連到一組可公開讀取的 ActivityPub prototype endpoints：WebFinger、actor、outbox、Article 與 NodeInfo。完整雙向 gateway runtime 仍在 G1 開發中；目前 demo 驗證的是公開長文如何被 discover 與表示。完整原始碼請見 <a href="https://github.com/mashbean/matters-fediverse-gateway">GitHub repo</a>。</p>
+  <span class="badge">Functional demo · in development</span>
+  <h1>Bring Matters long-form publishing into the Fediverse.</h1>
+  <p class="subtitle">A small, inspectable gateway for Mastodon, Misskey, GoToSocial, and other ActivityPub implementations to discover, read, follow, and interact with Matters authors.</p>
+  <p class="demo-note">This page links to public ActivityPub prototype endpoints: WebFinger, actor, outbox, Article, and NodeInfo. The full bidirectional gateway runtime is still in G1 development; the current demo validates how public long-form articles can be discovered and represented. Source code is available in the <a href="https://github.com/thematters/matters-fediverse-gateway">GitHub repository</a>.</p>
 </header>
 
 <section>
-  <h2>這是什麼</h2>
-  <p>Matters 是有十年歷史、超過 26 萬註冊使用者的中文長文平台。Fediverse（聯邦宇宙）則是一張開放的社交聯邦網，Mastodon、Misskey、Threads、GoToSocial 都是它的一部分。</p>
-  <p>這個 gateway 在兩者之間搭一座大使館：讓聯邦上的使用者能追蹤 Matters 作者、看到完整長文（以 <code>Article</code> 型別，不縮成微網誌摘要）、按愛心、留言、轉發。這些互動會回傳到 Matters 站內。同時，付費文、加密文、站內私訊不會外流。</p>
+  <h2>What it is</h2>
+  <p>Matters is a long-running Chinese-language writing platform with more than 260,000 registered users. The Fediverse is an open social network of interoperable servers and applications, including Mastodon, Misskey, GoToSocial, Threads, and others.</p>
+  <p>Matters Fediverse Gateway connects those two worlds. It lets Fediverse users follow Matters authors, read full public long-form articles as ActivityPub <code>Article</code> objects, reply, like, and boost. Those interactions can flow back into Matters. Paid articles, encrypted articles, private content, and messages stay outside federation.</p>
 </section>
 
 <section>
   <h2>Try the prototype</h2>
-  <p>這組公開 endpoint 展示 Matters Fediverse Gateway 的 read-side federation surface。測試 actor 是 <code>acct:alice@mashbean.github.io</code>，長文以 ActivityPub <code>Article</code> 表示，而不是降級成短訊息。</p>
+  <p>These public endpoints demonstrate the read-side federation surface. The demo actor is <code>acct:alice@thematters.github.io</code>. The demo article is represented as an ActivityPub <code>Article</code>, not reduced to a short-form note.</p>
   <table>
     <thead><tr><th>Endpoint</th><th>URL</th></tr></thead>
     <tbody>
-      <tr><td>WebFinger</td><td><a href="https://mashbean.github.io/.well-known/webfinger?resource=acct:alice@mashbean.github.io">/.well-known/webfinger?resource=acct:alice@mashbean.github.io</a></td></tr>
-      <tr><td>Actor</td><td><a href="https://mashbean.github.io/users/alice.json">/users/alice.json</a></td></tr>
-      <tr><td>Outbox</td><td><a href="https://mashbean.github.io/users/alice/outbox">/users/alice/outbox</a></td></tr>
-      <tr><td>Article</td><td><a href="https://mashbean.github.io/articles/matters-open-social-demo">/articles/matters-open-social-demo</a></td></tr>
-      <tr><td>NodeInfo discovery</td><td><a href="https://mashbean.github.io/.well-known/nodeinfo">/.well-known/nodeinfo</a></td></tr>
-      <tr><td>NodeInfo 2.1</td><td><a href="https://mashbean.github.io/nodeinfo/2.1">/nodeinfo/2.1</a></td></tr>
+      <tr><td>WebFinger</td><td><a href="https://thematters.github.io/.well-known/webfinger?resource=acct:alice@thematters.github.io">/.well-known/webfinger?resource=acct:alice@thematters.github.io</a></td></tr>
+      <tr><td>Actor</td><td><a href="https://thematters.github.io/users/alice.json">/users/alice.json</a></td></tr>
+      <tr><td>Outbox</td><td><a href="https://thematters.github.io/users/alice/outbox">/users/alice/outbox</a></td></tr>
+      <tr><td>Article</td><td><a href="https://thematters.github.io/articles/matters-open-social-demo">/articles/matters-open-social-demo</a></td></tr>
+      <tr><td>NodeInfo discovery</td><td><a href="https://thematters.github.io/.well-known/nodeinfo">/.well-known/nodeinfo</a></td></tr>
+      <tr><td>NodeInfo 2.1</td><td><a href="https://thematters.github.io/nodeinfo/2.1">/nodeinfo/2.1</a></td></tr>
     </tbody>
   </table>
-  <p>這不是完整 production service：目前沒有公開 POST inbox，也不接收真實使用者內容。G1 的下一步是把這個公開 surface 接回可部署的 <code>gateway-core</code> runtime，完成 staging drill 與多實作互通驗證。</p>
+  <p>This is not a production service. It does not expose a public POST inbox and does not accept real user content. The G1 next step is to connect this public surface to the deployable <code>gateway-core</code> runtime and complete staging drills plus multi-implementation interoperability checks.</p>
 </section>
 
 <section>
-  <h2>架構</h2>
+  <h2>Architecture</h2>
   <pre class="ascii">┌─────────────────────┐         ┌─────────────────────┐
-│   Matters 主站      │         │ ipns-site-generator │
-│   (matters.town)    │ ──────▶ │  靜態 ActivityPub   │
+│   Matters platform  │         │ ipns-site-generator │
+│   (matters.town)    │ ──────▶ │  static ActivityPub │
 └─────────────────────┘         │  WebFinger / outbox │
                                 └──────────┬──────────┘
                                            │ static bundle
                                            ▼
                                 ┌─────────────────────┐
-   ◀─── 入站互動 ──────────────  │   gateway-core      │  ── 出站 Article ─▶
+   ◀─── inbound social ────────  │   gateway-core      │  ── outbound Article ─▶
    Mastodon / Misskey           │   (this repo)       │       Fediverse
    GoToSocial / etc.            │                     │
                                 │  inbox / signatures │
                                 │  followers state    │
                                 │  moderation / ops   │
                                 └─────────────────────┘</pre>
-  <p><strong>靜態 + 動態雙層</strong>：文章本身永遠在 IPFS 上，gateway 當機也讀得到；gateway 只負責「互動」這個動態部分。</p>
+  <p><strong>Static + dynamic split</strong>: public article output remains durable through the IPFS/IPNS-oriented publishing layer. The gateway handles the dynamic social layer: discovery, inbox handling, followers, delivery state, moderation, and recovery. The proposed integration contract and Worker deployment path are documented in the <a href="https://github.com/thematters/matters-fediverse-gateway/blob/main/docs/ipns-gateway-cloudflare-plan.md">IPNS gateway plan</a>.</p>
 </section>
 
 <section>
-  <h2>目前進度</h2>
+  <h2>Current status</h2>
   <div class="stage-list">
-    <span class="label">Stage 01</span><span class="name">Instance Platform</span><span class="status done">完成</span>
-    <span class="label">Stage 02</span><span class="name">Identity &amp; Discovery</span><span class="status done">完成</span>
-    <span class="label">Stage 03</span><span class="name">Gateway Core</span><span class="status wip">進行中</span>
-    <span class="label">Stage 04</span><span class="name">Social Interop</span><span class="status wip">進行中</span>
-    <span class="label">Stage 05</span><span class="name">Moderation &amp; Ops</span><span class="status wip">進行中</span>
-    <span class="label">Stage 06</span><span class="name">Multi-Instance Control Plane</span><span class="status todo">規格完成</span>
-    <span class="label">Stage 07</span><span class="name">Launch Readiness</span><span class="status todo">規格完成</span>
+    <span class="label">Stage 01</span><span class="name">Instance Platform</span><span class="status done">done</span>
+    <span class="label">Stage 02</span><span class="name">Identity &amp; Discovery</span><span class="status done">done</span>
+    <span class="label">Stage 03</span><span class="name">Gateway Core</span><span class="status wip">in progress</span>
+    <span class="label">Stage 04</span><span class="name">Social Interop</span><span class="status wip">in progress</span>
+    <span class="label">Stage 05</span><span class="name">Moderation &amp; Ops</span><span class="status wip">in progress</span>
+    <span class="label">Stage 06</span><span class="name">Multi-Instance Control Plane</span><span class="status todo">specified</span>
+    <span class="label">Stage 07</span><span class="name">Launch Readiness</span><span class="status todo">specified</span>
   </div>
   <ul>
-    <li>公開 ActivityPub prototype endpoints 已上線，可檢查 WebFinger、actor、outbox、Article 與 NodeInfo</li>
-    <li>85 組自動化測試通過</li>
-    <li>已與 <code>mastodon.social</code> 完成第一輪黑箱互通驗證</li>
-    <li>SQLite + backup / restore / reconcile / replay 工具鏈到位</li>
-    <li>Webhook 外送：metrics / alerts / logs，含 Slack incoming</li>
+    <li>Public ActivityPub prototype endpoints are live: WebFinger, actor, outbox, Article, and NodeInfo.</li>
+    <li>85 automated tests passed in the latest recorded local verification snapshot.</li>
+    <li>First black-box interoperability check with <code>mastodon.social</code> completed.</li>
+    <li>SQLite persistence plus backup, restore, reconcile, and replay tooling are in place.</li>
+    <li>Webhook dispatch exists for metrics, alerts, logs, and Slack incoming webhooks.</li>
   </ul>
 </section>
 
 <section>
-  <h2>三層目標</h2>
+  <h2>Roadmap</h2>
   <table>
-    <thead><tr><th>目標</th><th>內容</th><th>時程</th></tr></thead>
+    <thead><tr><th>Goal</th><th>Scope</th><th>Timeline</th></tr></thead>
     <tbody>
-      <tr><td><strong>G1</strong></td><td>官方聯邦化基礎版（單實例 reference release，三家實作互通）</td><td>3 個月</td></tr>
-      <tr><td><strong>G2</strong></td><td>Matters 主站正式導入（pilot → beta → GA）</td><td>4–6 個月</td></tr>
-      <tr><td><strong>G3</strong></td><td>多站同源驗證（第二個 instance 上線）</td><td>2 個月</td></tr>
+      <tr><td><strong>G1</strong></td><td>Single-instance reference release with multi-implementation interoperability.</td><td>3 months</td></tr>
+      <tr><td><strong>G2</strong></td><td>Matters production integration: pilot, beta, then general availability.</td><td>4-6 months</td></tr>
+      <tr><td><strong>G3</strong></td><td>Second-instance validation to prove reuse beyond Matters.</td><td>2 months</td></tr>
     </tbody>
   </table>
-  <p>完整藍圖見 <a href="https://github.com/mashbean/matters-fediverse-gateway/blob/main/research/matters-fediverse-compat/05-roadmap/development-plan.md">development-plan</a>。</p>
+  <p>The full roadmap is in <a href="https://github.com/thematters/matters-fediverse-gateway/blob/main/research/matters-fediverse-compat/05-roadmap/development-plan.md">development-plan</a>.</p>
 </section>
 
 <section>
-  <h2>核心技術決策</h2>
+  <h2>Technical decisions</h2>
   <div class="grid2">
     <div class="card">
-      <h3>對外型別 = <code>Article</code></h3>
-      <p>不降級成 <code>Note</code>。長文得到完整 HTML、summary、attachment 的呈現空間，而不是被縮略成微網誌動態。</p>
+      <h3>Object type = <code>Article</code></h3>
+      <p>Long-form work is not downgraded to <code>Note</code>. Articles keep room for HTML, summary, attachments, and canonical links.</p>
     </div>
     <div class="card">
-      <h3>靜態 + inbox bridge</h3>
-      <p>不做完整聯邦伺服器。文章本身走 IPFS，gateway 只承接互動，故障邊界清楚。</p>
+      <h3>Static publishing + inbox bridge</h3>
+      <p>The project is not another full social server. Static publishing handles public article output; the gateway handles social state.</p>
     </div>
     <div class="card">
-      <h3>公開內容邊界程式化</h3>
-      <p>付費 / 加密 / 私訊由 visibility gate 在程式碼層級擋住，不靠規範自律。</p>
+      <h3>Programmed public-content boundary</h3>
+      <p>Paid, encrypted, private, and message-like content is blocked by code-level visibility gates, not by manual convention.</p>
     </div>
     <div class="card">
-      <h3>Container-first 部署</h3>
-      <p>首發提供 reverse proxy / systemd / env 三件組，給小型自架者一條可重現路徑。</p>
+      <h3>Worker-fronted runtime</h3>
+      <p>The first release can put a Cloudflare Worker in front of <code>gateway-core</code> for routing, content types, caching, size limits, and signed inbox pass-through.</p>
     </div>
   </div>
 </section>
 
 <section>
-  <h2>了解更多</h2>
+  <h2>Learn more</h2>
   <div class="links">
-    <a href="https://github.com/mashbean/matters-fediverse-gateway">GitHub Repo</a>
-    <a href="https://github.com/mashbean/matters-fediverse-gateway/tree/main/gateway-core">gateway-core 程式碼</a>
-    <a href="https://github.com/mashbean/matters-fediverse-gateway/tree/main/research/matters-fediverse-compat/01-specs">工程規格</a>
-    <a href="https://github.com/mashbean/matters-fediverse-gateway/blob/main/research/matters-fediverse-compat/05-roadmap/development-plan.md">開發藍圖</a>
+    <a href="https://github.com/thematters/matters-fediverse-gateway">GitHub repository</a>
+    <a href="https://github.com/thematters/matters-fediverse-gateway/tree/main/gateway-core">gateway-core source</a>
+    <a href="https://github.com/thematters/matters-fediverse-gateway/blob/main/docs/ipns-gateway-cloudflare-plan.md">IPNS gateway plan</a>
+    <a href="https://github.com/thematters/matters-fediverse-gateway/tree/main/research/matters-fediverse-compat/01-specs">Engineering specs</a>
+    <a href="https://github.com/thematters/matters-fediverse-gateway/blob/main/research/matters-fediverse-compat/05-roadmap/development-plan.md">Roadmap</a>
     <a href="https://matters.town">Matters.town</a>
   </div>
 </section>
 
 <footer>
-  <p>授權：<a href="https://github.com/mashbean/matters-fediverse-gateway/blob/main/LICENSE">AGPL-3.0</a> · 維護者：<a href="https://github.com/mashbean">@mashbean</a> · 原始研發：Github <a href="https://github.com/thematters">@thematters</a></p>
-  <p>視覺採用 Matters Design System 1.5（Matters 2.0 New Palette）。本頁為 prototype overview；公開 demo endpoint 由 <a href="https://mashbean.github.io/.well-known/webfinger?resource=acct:alice@mashbean.github.io">acct:alice@mashbean.github.io</a> 提供。</p>
+  <p>License: <a href="https://github.com/thematters/matters-fediverse-gateway/blob/main/LICENSE">AGPL-3.0</a> · Maintainer: <a href="https://github.com/thematters">@thematters</a></p>
+  <p>Visual system: Matters Design System 1.5. This page is a prototype overview; the public demo endpoint is <a href="https://thematters.github.io/.well-known/webfinger?resource=acct:alice@thematters.github.io">acct:alice@thematters.github.io</a>.</p>
 </footer>
 
 </div>

@@ -1,63 +1,67 @@
 # Matters Fediverse Gateway
 
-把 Matters 的長文出版層接到 Fediverse 的開源 gateway。讓 Mastodon、Misskey、GoToSocial 上的使用者能追蹤 Matters 作者、看到完整長文、留言互動，同時保護付費 / 加密 / 私訊內容不外流。
+An open-source ActivityPub gateway that connects Matters' long-form publishing layer to the Fediverse. It lets Mastodon, Misskey, GoToSocial, and other ActivityPub users discover Matters authors, read full public articles, and interact through follows, replies, likes, and boosts while paid, encrypted, private, and message-like content stays outside federation.
 
-> **Status**: G1 開發中（單實例 reference release，預計 2026-07 完工）
-> **Demo / Docs**: <https://mashbean.github.io/matters-fediverse-gateway/>
-> **Public demo actor**: `acct:alice@mashbean.github.io`
-
----
+> **Status**: G1 in development. Single-instance reference release planned for July 2026.
+> **Demo / docs**: <https://thematters.github.io/matters-fediverse-gateway/>
+> **Public demo actor**: `acct:alice@thematters.github.io`
+> **Source**: <https://github.com/thematters/matters-fediverse-gateway>
 
 ## Why
 
-Fediverse 的弱點是長文出版。短訊息與時間軸已成熟，但獨立媒體、社群出版者、多語寫作集體仍然缺一條「可自架、有營運控制、能參與聯邦」的技術路線。
+The Fediverse is strong at short-form social interaction, but long-form publishing is still underserved. Independent media groups, civic writers, multilingual communities, and small publishers need durable essays, archive-first publishing, and federated conversation without operating a full general-purpose social server.
 
-Matters 是有十年歷史、26 萬註冊使用者的長文平台，已在內部完成靜態 ActivityPub 輸出與 federation gateway 原型。本專案把這套工作打包成可重用的開源 gateway，讓 Matters 自身導入之外，其他長文出版團隊也能拿去自架。
+Matters is a long-running Chinese-language writing platform with more than 260,000 registered users. Matters already has IPFS/IPNS-oriented publishing work and a static ActivityPub output path. This repository packages the missing dynamic layer: a reusable gateway that handles identity discovery, inbox/outbox flows, delivery state, moderation controls, and operator recovery.
 
-## What's in here
+## What is in this repository
 
-| 路徑 | 內容 |
-|---|---|
-| [`gateway-core/`](gateway-core/) | Node.js 實作：WebFinger、ActivityPub inbox、HTTP Signatures、followers state、moderation、observability |
-| [`research/matters-fediverse-compat/`](research/matters-fediverse-compat/) | 完整研究與規格（feasibility、ADR×6、specs、22 份 runtime slice、ops runbook、roadmap） |
-| [`docs/tasks/`](docs/tasks/) | G1 七項工作的 handoff task 文件 |
+| Path | Purpose |
+| --- | --- |
+| [`gateway-core/`](gateway-core/) | Node.js runtime for WebFinger, ActivityPub inbox/outbox, HTTP Signatures, followers state, moderation, persistence, and observability |
+| [`research/matters-fediverse-compat/`](research/matters-fediverse-compat/) | Research, feasibility notes, ADRs, specs, runtime slices, operator notes, and roadmap |
+| [`docs/tasks/`](docs/tasks/) | Handoff task files for G1 delivery work |
+| [`docs/`](docs/) | GitHub Pages demo and project overview |
+| [`docs/ipns-gateway-cloudflare-plan.md`](docs/ipns-gateway-cloudflare-plan.md) | Integration plan for `ipns-site-generator`, `gateway-core`, and a Cloudflare Worker edge |
 
-## 已完成
+## Public demo endpoints
 
-- Canonical discoverability：WebFinger / NodeInfo / actor / followers / following
-- Follow loop：signed Follow → Accept/Reject、HTTP signature 驗章與簽發
-- Social loop：`Create / Reply / Like / Announce / Undo` 入站持久化、`Create / Like / Announce / Update / Delete` 出站 fan-out
-- Thread reconstruction、`acct:` 遠端 mention 解析
-- Moderation 基線：domain block、actor suspend、legal takedown、rate limit、evidence retention、manual replay
-- Persistence：SQLite + backup / restore / reconcile
-- Observability：metrics / alerts / logs webhook 外送 + Slack incoming
-- 與 mastodon.social 完成第一輪黑箱互通驗證
-- 85 組自動化測試通過
-- 公開靜態 ActivityPub prototype endpoints 已上線，可檢查 WebFinger、actor、outbox、Article 與 NodeInfo
+These static endpoints demonstrate the read-side federation surface for a demo actor. They are not a production gateway and do not expose a public POST inbox.
 
-公開 demo endpoints：
+- WebFinger: <https://thematters.github.io/.well-known/webfinger?resource=acct:alice@thematters.github.io>
+- Actor: <https://thematters.github.io/users/alice.json>
+- Outbox: <https://thematters.github.io/users/alice/outbox>
+- Article: <https://thematters.github.io/articles/matters-open-social-demo>
+- NodeInfo discovery: <https://thematters.github.io/.well-known/nodeinfo>
+- NodeInfo 2.1: <https://thematters.github.io/nodeinfo/2.1>
 
-- WebFinger: <https://mashbean.github.io/.well-known/webfinger?resource=acct:alice@mashbean.github.io>
-- Actor: <https://mashbean.github.io/users/alice.json>
-- Outbox: <https://mashbean.github.io/users/alice/outbox>
-- Article: <https://mashbean.github.io/articles/matters-open-social-demo>
-- NodeInfo: <https://mashbean.github.io/nodeinfo/2.1>
+## Current implementation status
 
-## G1 路線（2026-05 ~ 2026-07）
+- Canonical discoverability: WebFinger, NodeInfo, actor, followers, following
+- Follow loop: signed Follow to Accept/Reject, HTTP Signature verification and signing
+- Social loop: inbound `Create`, `Reply`, `Like`, `Announce`, `Undo`; outbound `Create`, `Like`, `Announce`, `Update`, `Delete`
+- Thread reconstruction and remote `acct:` mention resolution
+- Moderation baseline: domain block, actor suspension, legal takedown, rate limits, evidence retention, manual replay
+- Persistence: SQLite plus backup, restore, reconcile, and replay tooling
+- Observability: metrics, alerts, logs, webhook dispatch, and Slack incoming webhook support
+- First Mastodon sandbox black-box interoperability check completed
+- 85 automated tests passing in the latest recorded local verification snapshot
+- Public static ActivityPub prototype endpoints live under `thematters.github.io`
 
-七項工作：
-1. [W1 真環境值班演習](docs/tasks/matters-g1-w1-staging-observability-drill.md)
-2. [W3 Misskey + GoToSocial 互通](docs/tasks/matters-g1-w3-misskey-gotosocial-interop.md)
-3. [W4a 長文 Article 系統化](docs/tasks/matters-g1-w4a-longform-article-systematization.md)（核心）
-4. [W5 付費 / 私密邊界程式化](docs/tasks/matters-g1-w5-paid-private-boundary-enforcement.md)
-5. [W6 金鑰輪替流程](docs/tasks/matters-g1-w6-key-rotation-flow.md)
-6. [W2 一致性掃描](docs/tasks/matters-g1-w2-consistency-scan.md)
-7. [W8 應變手冊與桌面演練](docs/tasks/matters-g1-w8-incident-runbooks-tabletop.md)
+## G1 roadmap, May-July 2026
 
-完整藍圖：[development-plan](research/matters-fediverse-compat/05-roadmap/development-plan.md)
-五個產品決策：[decisions](research/matters-fediverse-compat/05-roadmap/decisions/)
+The G1 goal is a single-instance reference release that Matters can run, inspect, and later connect to production.
 
-## Quick Start
+1. [W1 staging observability drill](docs/tasks/matters-g1-w1-staging-observability-drill.md)
+2. [W3 Misskey and GoToSocial interoperability](docs/tasks/matters-g1-w3-misskey-gotosocial-interop.md)
+3. [W4a long-form Article systematization](docs/tasks/matters-g1-w4a-longform-article-systematization.md)
+4. [W5 paid/private boundary enforcement](docs/tasks/matters-g1-w5-paid-private-boundary-enforcement.md)
+5. [W6 key rotation flow](docs/tasks/matters-g1-w6-key-rotation-flow.md)
+6. [W2 consistency scan](docs/tasks/matters-g1-w2-consistency-scan.md)
+7. [W8 incident runbooks and tabletop drill](docs/tasks/matters-g1-w8-incident-runbooks-tabletop.md)
+
+The full roadmap is in [`research/matters-fediverse-compat/05-roadmap/development-plan.md`](research/matters-fediverse-compat/05-roadmap/development-plan.md).
+
+## Quick start
 
 ```bash
 cd gateway-core
@@ -66,33 +70,33 @@ npm test
 npm start
 ```
 
-預設讀 `config/dev.instance.json`，狀態寫到 `runtime/dev-state.sqlite`。
-詳見 [gateway-core/README.md](gateway-core/README.md)。
+The default development runtime reads `config/dev.instance.json` and writes state to `runtime/dev-state.sqlite`.
 
 ## Architecture
 
+```text
+Matters main platform
+        |
+        v
+ipns-site-generator
+static public article bundle / static ActivityPub surface
+        |
+        v
+gateway-core
+dynamic inbox / followers state / delivery queue / moderation / ops
+        |
+        v
+Mastodon, Misskey, GoToSocial, and other ActivityPub implementations
 ```
-┌─────────────────────┐         ┌─────────────────────┐
-│   Matters 主站       │         │ ipns-site-generator │
-│   (matters.town)     │ ──────> │  靜態 ActivityPub    │
-└─────────────────────┘         │  WebFinger / outbox  │
-                                └──────────┬──────────┘
-                                            │ static bundle
-                                            ▼
-                                ┌─────────────────────┐
-              入站互動           │   gateway-core      │     出站 Article
-       ◀─────────────────────── │   (this repo)        │ ─────────────────▶
-       Mastodon / Misskey       │                      │     Fediverse
-       GoToSocial / etc.        │  inbox / signatures  │
-                                │  followers state     │
-                                │  moderation / ops    │
-                                └──────────────────────┘
-```
+
+`ipns-site-generator` remains responsible for public article output and static publishing. `gateway-core` handles dynamic federation behavior: discovery, inbox handling, signatures, followers, delivery state, moderation operations, and recovery.
+
+For the proposed static bundle contract and edge deployment path, see [`docs/ipns-gateway-cloudflare-plan.md`](docs/ipns-gateway-cloudflare-plan.md).
 
 ## License
 
-[AGPL-3.0](LICENSE) — 與 Mastodon、Misskey、GoToSocial 等聯邦伺服器一致。
+[AGPL-3.0](LICENSE), aligned with Mastodon, Misskey, GoToSocial, and other network-facing Fediverse software.
 
 ## Acknowledgements
 
-原始研發：Github [@thematters](https://github.com/thematters)。靜態發佈層基於 [`thematters/ipns-site-generator`](https://github.com/thematters/ipns-site-generator)。
+Original research and development by [@thematters](https://github.com/thematters). The static publishing layer builds on [`thematters/ipns-site-generator`](https://github.com/thematters/ipns-site-generator).
