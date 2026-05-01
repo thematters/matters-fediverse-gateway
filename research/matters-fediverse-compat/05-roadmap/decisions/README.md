@@ -1,8 +1,8 @@
 # 待決策題索引
 
-進入 G1 / G2 各階段前需要拍板的產品決策。每份備忘列出選項、利弊、建議與待確認問題。
+進入 G1 / G2 各階段前需要拍板的產品與運維決策。每份備忘列出選項、利弊、建議與待確認問題。
 
-五題均於 **2026-04-25** 由 mashbean（Matters 總經理）拍板。
+01-05 於 **2026-04-25** 由 mashbean（Matters 總經理）拍板；06 於 **2026-05-01** 補充 runtime state source of truth。
 
 | # | 主題 | 卡哪個工作項目 | 決議 |
 |---|---|---|---|
@@ -11,3 +11,4 @@
 | [03](03-paywall-preview-policy.md) | 付費文外部呈現策略 | W5 | **A** · 完全隱形 |
 | [04](04-opt-in-vs-opt-out.md) | 既有使用者聯邦化採用模式 | G2-D / G2-E | **C + D** · 階段 opt-in × per-article 細緻度 |
 | [05](05-monorepo-vs-sibling.md) | gateway-core 倉庫位置與授權 | G2-A | **C → B** · 個人倉庫先行，G2 啟動後遷移；AGPL-3.0；無 CLA |
+| [06](06-runtime-state-source-of-truth.md) | Runtime state source of truth | W2 / G1-B3 | SQLite 為主；file state 為輔助 / migration 檢查 |

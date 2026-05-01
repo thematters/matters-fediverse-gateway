@@ -27,7 +27,9 @@
 5. 先跑 consistency scan
    - `npm run scan:consistency`
    - 檢查 JSON 與 markdown 報表中的 followers、inbound objects、engagements 差異
-   - 預設只做 dry-run；只有確認來源與目標後才使用 `-- --repair --repair-target <file|sqlite>`
+   - 預設只做 dry-run
+   - SQLite 是 runtime source of truth；一般 repair 方向是 `-- --repair --repair-target file`
+   - 只有在明確確認 file state backup 是可信來源時，才可用 `-- --repair --repair-target sqlite`
 6. 跑 reconciliation
    - 對 drill runtime 執行 `POST /admin/runtime/storage/reconcile`
    - 確認 `backfilledDeadLetters`、`orphanedDeadLetters`
@@ -56,6 +58,7 @@
 ## Failure Handling
 
 - 如果 restore 失敗，停止 drill，保留 source backup 與錯誤輸出
+- 如果 consistency scan 顯示 file / SQLite 差異，先保留報表；預設信任 SQLite，不要把 JSON file state 自動覆蓋回 SQLite
 - 如果 reconciliation 出現異常 orphaned records，先封存 bundle，再回頭分析資料一致性
 - 如果 replay 失敗，確認是不是 policy 阻擋、target domain block 或 remote delivery 失敗，不要直接重覆 replay
 
