@@ -8,6 +8,26 @@ workers_dev = true
 pattern = "gateway-demo.matters.town"
 custom_domain = true
 
+[[routes]]
+pattern = "matters.town/.well-known/webfinger*"
+zone_name = "matters.town"
+
+[[routes]]
+pattern = "matters.town/.well-known/host-meta"
+zone_name = "matters.town"
+
+[[routes]]
+pattern = "matters.town/.well-known/nodeinfo"
+zone_name = "matters.town"
+
+[[routes]]
+pattern = "matters.town/nodeinfo/*"
+zone_name = "matters.town"
+
+[[routes]]
+pattern = "matters.town/ap/*"
+zone_name = "matters.town"
+
 [vars]
 MATTERS_PROFILE_URL = "https://matters.town"
 PROJECT_DOCS_URL = "https://thematters.github.io/matters-fediverse-gateway/"

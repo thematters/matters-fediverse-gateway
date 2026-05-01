@@ -137,7 +137,7 @@ For G1 this can remain read-through. For G2 it can materialize normalized Articl
 
 ## Cloudflare Worker Role
 
-Use a Worker as the public edge for a domain such as `fediverse.matters.town` or `gateway.matters.town`.
+Use a Worker as the public edge for the canonical `matters.town` ActivityPub routes, while keeping the production site root on the existing Matters application. The isolated Worker testbed can remain available at `gateway-demo.matters.town`.
 
 The Worker should not contain federation business logic. Its job is edge routing and safety:
 
@@ -149,7 +149,7 @@ The Worker should not contain federation business logic. Its job is edge routing
 - Add CORS only for safe read endpoints.
 - Hide admin endpoints from the public internet unless explicitly allowed by operator auth.
 
-The repository now includes a deployed Worker demo under `cloudflare-worker/`: `https://gateway-demo.matters.town`. It serves a Matters main-site example, exposes the seed bundle shape, and can later forward dynamic POST traffic to `gateway-core` through `GATEWAY_CORE_ORIGIN`.
+The repository now includes a deployed Worker under `cloudflare-worker/`. It serves the canonical Matters-domain prototype actor `acct:matters@matters.town` through narrow routes such as `/.well-known/webfinger` and `/ap/*`, while the isolated testbed remains available at `https://gateway-demo.matters.town`. It serves a Matters main-site example, exposes the seed bundle shape, and can later forward dynamic POST traffic to `gateway-core` through `GATEWAY_CORE_ORIGIN`.
 
 ## Worker Routes
 
@@ -164,6 +164,9 @@ Read endpoints:
 - `GET /users/:handle/followers`
 - `GET /users/:handle/following`
 - `GET /articles/:slug` if article objects are edge-hosted
+- `GET /ap/users/:handle` for the current `matters.town` prototype actor namespace
+- `GET /ap/articles/:slug` for the current `matters.town` prototype Article namespace
+- `GET /ap/seed/*` for the current `matters.town` seed-bundle exposure
 
 Dynamic endpoints:
 
@@ -241,8 +244,7 @@ Deployment options:
 
 ## Open Questions
 
-- Final production hostname: `fediverse.matters.town`, `gateway.matters.town`, or a project-specific subdomain.
-- Whether Matters production actor URLs should be `https://<domain>/users/<handle>` or a compatibility alias under `https://<domain>/@<handle>`.
+- Whether Matters production actor URLs should stay under `https://matters.town/ap/users/<handle>` or later move to a shorter compatibility alias such as `https://matters.town/@<handle>`.
 - Whether static personal sites should keep their own WebFinger or delegate canonical identity to the gateway.
 - Whether Article bodies should be delivered in full HTML or as summary plus canonical link for the first pilot.
 - Which pilot authors can be named publicly in award materials.

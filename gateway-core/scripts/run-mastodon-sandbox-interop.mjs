@@ -48,14 +48,19 @@ function normalizeAcct(value) {
   return value?.replace(/^@/, "").toLowerCase();
 }
 
-async function readGatewaySurface({ probeBaseUrl, acctUri, handle }) {
+function normalizePath(pathname) {
+  const normalized = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  return normalized.replace(/\/$/, "");
+}
+
+async function readGatewaySurface({ probeBaseUrl, acctUri, actorPath }) {
   const webfinger = await fetchJson(
     buildUrl(probeBaseUrl, "/.well-known/webfinger", { resource: acctUri }),
     {},
     "application/jrd+json",
   );
   const actor = await fetchJson(
-    buildUrl(probeBaseUrl, `/users/${handle}`),
+    buildUrl(probeBaseUrl, actorPath),
     {
       headers: {
         accept: [
@@ -67,7 +72,7 @@ async function readGatewaySurface({ probeBaseUrl, acctUri, handle }) {
     "application/activity+json",
   );
   const outbox = await fetchJson(
-    buildUrl(probeBaseUrl, `/users/${handle}/outbox`),
+    buildUrl(probeBaseUrl, `${actorPath}/outbox`),
     {
       headers: {
         accept: [
@@ -167,6 +172,7 @@ async function main() {
   const gatewayPublicBaseUrl = getRequiredEnv("GATEWAY_PUBLIC_BASE_URL");
   const gatewayProbeBaseUrl = process.env.GATEWAY_PROBE_BASE_URL?.trim() || gatewayPublicBaseUrl;
   const gatewayHandle = process.env.GATEWAY_HANDLE?.trim() || "alice";
+  const gatewayActorPath = normalizePath(process.env.GATEWAY_ACTOR_PATH?.trim() || `/users/${gatewayHandle}`);
   const pollAttempts = Number.parseInt(process.env.MASTODON_RELATIONSHIP_POLL_ATTEMPTS ?? "10", 10);
   const pollIntervalMs = Number.parseInt(process.env.MASTODON_RELATIONSHIP_POLL_INTERVAL_MS ?? "3000", 10);
 
@@ -175,7 +181,7 @@ async function main() {
   const gateway = await readGatewaySurface({
     probeBaseUrl: gatewayProbeBaseUrl,
     acctUri,
-    handle: gatewayHandle,
+    actorPath: gatewayActorPath,
   });
   const resolvedAccount = await resolveRemoteAccount({
     mastodonBaseUrl,
@@ -196,7 +202,7 @@ async function main() {
   });
 
   const failures = [];
-  const canonicalActorUrl = `${gatewayPublicBaseUrl.replace(/\/$/, "")}/users/${gatewayHandle}`;
+  const canonicalActorUrl = `${gatewayPublicBaseUrl.replace(/\/$/, "")}${gatewayActorPath}`;
   if (gateway.webfinger.subject !== acctUri) {
     failures.push("webfinger subject mismatch");
   }

@@ -4,8 +4,8 @@ An open-source ActivityPub gateway that connects Matters' long-form publishing l
 
 > **Status**: G1 in development. Single-instance reference release planned for July 2026.
 > **Demo / docs**: <https://thematters.github.io/matters-fediverse-gateway/>
-> **Live Worker demo**: <https://gateway-demo.matters.town>
-> **Public demo actor**: `acct:matters@gateway-demo.matters.town`
+> **Canonical demo actor**: `acct:matters@matters.town`
+> **Worker testbed**: <https://gateway-demo.matters.town>
 > **Source**: <https://github.com/thematters/matters-fediverse-gateway>
 
 ## Why
@@ -27,7 +27,18 @@ Matters is a long-running, open-source, interoperable IPFS-protocol publishing s
 
 ## Public demo endpoints
 
-The live Cloudflare Worker demo serves ActivityPub and NodeInfo JSON with the expected content types:
+The canonical Matters-domain ActivityPub surface is exposed from `matters.town` through narrow Cloudflare Worker routes. The root Matters site remains served by the production site; only the federation paths are routed to the Worker.
+
+- WebFinger: <https://matters.town/.well-known/webfinger?resource=acct:matters@matters.town>
+- Actor: <https://matters.town/ap/users/matters>
+- Outbox: <https://matters.town/ap/users/matters/outbox>
+- Article: <https://matters.town/ap/articles/matters-main-site-open-social-demo>
+- ActivityPub seed manifest: <https://matters.town/ap/seed/activitypub-manifest.json>
+- ActivityPub seed outbox: <https://matters.town/ap/seed/outbox.jsonld>
+- NodeInfo discovery: <https://matters.town/.well-known/nodeinfo>
+- NodeInfo 2.1: <https://matters.town/nodeinfo/2.1>
+
+The dedicated Cloudflare Worker testbed keeps the same read-side federation surface isolated from the main domain:
 
 - WebFinger: <https://gateway-demo.matters.town/.well-known/webfinger?resource=acct:matters@gateway-demo.matters.town>
 - Actor: <https://gateway-demo.matters.town/users/matters>
@@ -62,6 +73,7 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 - 85 automated tests passing in the latest recorded local verification snapshot
 - Public static ActivityPub prototype endpoints and seed bundle live under `thematters.github.io`
 - Cloudflare Worker edge demo is deployed under `gateway-demo.matters.town`
+- Canonical Matters-domain prototype endpoints are deployed under `matters.town`
 
 ## G1 roadmap, May-July 2026
 

@@ -1,6 +1,6 @@
 # Matters Fediverse Gateway Worker
 
-This Cloudflare Worker is the public edge demo for Matters Fediverse Gateway.
+This Cloudflare Worker is the public edge demo for Matters Fediverse Gateway. It now serves both the isolated Worker testbed and the canonical Matters-domain prototype routes.
 
 It serves a Matters main-site example:
 
@@ -16,13 +16,32 @@ The Worker can also be used as the edge in front of a future `gateway-core` runt
 
 ## Deployed Demo
 
-The current public Worker demo is:
+The canonical public demo actor is:
+
+```text
+acct:matters@matters.town
+```
+
+The canonical Matters-domain ActivityPub endpoints are routed narrowly through the Worker:
+
+```text
+https://matters.town/.well-known/webfinger?resource=acct:matters@matters.town
+https://matters.town/ap/users/matters
+https://matters.town/ap/users/matters/outbox
+https://matters.town/ap/articles/matters-main-site-open-social-demo
+https://matters.town/ap/seed/activitypub-manifest.json
+https://matters.town/ap/seed/outbox.jsonld
+https://matters.town/.well-known/nodeinfo
+https://matters.town/nodeinfo/2.1
+```
+
+The isolated Worker testbed remains:
 
 ```text
 https://gateway-demo.matters.town
 ```
 
-The demo actor is:
+The testbed actor is:
 
 ```text
 acct:matters@gateway-demo.matters.town
@@ -47,12 +66,32 @@ By default this deploys to a `workers.dev` hostname:
 https://matters-fediverse-gateway-demo.<account>.workers.dev
 ```
 
-The current `wrangler.toml` pins deployment to the Matters Lab Cloudflare account by `account_id` and keeps the verified custom Worker domain:
+The current `wrangler.toml` pins deployment to the Matters Lab Cloudflare account by `account_id`, keeps the verified custom Worker domain, and adds narrow main-domain routes for ActivityPub discovery and objects:
 
 ```toml
 [[routes]]
 pattern = "gateway-demo.matters.town"
 custom_domain = true
+
+[[routes]]
+pattern = "matters.town/.well-known/webfinger*"
+zone_name = "matters.town"
+
+[[routes]]
+pattern = "matters.town/.well-known/host-meta"
+zone_name = "matters.town"
+
+[[routes]]
+pattern = "matters.town/.well-known/nodeinfo"
+zone_name = "matters.town"
+
+[[routes]]
+pattern = "matters.town/nodeinfo/*"
+zone_name = "matters.town"
+
+[[routes]]
+pattern = "matters.town/ap/*"
+zone_name = "matters.town"
 ```
 
 ### Cloudflare API Token
@@ -64,7 +103,7 @@ Create a Cloudflare user API token with these permissions:
 - User / User Details / Read
 - User / Memberships / Read
 
-Scope account resources to `Matters Lab`. No zone permission is required for a `workers.dev`-only demo. For the current `gateway-demo.matters.town` custom domain, future Wrangler deploys may also need Zone / Workers Routes / Edit for the `matters.town` zone.
+Scope account resources to `Matters Lab`. For the `gateway-demo.matters.town` custom domain and the narrow `matters.town` routes, Wrangler deploys also need Zone / Workers Routes / Edit for the `matters.town` zone.
 
 Use the token as an environment variable and do not commit it:
 
@@ -74,7 +113,7 @@ CLOUDFLARE_API_TOKEN=... npm run deploy
 
 ## Demo Endpoints
 
-Replace `<worker-origin>` with the deployed Worker origin. For the live demo, `<worker-origin>` is `https://gateway-demo.matters.town`.
+Replace `<worker-origin>` with the deployed Worker origin. For the isolated testbed, `<worker-origin>` is `https://gateway-demo.matters.town`.
 
 - `<worker-origin>/.well-known/webfinger?resource=acct:matters@<worker-host>`
 - `<worker-origin>/.well-known/nodeinfo`
@@ -85,6 +124,18 @@ Replace `<worker-origin>` with the deployed Worker origin. For the live demo, `<
 - `<worker-origin>/seed/activitypub-manifest.json`
 - `<worker-origin>/seed/about.jsonld`
 - `<worker-origin>/seed/outbox.jsonld`
+
+For the canonical Matters-domain surface, use `https://matters.town` and the `/ap` prefix for ActivityPub object paths:
+
+- `https://matters.town/.well-known/webfinger?resource=acct:matters@matters.town`
+- `https://matters.town/.well-known/nodeinfo`
+- `https://matters.town/nodeinfo/2.1`
+- `https://matters.town/ap/users/matters`
+- `https://matters.town/ap/users/matters/outbox`
+- `https://matters.town/ap/articles/matters-main-site-open-social-demo`
+- `https://matters.town/ap/seed/activitypub-manifest.json`
+- `https://matters.town/ap/seed/about.jsonld`
+- `https://matters.town/ap/seed/outbox.jsonld`
 
 ## Runtime Forwarding
 

@@ -4,6 +4,7 @@ runtime/
 .DS_Store
 .env
 .env.local
+.wrangler/
 *.tsbuildinfo
 .vscode/
 .idea/

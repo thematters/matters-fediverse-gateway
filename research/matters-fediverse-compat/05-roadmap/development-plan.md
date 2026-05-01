@@ -15,7 +15,7 @@ Matters is a long-form writing platform. The Fediverse is an open federated netw
 - Long-form writing is exposed as ActivityPub `Article` objects, not collapsed into microblog excerpts.
 - Paid, encrypted, private, and message-like content does not federate; at most, it can be represented by safe navigation links where the product policy allows it.
 
-The first public prototype is available at `https://gateway-demo.matters.town` and demonstrates WebFinger, ActivityPub actor, outbox, Article, ActivityPub seed bundle, and NodeInfo endpoints.
+The first public prototype exposes the canonical Matters-domain actor `acct:matters@matters.town` through narrow Cloudflare Worker routes on `matters.town` and demonstrates WebFinger, ActivityPub actor, outbox, Article, ActivityPub seed bundle, and NodeInfo endpoints. The isolated Worker testbed remains available at `https://gateway-demo.matters.town`.
 
 ---
 

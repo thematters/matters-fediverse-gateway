@@ -2,6 +2,7 @@ const PUBLIC_AUDIENCE = "https://www.w3.org/ns/activitystreams#Public";
 const ACTIVITY_CONTEXT = [
   "https://www.w3.org/ns/activitystreams",
   "https://w3id.org/security/v1",
+  "https://purl.archive.org/socialweb/webfinger",
   {
     toot: "http://joinmastodon.org/ns#",
     discoverable: "toot:discoverable",
@@ -16,6 +17,7 @@ const ACTOR_HANDLE = "matters";
 const ARTICLE_SLUG = "matters-main-site-open-social-demo";
 const ARTICLE_SOURCE_URL = "https://matters.town";
 const PROJECT_REPOSITORY_URL = "https://github.com/thematters/matters-fediverse-gateway";
+const MATTERS_CANONICAL_HOST = "matters.town";
 
 function trimTrailingSlash(value) {
   return value.endsWith("/") ? value.slice(0, -1) : value;
@@ -25,12 +27,21 @@ function publicBase(request, env) {
   return trimTrailingSlash(env.PUBLIC_BASE_URL || new URL(request.url).origin);
 }
 
-function actorUrl(base) {
-  return `${base}/users/${ACTOR_HANDLE}`;
+function activityPrefix(request, env) {
+  const host = new URL(publicBase(request, env)).host;
+  return host === MATTERS_CANONICAL_HOST ? "/ap" : "";
 }
 
-function articleUrl(base) {
-  return `${base}/articles/${ARTICLE_SLUG}`;
+function actorUrl(base, prefix = "") {
+  return `${base}${prefix}/users/${ACTOR_HANDLE}`;
+}
+
+function articleUrl(base, prefix = "") {
+  return `${base}${prefix}/articles/${ARTICLE_SLUG}`;
+}
+
+function inboxUrl(base, prefix = "") {
+  return `${base}${prefix}/inbox`;
 }
 
 function subjectFor(request, env) {
@@ -76,9 +87,9 @@ function withoutBody(response) {
   });
 }
 
-function mattersArticle(base) {
-  const actor = actorUrl(base);
-  const url = articleUrl(base);
+function mattersArticle(base, prefix = "") {
+  const actor = actorUrl(base, prefix);
+  const url = articleUrl(base, prefix);
 
   return {
     "@context": "https://www.w3.org/ns/activitystreams",
@@ -112,28 +123,29 @@ function mattersArticle(base) {
   };
 }
 
-function createActivity(base) {
-  const actor = actorUrl(base);
+function createActivity(base, prefix = "") {
+  const actor = actorUrl(base, prefix);
 
   return {
     "@context": "https://www.w3.org/ns/activitystreams",
-    id: `${base}/activities/${ARTICLE_SLUG}-create`,
+    id: `${base}${prefix}/activities/${ARTICLE_SLUG}-create`,
     type: "Create",
     actor,
     published: "2026-04-30T00:00:00.000Z",
     to: [PUBLIC_AUDIENCE],
     cc: [`${actor}/followers`],
-    object: mattersArticle(base),
+    object: mattersArticle(base, prefix),
   };
 }
 
-function actorDocument(base, request, env) {
-  const actor = actorUrl(base);
+function actorDocument(base, prefix, request, env) {
+  const actor = actorUrl(base, prefix);
 
   return {
     "@context": ACTIVITY_CONTEXT,
     id: actor,
     type: "Person",
+    webfinger: subjectFor(request, env).replace(/^acct:/, ""),
     preferredUsername: ACTOR_HANDLE,
     name: "Matters",
     summary:
@@ -148,7 +160,7 @@ function actorDocument(base, request, env) {
     icon: {
       type: "Image",
       mediaType: "image/svg+xml",
-      url: `${base}/icon.svg`,
+      url: `${base}${prefix}/icon.svg`,
     },
     publicKey: {
       id: `${actor}#main-key`,
@@ -157,7 +169,7 @@ function actorDocument(base, request, env) {
         "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjxk5vrkfCOSMDqY5uyLj\nn362WeowOlzbHOBkZ6xvUd3XiK5rZvpdh44vCO4wrP+sJB4lM5XmWvF6ovuXLQFY\nlSBFIYNOO/d0Tb36vSQI6iP3p4evJ2rBFq1XB7L+iwTNYgTOQKNPTm4GtSRiKO4j\nG9OAOVGWj5l+IaBwvle+j/tc/cFjB6mkLkcPpWFAMaowZZB4w1vBnEuPwAslXKr8\nif2dnlz2evdgwYcydF2duIt2WqPC+FoGEzXneXkJooJflF5exsTbWcAyFaGdatRG\n6MhotmpLoAdmsHlcwYCJcgjLX9uNc4k8rVmUKnlMfuqUgEw2MyH/KyPPHqLnmbPY\nRwIDAQAB\n-----END PUBLIC KEY-----",
     },
     endpoints: {
-      sharedInbox: `${base}/inbox`,
+      sharedInbox: inboxUrl(base, prefix),
     },
     published: "2026-04-30T00:00:00.000Z",
   };
@@ -165,6 +177,7 @@ function actorDocument(base, request, env) {
 
 function webfinger(request, env) {
   const base = publicBase(request, env);
+  const prefix = activityPrefix(request, env);
   const url = new URL(request.url);
   const resource = url.searchParams.get("resource") || subjectFor(request, env);
   const host = new URL(base).host;
@@ -188,7 +201,7 @@ function webfinger(request, env) {
   return jsonResponse(
     {
       subject: resource,
-      aliases: [env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL, actorUrl(base)],
+      aliases: [env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL, actorUrl(base, prefix)],
       links: [
         {
           rel: "http://webfinger.net/rel/profile-page",
@@ -198,7 +211,7 @@ function webfinger(request, env) {
         {
           rel: "self",
           type: "application/activity+json",
-          href: actorUrl(base),
+          href: actorUrl(base, prefix),
         },
       ],
     },
@@ -257,19 +270,19 @@ function nodeInfo() {
   };
 }
 
-function outbox(base) {
+function outbox(base, prefix = "") {
   return {
     "@context": "https://www.w3.org/ns/activitystreams",
-    id: `${actorUrl(base)}/outbox`,
+    id: `${actorUrl(base, prefix)}/outbox`,
     type: "OrderedCollection",
     totalItems: 1,
     first: {
-      id: `${actorUrl(base)}/outbox?page=true`,
+      id: `${actorUrl(base, prefix)}/outbox?page=true`,
       type: "OrderedCollectionPage",
-      partOf: `${actorUrl(base)}/outbox`,
-      orderedItems: [createActivity(base)],
+      partOf: `${actorUrl(base, prefix)}/outbox`,
+      orderedItems: [createActivity(base, prefix)],
     },
-    orderedItems: [createActivity(base)],
+    orderedItems: [createActivity(base, prefix)],
   };
 }
 
@@ -283,7 +296,7 @@ function collection(id, items = []) {
   };
 }
 
-function seedManifest(base, request, env) {
+function seedManifest(base, prefix, request, env) {
   return {
     version: 1,
     generator: "ipns-site-generator",
@@ -292,15 +305,15 @@ function seedManifest(base, request, env) {
     actor: {
       handle: ACTOR_HANDLE,
       sourceActorId: `${env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL}/@${ACTOR_HANDLE}`,
-      canonicalActorId: actorUrl(base),
+      canonicalActorId: actorUrl(base, prefix),
       webfingerSubject: subjectFor(request, env),
       profileUrl: env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL,
     },
     files: {
-      actor: `${base}/seed/about.jsonld`,
-      outbox: `${base}/seed/outbox.jsonld`,
-      canonicalActor: actorUrl(base),
-      canonicalOutbox: `${actorUrl(base)}/outbox`,
+      actor: `${base}${prefix}/seed/about.jsonld`,
+      outbox: `${base}${prefix}/seed/outbox.jsonld`,
+      canonicalActor: actorUrl(base, prefix),
+      canonicalOutbox: `${actorUrl(base, prefix)}/outbox`,
     },
     visibility: {
       federatedPublicOnly: true,
@@ -314,7 +327,7 @@ function seedManifest(base, request, env) {
   };
 }
 
-function seedActor(base, request, env) {
+function seedActor(base, prefix, request, env) {
   return {
     "@context": ACTIVITY_CONTEXT,
     id: `${env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL}/@${ACTOR_HANDLE}`,
@@ -323,35 +336,35 @@ function seedActor(base, request, env) {
     name: "Matters",
     summary: "Static ActivityPub seed actor emitted by the publishing layer before gateway canonicalization.",
     url: env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL,
-    inbox: `${actorUrl(base)}/inbox`,
-    outbox: `${base}/seed/outbox.jsonld`,
-    alsoKnownAs: [actorUrl(base)],
+    inbox: `${actorUrl(base, prefix)}/inbox`,
+    outbox: `${base}${prefix}/seed/outbox.jsonld`,
+    alsoKnownAs: [actorUrl(base, prefix)],
     discoverable: true,
     publicKey: {
-      id: `${actorUrl(base)}#main-key`,
-      owner: actorUrl(base),
+      id: `${actorUrl(base, prefix)}#main-key`,
+      owner: actorUrl(base, prefix),
     },
     webfingerSubject: subjectFor(request, env),
   };
 }
 
-function seedOutbox(base, env) {
+function seedOutbox(base, prefix, env) {
   const sourceActor = `${env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL}/@${ACTOR_HANDLE}`;
   const article = {
-    ...mattersArticle(base),
+    ...mattersArticle(base, prefix),
     id: `${env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL}/articles/${ARTICLE_SLUG}`,
     attributedTo: sourceActor,
   };
 
   return {
     "@context": "https://www.w3.org/ns/activitystreams",
-    id: `${base}/seed/outbox.jsonld`,
+    id: `${base}${prefix}/seed/outbox.jsonld`,
     type: "OrderedCollection",
     totalItems: 1,
     orderedItems: [
       {
         "@context": "https://www.w3.org/ns/activitystreams",
-        id: `${base}/seed/activities/${ARTICLE_SLUG}-create`,
+        id: `${base}${prefix}/seed/activities/${ARTICLE_SLUG}-create`,
         type: "Create",
         actor: sourceActor,
         published: "2026-04-30T00:00:00.000Z",
@@ -407,6 +420,7 @@ async function handleInbox(request, env) {
 
 function landing(request, env) {
   const base = publicBase(request, env);
+  const prefix = activityPrefix(request, env);
   const host = new URL(base).host;
 
   return jsonResponse(
@@ -416,12 +430,12 @@ function landing(request, env) {
       actor: `acct:${ACTOR_HANDLE}@${host}`,
       endpoints: {
         webfinger: `${base}/.well-known/webfinger?resource=acct:${ACTOR_HANDLE}@${host}`,
-        actor: actorUrl(base),
-        outbox: `${actorUrl(base)}/outbox`,
-        article: articleUrl(base),
+        actor: actorUrl(base, prefix),
+        outbox: `${actorUrl(base, prefix)}/outbox`,
+        article: articleUrl(base, prefix),
         nodeinfo: `${base}/nodeinfo/2.1`,
-        seedManifest: `${base}/seed/activitypub-manifest.json`,
-        seedOutbox: `${base}/seed/outbox.jsonld`,
+        seedManifest: `${base}${prefix}/seed/activitypub-manifest.json`,
+        seedOutbox: `${base}${prefix}/seed/outbox.jsonld`,
       },
     },
     200,
@@ -440,7 +454,9 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const base = publicBase(request, env);
+    const prefix = activityPrefix(request, env);
     const path = url.pathname.replace(/\/$/, "") || "/";
+    const actorPath = `${prefix}/users/${ACTOR_HANDLE}`;
 
     if (request.method === "OPTIONS") {
       return new Response(null, {
@@ -453,7 +469,10 @@ export default {
       });
     }
 
-    if (request.method === "POST" && (path === "/inbox" || path === `/users/${ACTOR_HANDLE}/inbox`)) {
+    if (
+      request.method === "POST" &&
+      (path === inboxUrl("", prefix) || path === `${actorPath}/inbox` || path === "/inbox" || path === `/users/${ACTOR_HANDLE}/inbox`)
+    ) {
       return handleInbox(request, env);
     }
 
@@ -463,13 +482,13 @@ export default {
 
     const respond = (response) => (request.method === "HEAD" ? withoutBody(response) : response);
 
-    if (path === "/") {
+    if (path === "/" || path === prefix) {
       return respond(landing(request, env));
     }
-    if (path === "/healthz") {
+    if (path === "/healthz" || path === `${prefix}/healthz`) {
       return respond(jsonResponse({ ok: true }, 200, "application/json; charset=utf-8", "no-store"));
     }
-    if (path === "/icon.svg") {
+    if (path === "/icon.svg" || path === `${prefix}/icon.svg`) {
       return respond(textResponse(iconSvg(), 200, "image/svg+xml; charset=utf-8"));
     }
     if (path === "/.well-known/webfinger") {
@@ -484,29 +503,29 @@ export default {
     if (path === "/nodeinfo/2.1") {
       return respond(jsonResponse(nodeInfo()));
     }
-    if (path === `/users/${ACTOR_HANDLE}` || path === `/users/${ACTOR_HANDLE}.json`) {
-      return respond(activityResponse(actorDocument(base, request, env)));
+    if (path === actorPath || path === `${actorPath}.json`) {
+      return respond(activityResponse(actorDocument(base, prefix, request, env)));
     }
-    if (path === `/users/${ACTOR_HANDLE}/outbox`) {
-      return respond(activityResponse(outbox(base)));
+    if (path === `${actorPath}/outbox`) {
+      return respond(activityResponse(outbox(base, prefix)));
     }
-    if (path === `/users/${ACTOR_HANDLE}/followers`) {
-      return respond(activityResponse(collection(`${actorUrl(base)}/followers`)));
+    if (path === `${actorPath}/followers`) {
+      return respond(activityResponse(collection(`${actorUrl(base, prefix)}/followers`)));
     }
-    if (path === `/users/${ACTOR_HANDLE}/following`) {
-      return respond(activityResponse(collection(`${actorUrl(base)}/following`)));
+    if (path === `${actorPath}/following`) {
+      return respond(activityResponse(collection(`${actorUrl(base, prefix)}/following`)));
     }
-    if (path === `/articles/${ARTICLE_SLUG}`) {
-      return respond(activityResponse(mattersArticle(base)));
+    if (path === `${prefix}/articles/${ARTICLE_SLUG}`) {
+      return respond(activityResponse(mattersArticle(base, prefix)));
     }
-    if (path === "/seed/activitypub-manifest.json") {
-      return respond(jsonResponse(seedManifest(base, request, env)));
+    if (path === `${prefix}/seed/activitypub-manifest.json`) {
+      return respond(jsonResponse(seedManifest(base, prefix, request, env)));
     }
-    if (path === "/seed/about.jsonld") {
-      return respond(activityResponse(seedActor(base, request, env)));
+    if (path === `${prefix}/seed/about.jsonld`) {
+      return respond(activityResponse(seedActor(base, prefix, request, env)));
     }
-    if (path === "/seed/outbox.jsonld") {
-      return respond(activityResponse(seedOutbox(base, env)));
+    if (path === `${prefix}/seed/outbox.jsonld`) {
+      return respond(activityResponse(seedOutbox(base, prefix, env)));
     }
 
     return respond(notFound());
