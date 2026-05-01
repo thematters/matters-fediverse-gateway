@@ -44,6 +44,10 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function normalizeAcct(value) {
+  return value?.replace(/^@/, "").toLowerCase();
+}
+
 async function readGatewaySurface({ probeBaseUrl, acctUri, handle }) {
   const webfinger = await fetchJson(
     buildUrl(probeBaseUrl, "/.well-known/webfinger", { resource: acctUri }),
@@ -79,11 +83,13 @@ async function readGatewaySurface({ probeBaseUrl, acctUri, handle }) {
 }
 
 async function resolveRemoteAccount({ mastodonBaseUrl, token, acctUri }) {
+  const expectedAcct = acctUri.replace(/^acct:/, "");
   const result = await fetchJson(
     buildUrl(mastodonBaseUrl, "/api/v2/search", {
-      q: acctUri.replace(/^acct:/, ""),
+      q: `@${expectedAcct}`,
       type: "accounts",
       resolve: "true",
+      limit: "10",
     }),
     {
       headers: {
@@ -97,7 +103,15 @@ async function resolveRemoteAccount({ mastodonBaseUrl, token, acctUri }) {
     throw new Error(`Mastodon search did not resolve ${acctUri}`);
   }
 
-  return result.accounts[0];
+  const exactAccount = result.accounts.find((account) => normalizeAcct(account.acct) === normalizeAcct(expectedAcct));
+  if (!exactAccount) {
+    const returnedAccounts = result.accounts
+      .map((account) => `${account.acct || "(unknown)"} ${account.url || ""}`.trim())
+      .join(", ");
+    throw new Error(`Mastodon search did not resolve exact ${acctUri}; returned: ${returnedAccounts}`);
+  }
+
+  return exactAccount;
 }
 
 async function followRemoteAccount({ mastodonBaseUrl, token, accountId }) {
@@ -197,6 +211,9 @@ async function main() {
   }
   if (!resolvedAccount.id) {
     failures.push("mastodon account resolution returned no account id");
+  }
+  if (normalizeAcct(resolvedAccount.acct) !== normalizeAcct(`${gatewayHandle}@${publicHost}`)) {
+    failures.push(`mastodon resolved ${resolvedAccount.acct} instead of ${gatewayHandle}@${publicHost}`);
   }
   if (!followResponse.following && !followResponse.requested) {
     failures.push("mastodon follow response was neither following nor requested");

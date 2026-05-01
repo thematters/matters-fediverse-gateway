@@ -68,6 +68,14 @@ function notFound() {
   return jsonResponse({ error: "not_found" }, 404, "application/json; charset=utf-8", "no-store");
 }
 
+function withoutBody(response) {
+  return new Response(null, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
 function mattersArticle(base) {
   const actor = actorUrl(base);
   const url = articleUrl(base);
@@ -438,7 +446,7 @@ export default {
       return new Response(null, {
         status: 204,
         headers: withCommonHeaders({
-          "access-control-allow-methods": "GET, POST, OPTIONS",
+          "access-control-allow-methods": "GET, HEAD, POST, OPTIONS",
           "access-control-allow-headers": "content-type, date, digest, signature, authorization",
           "access-control-max-age": "86400",
         }, "no-store"),
@@ -449,56 +457,58 @@ export default {
       return handleInbox(request, env);
     }
 
-    if (request.method !== "GET") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
       return jsonResponse({ error: "method_not_allowed" }, 405, "application/json; charset=utf-8", "no-store");
     }
 
+    const respond = (response) => (request.method === "HEAD" ? withoutBody(response) : response);
+
     if (path === "/") {
-      return landing(request, env);
+      return respond(landing(request, env));
     }
     if (path === "/healthz") {
-      return jsonResponse({ ok: true }, 200, "application/json; charset=utf-8", "no-store");
+      return respond(jsonResponse({ ok: true }, 200, "application/json; charset=utf-8", "no-store"));
     }
     if (path === "/icon.svg") {
-      return textResponse(iconSvg(), 200, "image/svg+xml; charset=utf-8");
+      return respond(textResponse(iconSvg(), 200, "image/svg+xml; charset=utf-8"));
     }
     if (path === "/.well-known/webfinger") {
-      return webfinger(request, env);
+      return respond(webfinger(request, env));
     }
     if (path === "/.well-known/host-meta") {
-      return textResponse(hostMeta(base), 200, "application/xrd+xml; charset=utf-8");
+      return respond(textResponse(hostMeta(base), 200, "application/xrd+xml; charset=utf-8"));
     }
     if (path === "/.well-known/nodeinfo") {
-      return jsonResponse(nodeInfoDirectory(base));
+      return respond(jsonResponse(nodeInfoDirectory(base)));
     }
     if (path === "/nodeinfo/2.1") {
-      return jsonResponse(nodeInfo());
+      return respond(jsonResponse(nodeInfo()));
     }
     if (path === `/users/${ACTOR_HANDLE}` || path === `/users/${ACTOR_HANDLE}.json`) {
-      return activityResponse(actorDocument(base, request, env));
+      return respond(activityResponse(actorDocument(base, request, env)));
     }
     if (path === `/users/${ACTOR_HANDLE}/outbox`) {
-      return activityResponse(outbox(base));
+      return respond(activityResponse(outbox(base)));
     }
     if (path === `/users/${ACTOR_HANDLE}/followers`) {
-      return activityResponse(collection(`${actorUrl(base)}/followers`));
+      return respond(activityResponse(collection(`${actorUrl(base)}/followers`)));
     }
     if (path === `/users/${ACTOR_HANDLE}/following`) {
-      return activityResponse(collection(`${actorUrl(base)}/following`));
+      return respond(activityResponse(collection(`${actorUrl(base)}/following`)));
     }
     if (path === `/articles/${ARTICLE_SLUG}`) {
-      return activityResponse(mattersArticle(base));
+      return respond(activityResponse(mattersArticle(base)));
     }
     if (path === "/seed/activitypub-manifest.json") {
-      return jsonResponse(seedManifest(base, request, env));
+      return respond(jsonResponse(seedManifest(base, request, env)));
     }
     if (path === "/seed/about.jsonld") {
-      return activityResponse(seedActor(base, request, env));
+      return respond(activityResponse(seedActor(base, request, env)));
     }
     if (path === "/seed/outbox.jsonld") {
-      return activityResponse(seedOutbox(base, env));
+      return respond(activityResponse(seedOutbox(base, env)));
     }
 
-    return notFound();
+    return respond(notFound());
   },
 };
