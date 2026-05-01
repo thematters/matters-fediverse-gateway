@@ -32,7 +32,7 @@ https://matters.town/ap/articles/matters-main-site-open-social-demo
 https://matters.town/ap/seed/activitypub-manifest.json
 https://matters.town/ap/seed/outbox.jsonld
 https://matters.town/.well-known/nodeinfo
-https://matters.town/nodeinfo/2.1
+https://matters.town/ap/instance-info/2.1
 ```
 
 The isolated Worker testbed remains:
@@ -45,6 +45,12 @@ The testbed actor is:
 
 ```text
 acct:matters@gateway-demo.matters.town
+```
+
+The temporary probe domain used for Mastodon cache-isolation diagnostics is:
+
+```text
+https://gateway-probe.matters.town
 ```
 
 ## Local Development
@@ -71,6 +77,10 @@ The current `wrangler.toml` pins deployment to the Matters Lab Cloudflare accoun
 ```toml
 [[routes]]
 pattern = "gateway-demo.matters.town"
+custom_domain = true
+
+[[routes]]
+pattern = "gateway-probe.matters.town"
 custom_domain = true
 
 [[routes]]
@@ -129,7 +139,7 @@ For the canonical Matters-domain surface, use `https://matters.town` and the `/a
 
 - `https://matters.town/.well-known/webfinger?resource=acct:matters@matters.town`
 - `https://matters.town/.well-known/nodeinfo`
-- `https://matters.town/nodeinfo/2.1`
+- `https://matters.town/ap/instance-info/2.1`
 - `https://matters.town/ap/users/matters`
 - `https://matters.town/ap/users/matters/outbox`
 - `https://matters.town/ap/articles/matters-main-site-open-social-demo`

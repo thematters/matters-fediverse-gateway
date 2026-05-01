@@ -7,7 +7,7 @@ executor: codex-local
 host: any
 branch: task/matters-g1-w3-misskey-gotosocial-interop
 latest_commit: UNSET
-last_updated: 2026-04-25T00:00:00+08:00
+last_updated: 2026-05-01T00:00:00+08:00
 tmux_session: none
 host_affinity: none
 outputs_scope: gateway-core
@@ -33,7 +33,7 @@ blockers: 需要 Misskey 與 GoToSocial 測試 instance（可用公開 instance 
 
 ## Context
 
-G1 工作項目 W3。目前只在 mastodon.social 完成第一輪黑箱驗證；Fediverse 的另兩個主要實作（Misskey、GoToSocial）行為差異不小，特別是 `Article` 顯示、HTTP signature 變體、followers collection 解析。要各跑一輪，確保互通故事不只綁單一鄰國。
+G1 工作項目 W3。目前已有 `mastodon.social` sandbox 黑箱驗證，以及 `g0v.social` 對 canonical `acct:matters@matters.town` 的 exact discovery 與 inbound follow delivery 驗證。Fediverse 的另兩個主要實作（Misskey、GoToSocial）行為差異不小，特別是 `Article` 顯示、HTTP signature 變體、followers collection 解析。要各跑一輪，確保互通故事不只綁 Mastodon 系列 instance。
 
 ## Acceptance Criteria
 
@@ -45,6 +45,7 @@ G1 工作項目 W3。目前只在 mastodon.social 完成第一輪黑箱驗證；
 ## Change Log
 
 - 2026-04-25 created from G1 roadmap; not yet started
+- 2026-05-01 updated current baseline after g0v.social exact discovery and inbound follow delivery against `acct:matters@matters.town`
 
 ## Validation
 

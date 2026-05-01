@@ -1,6 +1,6 @@
 # IPNS Generator, Gateway Core, and Cloudflare Worker Plan
 
-Working date: 2026-04-30
+Working date: 2026-05-01
 
 This document defines the practical split between `thematters/ipns-site-generator`, `gateway-core`, and an edge Worker in front of the public gateway.
 
@@ -167,6 +167,7 @@ Read endpoints:
 - `GET /ap/users/:handle` for the current `matters.town` prototype actor namespace
 - `GET /ap/articles/:slug` for the current `matters.town` prototype Article namespace
 - `GET /ap/seed/*` for the current `matters.town` seed-bundle exposure
+- `GET /ap/instance-info/2.1` for the current `matters.town` NodeInfo document, avoiding main-site security challenges on `/nodeinfo/*`
 
 Dynamic endpoints:
 

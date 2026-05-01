@@ -2,13 +2,13 @@
 
 在 Matters 站前架一座「大使館」（代號 `gateway-core`），讓長文能以 ActivityPub `Article` 型別雙向對接 Fediverse（Mastodon / Misskey / GoToSocial），同時保護付費/加密/私訊內容不外流。
 
-最後更新：2026-04-25
+最後更新：2026-05-01
 
 ---
 
 ## 現況一眼看
 
-- **完成度**：單實例 gateway 原型可跑，85 tests passing，已與 `mastodon.social` 完成第一輪黑箱互通
+- **完成度**：單實例 gateway 原型可跑，85 tests passing，已與 `mastodon.social` 完成第一輪 sandbox 黑箱互通；canonical `acct:matters@matters.town` 已透過 `g0v.social` 完成 exact discovery 與 inbound follow delivery 驗證
 - **目前階段**：G1 · 官方聯邦化基礎版（3 個月，2026-05 ~ 2026-07）
 - **下一步**：真環境值班演習 + 長文 Article 系統化 + Misskey/GoToSocial 互通驗證
 - **程式碼**：[`gateway-core/`](../../gateway-core)（sibling repo root）
@@ -48,11 +48,11 @@
 - **對外型別**：ActivityPub `Article`（不降級成 `Note`） — 見 [00-research/adr/ADR-006](00-research/adr/ADR-006-longform-object-mapping.md)
 - **內容邊界**：僅公開內容進聯邦；付費/加密/私訊僅給 preview + canonical link — 見 [00-research/adr/ADR-004](00-research/adr/ADR-004-public-content-boundary.md)
 - **架構選型**：Static publisher + inbox bridge，不是完整 federation server — 見 [00-research/feasibility-memo.md](00-research/feasibility-memo.md)
-- **Canonical URL**：短期 `@user@webf.matters.town`，長期收斂到 `@user@matters.town`（G2-B 定案）
+- **Canonical URL**：以 `@user@matters.town` / `acct:matters@matters.town` 為主；`gateway-demo.matters.town` 只作為隔離 Worker testbed
 
 ---
 
 ## 相關任務
 
-- 活躍 task：[matters-gateway-core-minimum-slice](../../docs/handoff/tasks/matters-gateway-core-minimum-slice.md)
-- Grant 申請紀錄：[nlnet-grant-worklog](../../docs/handoff/artifacts/nlnet-grant-worklog-2026-03-25.md)
+- 活躍 task：[matters-gateway-core-minimum-slice](../../docs/tasks/matters-gateway-core-minimum-slice.md)
+- 最新 interop 紀錄：[mastodon-exact-discovery-run-20260501.md](03-ops/mastodon-exact-discovery-run-20260501.md)

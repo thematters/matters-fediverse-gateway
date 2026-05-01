@@ -2,7 +2,8 @@
 
 ## Current Readiness Snapshot
 
-- 已完成 canonical discoverability、Follow loop、remote actor discovery、static outbox bridge、local sandbox 驗證，以及第一輪 `mastodon.social` 黑箱驗證
+- 已完成 gateway-core canonical discoverability、Follow loop、remote actor discovery、static outbox bridge、local sandbox 驗證，以及第一輪 `mastodon.social` sandbox 黑箱驗證
+- 已完成 canonical `acct:matters@matters.town` Cloudflare Worker read-side routes，並透過 `g0v.social` 驗證 exact discovery 與 inbound follow delivery；Worker edge 目前尚未接上 `gateway-core` 的 signed inbox verification / persistence / outbound `Accept`
 - 已完成 inbound public `Create` / `Reply` / `Like` / `Announce` 的最小持久化
 - 已完成 SQLite persistence baseline，可切換 file store / SQLite store
 - 目前可視為 engineering prototype，可用來持續擴張 social loop

@@ -238,12 +238,13 @@ function hostMeta(base) {
 `;
 }
 
-function nodeInfoDirectory(base) {
+function nodeInfoDirectory(base, prefix = "") {
+  const href = prefix ? `${base}${prefix}/instance-info/2.1` : `${base}/nodeinfo/2.1`;
   return {
     links: [
       {
         rel: "http://nodeinfo.diaspora.software/ns/schema/2.1",
-        href: `${base}/nodeinfo/2.1`,
+        href,
       },
     ],
   };
@@ -453,7 +454,7 @@ function landing(request, env) {
         diagnosticActor: actorUrl(base, prefix, DIAGNOSTIC_ACTOR_HANDLE),
         diagnosticOutbox: `${actorUrl(base, prefix, DIAGNOSTIC_ACTOR_HANDLE)}/outbox`,
         article: articleUrl(base, prefix),
-        nodeinfo: `${base}/nodeinfo/2.1`,
+        nodeinfo: prefix ? `${base}${prefix}/instance-info/2.1` : `${base}/nodeinfo/2.1`,
         seedManifest: `${base}${prefix}/seed/activitypub-manifest.json`,
         seedOutbox: `${base}${prefix}/seed/outbox.jsonld`,
       },
@@ -520,9 +521,9 @@ export default {
       return respond(textResponse(hostMeta(base), 200, "application/xrd+xml; charset=utf-8"));
     }
     if (path === "/.well-known/nodeinfo") {
-      return respond(jsonResponse(nodeInfoDirectory(base)));
+      return respond(jsonResponse(nodeInfoDirectory(base, prefix)));
     }
-    if (path === "/nodeinfo/2.1") {
+    if (path === "/nodeinfo/2.1" || path === `${prefix}/nodeinfo/2.1` || path === `${prefix}/instance-info/2.1`) {
       return respond(jsonResponse(nodeInfo()));
     }
     if (path === inboxUrl("", prefix) || path === "/inbox") {

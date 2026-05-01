@@ -190,5 +190,7 @@
   可完成 canonical discoverability、bridged outbox 與 signed `Follow` -> `Accept` 驗證
 - `cd gateway-core && npm run check:mastodon-sandbox`  
   已在 `mastodon.social` 對公開 trycloudflare gateway 跑過第一輪黑箱驗證，結果 `ok: true`
+- 2026-05-01 補充  
+  canonical `acct:matters@matters.town` 已透過 Cloudflare Worker routes 上線，並由 `g0v.social` 完成 exact discovery 與 inbound follow delivery；`mastodon.social` exact discovery 仍保留為 instance-side cache / remote-resolution retest
 - 正式部署缺口清單  
   見 `production-deployment-gaps.md`

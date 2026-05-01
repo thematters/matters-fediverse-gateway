@@ -19,7 +19,7 @@ Matters is a long-running, open-source, interoperable IPFS-protocol publishing s
 | Path | Purpose |
 | --- | --- |
 | [`gateway-core/`](gateway-core/) | Node.js runtime for WebFinger, ActivityPub inbox/outbox, HTTP Signatures, followers state, moderation, persistence, and observability |
-| [`cloudflare-worker/`](cloudflare-worker/) | Cloudflare Worker edge demo for ActivityPub content types, route handling, seed bundle exposure, and future `gateway-core` pass-through |
+| [`cloudflare-worker/`](cloudflare-worker/) | Cloudflare Worker edge prototype for canonical `matters.town` ActivityPub routes, isolated testbed routing, seed bundle exposure, and future `gateway-core` pass-through |
 | [`research/matters-fediverse-compat/`](research/matters-fediverse-compat/) | Research, feasibility notes, ADRs, specs, runtime slices, operator notes, and roadmap |
 | [`docs/tasks/`](docs/tasks/) | Handoff task files for G1 delivery work |
 | [`docs/`](docs/) | GitHub Pages demo and project overview |
@@ -36,7 +36,7 @@ The canonical Matters-domain ActivityPub surface is exposed from `matters.town` 
 - ActivityPub seed manifest: <https://matters.town/ap/seed/activitypub-manifest.json>
 - ActivityPub seed outbox: <https://matters.town/ap/seed/outbox.jsonld>
 - NodeInfo discovery: <https://matters.town/.well-known/nodeinfo>
-- NodeInfo 2.1: <https://matters.town/nodeinfo/2.1>
+- NodeInfo 2.1: <https://matters.town/ap/instance-info/2.1>
 
 The dedicated Cloudflare Worker testbed keeps the same read-side federation surface isolated from the main domain:
 
@@ -69,11 +69,12 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 - Moderation baseline: domain block, actor suspension, legal takedown, rate limits, evidence retention, manual replay
 - Persistence: SQLite plus backup, restore, reconcile, and replay tooling
 - Observability: metrics, alerts, logs, webhook dispatch, and Slack incoming webhook support
-- First Mastodon sandbox black-box interoperability check completed
+- Mastodon sandbox black-box interoperability check completed
+- `g0v.social` exact discovery and inbound follow delivery confirmed for `acct:matters@matters.town`
 - 85 automated tests passing in the latest recorded local verification snapshot
 - Public static ActivityPub prototype endpoints and seed bundle live under `thematters.github.io`
-- Cloudflare Worker edge demo is deployed under `gateway-demo.matters.town`
-- Canonical Matters-domain prototype endpoints are deployed under `matters.town`
+- Canonical Matters-domain Cloudflare Worker routes are deployed under `matters.town`
+- Isolated Cloudflare Worker testbed remains deployed under `gateway-demo.matters.town`
 
 ## G1 roadmap, May-July 2026
 

@@ -36,6 +36,7 @@
 
 - gateway core runtime 已具備 canonical discoverability、Follow loop、signature verification、followers state、retry、dead letter
 - 已完成 static outbox bridge 與第一輪 `mastodon.social` 黑箱驗證
+- 2026-05-01 補充：canonical `acct:matters@matters.town` 已透過 Cloudflare Worker routes 上線，並由 `g0v.social` 完成 exact discovery 與 inbound follow delivery；完整 production follow loop 仍需 Worker inbox 接上 `gateway-core`
 - social loop 已有 inbound `Create` / `Reply` / `Like` / `Announce` / `Undo`
 - outbound 已有 `Create`、`Like`、`Announce`、`Update`、`Delete`
 - moderation / ops 已有 domain block、actor suspend、legal takedown、rate limit、evidence、manual replay、remote actor policy
