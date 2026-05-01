@@ -4,7 +4,7 @@
 
 We tested exact Mastodon discovery for the Cloudflare Worker ActivityPub surface after moving the demo onto Matters-controlled domains.
 
-`g0v.social` successfully resolved the Worker actors, including the canonical `acct:matters@matters.town` actor. `mastodon.social` did not return an exact remote account for the same surface during this run. No follow was attempted because following changes the tester account's relationship state and requires explicit action-time confirmation.
+`g0v.social` successfully resolved the Worker actors, including the canonical `acct:matters@matters.town` actor. After explicit action-time confirmation, the tester account followed the canonical actor from the g0v.social web UI, and Cloudflare tail confirmed an inbound POST to the canonical actor inbox. `mastodon.social` did not return an exact remote account for the same surface during this run.
 
 ## Runtime Context
 
@@ -52,7 +52,11 @@ Cloudflare tail showed `g0v.social` fetching the expected gateway resources:
 - actor following collection
 - actor followers collection
 
-This confirms that the hardened Worker ActivityPub surface can be discovered and ingested by Mastodon 4.5.9.
+After explicit tester confirmation, the `@matters@matters.town` result was followed from the g0v.social web UI. The UI changed from `Follow` to `Unfollow`, and Cloudflare tail observed the delivery:
+
+- `POST https://matters.town/ap/users/matters/inbox - Ok @ 2026-04-30 21:49:26 EDT`
+
+This confirms that the hardened Worker ActivityPub surface can be discovered, ingested, and addressed by Mastodon 4.5.9 for inbound follow delivery. It does not yet prove a production-complete follow relationship because the current Worker edge demo accepts the inbox POST at the edge and does not yet run the full `gateway-core` signed inbox processing and outbound `Accept` response.
 
 ### mastodon.social
 
@@ -79,7 +83,7 @@ The remaining issue is specific to the `mastodon.social` exact discovery path: e
 
 ## Next Checks
 
-1. If approved, perform the follow action from `g0v.social` against `acct:matters@matters.town` and observe whether the Worker receives the signed Follow activity.
+1. Wire the canonical Worker inbox route to `gateway-core` signed inbox handling so an inbound Follow can be verified, persisted, and answered with `Accept`.
 2. Retry exact discovery on `mastodon.social` after negative caches expire.
 3. Run the same endpoint against one additional Mastodon-compatible instance to broaden evidence beyond `g0v.social`.
 4. If a controlled Mastodon test instance is available, inspect server logs around `ResolveAccountService`, `FetchRemoteActorService`, and `ProcessAccountService`.
