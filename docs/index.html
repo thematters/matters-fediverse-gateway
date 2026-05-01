@@ -439,21 +439,22 @@
 
 <section>
   <h2>Try the prototype</h2>
-  <p>The live Cloudflare Worker demo demonstrates the read-side federation surface with ActivityPub and NodeInfo JSON served from an edge runtime. The demo actor is <code>acct:matters@gateway-demo.matters.town</code>. The demo article is represented as an ActivityPub <code>Article</code>, not reduced to a short-form note.</p>
+  <p>The live Cloudflare Worker prototype demonstrates the read-side federation surface with ActivityPub and NodeInfo JSON served from narrow routes on the Matters domain. The canonical demo actor is <code>acct:matters@matters.town</code>. The demo article is represented as an ActivityPub <code>Article</code>, not reduced to a short-form note.</p>
   <table>
     <thead><tr><th>Endpoint</th><th>URL</th></tr></thead>
     <tbody>
-      <tr><td>Worker root</td><td><a href="https://gateway-demo.matters.town/">gateway-demo.matters.town</a></td></tr>
-      <tr><td>WebFinger</td><td><a href="https://gateway-demo.matters.town/.well-known/webfinger?resource=acct:matters@gateway-demo.matters.town">/.well-known/webfinger?resource=acct:matters@gateway-demo.matters.town</a></td></tr>
-      <tr><td>Actor</td><td><a href="https://gateway-demo.matters.town/users/matters">/users/matters</a></td></tr>
-      <tr><td>Outbox</td><td><a href="https://gateway-demo.matters.town/users/matters/outbox">/users/matters/outbox</a></td></tr>
-      <tr><td>Article</td><td><a href="https://gateway-demo.matters.town/articles/matters-main-site-open-social-demo">/articles/matters-main-site-open-social-demo</a></td></tr>
-      <tr><td>Seed manifest</td><td><a href="https://gateway-demo.matters.town/seed/activitypub-manifest.json">/seed/activitypub-manifest.json</a></td></tr>
-      <tr><td>Seed outbox</td><td><a href="https://gateway-demo.matters.town/seed/outbox.jsonld">/seed/outbox.jsonld</a></td></tr>
-      <tr><td>NodeInfo discovery</td><td><a href="https://gateway-demo.matters.town/.well-known/nodeinfo">/.well-known/nodeinfo</a></td></tr>
-      <tr><td>NodeInfo 2.1</td><td><a href="https://gateway-demo.matters.town/nodeinfo/2.1">/nodeinfo/2.1</a></td></tr>
+      <tr><td>Matters root</td><td><a href="https://matters.town/">matters.town</a></td></tr>
+      <tr><td>WebFinger</td><td><a href="https://matters.town/.well-known/webfinger?resource=acct:matters@matters.town">/.well-known/webfinger?resource=acct:matters@matters.town</a></td></tr>
+      <tr><td>Actor</td><td><a href="https://matters.town/ap/users/matters">/ap/users/matters</a></td></tr>
+      <tr><td>Outbox</td><td><a href="https://matters.town/ap/users/matters/outbox">/ap/users/matters/outbox</a></td></tr>
+      <tr><td>Article</td><td><a href="https://matters.town/ap/articles/matters-main-site-open-social-demo">/ap/articles/matters-main-site-open-social-demo</a></td></tr>
+      <tr><td>Seed manifest</td><td><a href="https://matters.town/ap/seed/activitypub-manifest.json">/ap/seed/activitypub-manifest.json</a></td></tr>
+      <tr><td>Seed outbox</td><td><a href="https://matters.town/ap/seed/outbox.jsonld">/ap/seed/outbox.jsonld</a></td></tr>
+      <tr><td>NodeInfo discovery</td><td><a href="https://matters.town/.well-known/nodeinfo">/.well-known/nodeinfo</a></td></tr>
+      <tr><td>NodeInfo 2.1</td><td><a href="https://matters.town/nodeinfo/2.1">/nodeinfo/2.1</a></td></tr>
     </tbody>
   </table>
+  <p>The isolated Worker testbed remains available at <a href="https://gateway-demo.matters.town/">gateway-demo.matters.town</a> for edge-runtime diagnostics without touching the main-site root route.</p>
   <p>The static GitHub Pages prototype remains available for the seed-bundle surface: <a href="https://thematters.github.io/.well-known/webfinger?resource=acct:matters@thematters.github.io">WebFinger</a>, <a href="https://thematters.github.io/users/matters.json">actor</a>, <a href="https://thematters.github.io/users/matters/outbox">outbox</a>, <a href="https://thematters.github.io/articles/matters-main-site-open-social-demo">Article</a>, <a href="https://thematters.github.io/seed/activitypub-manifest.json">seed manifest</a>, <a href="https://thematters.github.io/seed/outbox.jsonld">seed outbox</a>, and <a href="https://thematters.github.io/nodeinfo/2.1">NodeInfo</a>.</p>
   <p>This is not a production service. It does not accept real user content. The Worker currently demonstrates ActivityPub content types, edge routing, seed bundle exposure, and the future signed inbox pass-through path to <code>gateway-core</code>.</p>
 </section>
@@ -514,7 +515,7 @@ Mastodon / Misskey / GoToSocial / other Fediverse servers</pre>
     <li>Public ActivityPub prototype endpoints are live: WebFinger, actor, outbox, Article, seed bundle, and NodeInfo.</li>
     <li>Cloudflare Worker edge implementation is deployed for correct ActivityPub content types, edge routing, seed bundle exposure, and future runtime pass-through.</li>
     <li>85 automated tests passed in the latest recorded local verification snapshot.</li>
-    <li>First black-box interoperability check with <code>mastodon.social</code> completed.</li>
+    <li>Black-box interoperability checks completed with Mastodon surfaces, including successful exact discovery and inbound follow delivery from <code>g0v.social</code>.</li>
     <li>SQLite persistence plus backup, restore, reconcile, and replay tooling are in place.</li>
     <li>Webhook dispatch exists for metrics, alerts, logs, and Slack incoming webhooks.</li>
   </ul>
@@ -559,7 +560,8 @@ Mastodon / Misskey / GoToSocial / other Fediverse servers</pre>
   <h2>Learn more</h2>
   <div class="links">
     <a href="https://github.com/thematters/matters-fediverse-gateway">GitHub repository</a>
-    <a href="https://gateway-demo.matters.town">Live Worker demo</a>
+    <a href="https://matters.town/.well-known/webfinger?resource=acct:matters@matters.town">Canonical demo actor</a>
+    <a href="https://gateway-demo.matters.town">Worker testbed</a>
     <a href="https://github.com/thematters/matters-fediverse-gateway/tree/main/gateway-core">gateway-core source</a>
     <a href="https://github.com/thematters/matters-fediverse-gateway/tree/main/cloudflare-worker">Cloudflare Worker source</a>
     <a href="https://github.com/thematters/matters-fediverse-gateway/blob/main/docs/ipns-gateway-cloudflare-plan.md">IPNS gateway plan</a>
@@ -571,7 +573,7 @@ Mastodon / Misskey / GoToSocial / other Fediverse servers</pre>
 
 <footer>
   <p>License: <a href="https://github.com/thematters/matters-fediverse-gateway/blob/main/LICENSE">AGPL-3.0</a> · Maintainer: <a href="https://github.com/thematters">@thematters</a></p>
-  <p>Visual system: Matters Design System 1.5. This page is a prototype overview; the live public demo endpoint is <a href="https://gateway-demo.matters.town/.well-known/webfinger?resource=acct:matters@gateway-demo.matters.town">acct:matters@gateway-demo.matters.town</a>.</p>
+  <p>Visual system: Matters Design System 1.5. This page is a prototype overview; the live public demo endpoint is <a href="https://matters.town/.well-known/webfinger?resource=acct:matters@matters.town">acct:matters@matters.town</a>.</p>
 </footer>
 
 </div>
