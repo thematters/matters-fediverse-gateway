@@ -1,13 +1,13 @@
 ---
 task_slug: matters-g1-w4a-longform-article-systematization
-status: queued
+status: done
 goal: 把 ActivityPub Article 型別作為 Matters 對外聯邦長文的主型別，並系統化 sanitizer / summary / attachment / canonical link 行為
 dispatcher: human-fallback
 executor: codex-local
 host: any
 branch: task/matters-g1-w4a-longform-article-systematization
-latest_commit: UNSET
-last_updated: 2026-04-25T00:00:00+08:00
+latest_commit: e1045f5
+last_updated: 2026-05-01T17:55:00-04:00
 tmux_session: none
 host_affinity: none
 outputs_scope: gateway-core
@@ -28,8 +28,8 @@ local_paths:
 start_command: none
 stop_command: none
 verify_command: cd gateway-core && npm test
-next_step: 寫 Article mapping spec、HTML sanitizer 白名單、IPFS 圖片 attachment 策略、`url`/`summary`/`name` 欄位定案；補 Article-specific test
-blockers: 需先確認決策題 02（HTML sanitizer 規則）
+next_step: 進入 W3 三方互通驗證時，記錄 Mastodon / Misskey / GoToSocial 對 Article summary、attachment、canonical link 的顯示差異
+blockers: none
 ---
 
 # Task Handoff
@@ -52,7 +52,10 @@ G1 工作項目 W4a，是這一輪最核心的內容工程。決策已定：對�
 ## Change Log
 
 - 2026-04-25 created from G1 roadmap; not yet started
+- 2026-05-01 completed by codex-local in `e1045f5`; added shared Article normalization for static bridge and outbound Create/Update, plus Article-specific tests and ADR-006 rules
 
 ## Validation
 
-- TBD
+- 2026-05-01 `node --test --test-name-pattern "article normalization|outbox bridge|outbox Update normalizes|outbox Create normalizes" test/gateway-core.test.mjs`：9 pass / 0 fail
+- 2026-05-01 `node --test`：95 pass / 0 fail
+- 2026-05-01 `git diff --check`：pass
