@@ -1147,6 +1147,96 @@ test("outbox bridge rewrites static publisher output to canonical actor URLs", a
   );
 });
 
+test("outbox bridge drops non-public static items and records visibility audit", async () => {
+  const harness = await createHarness();
+  const fixturePath = path.join(os.tmpdir(), `static-outbox-visibility-${Date.now()}-${Math.random().toString(16).slice(2)}.json`);
+  const publicAudience = "https://www.w3.org/ns/activitystreams#Public";
+  const createItem = (suffix, objectOverrides = {}, itemOverrides = {}) => ({
+    id: `https://example.eth.limo/activities/${suffix}`,
+    type: "Create",
+    actor: "https://example.eth.limo/about.jsonld",
+    to: [publicAudience],
+    object: {
+      id: `https://example.eth.limo/articles/${suffix}`,
+      type: "Note",
+      name: `${suffix} headline`,
+      content: `${suffix} body`,
+      url: `https://example.eth.limo/articles/${suffix}`,
+      to: [publicAudience],
+      ...objectOverrides,
+    },
+    ...itemOverrides,
+  });
+  await writeFile(
+    fixturePath,
+    JSON.stringify({
+      "@context": "https://www.w3.org/ns/activitystreams",
+      id: "https://example.eth.limo/outbox.jsonld",
+      type: "OrderedCollection",
+      orderedItems: [
+        createItem("public"),
+        createItem("paid", { visibility: "paid", name: "Paid headline should not leak", content: "Paid premium body should not leak" }),
+        createItem("encrypted", { encrypted: true, content: "Encrypted body should not leak" }),
+        createItem("private", { visibility: "private", content: "Private body should not leak" }),
+        createItem("draft", { status: "draft", content: "Draft body should not leak" }),
+        createItem("message", { type: "ChatMessage", content: "Message body should not leak" }),
+        createItem("mixed-thread", { threadVisibility: "private", content: "Mixed thread body should not leak" }),
+      ],
+    }),
+  );
+  const outboxApp = createGatewayApp({
+    config: {
+      ...harness.config,
+      actors: {
+        ...harness.config.actors,
+        alice: {
+          ...harness.config.actors.alice,
+          staticOutboxFile: fixturePath,
+        },
+      },
+    },
+    store: harness.store,
+    deliveryClient: {
+      async deliver() {
+        return { status: 202 };
+      },
+    },
+    clock: () => new Date("2026-05-01T12:00:00.000Z"),
+  });
+
+  const response = await outboxApp.handle(
+    new Request("https://matters.example/users/alice/outbox"),
+  );
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.totalItems, 1);
+  assert.equal(payload.orderedItems[0].object.id, "https://example.eth.limo/articles/public");
+  assert.equal(payload.orderedItems[0].object.attributedTo, "https://matters.example/users/alice");
+  assert.doesNotMatch(JSON.stringify(payload), /Paid premium body|Encrypted body|Private body|Draft body|Message body|Mixed thread body/);
+
+  const auditResponse = await outboxApp.handle(
+    new Request("https://matters.example/admin/visibility-audit?actorHandle=alice&limit=20"),
+  );
+  assert.equal(auditResponse.status, 200);
+  const auditPayload = await auditResponse.json();
+  assert.equal(auditPayload.items.length, 7);
+  assert.equal(auditPayload.items.filter((entry) => entry.decision === "included").length, 1);
+  assert.equal(auditPayload.items.filter((entry) => entry.decision === "excluded").length, 6);
+  assert.deepEqual(
+    auditPayload.items.filter((entry) => entry.decision === "excluded").map((entry) => entry.reason).sort(),
+    [
+      "encrypted-content",
+      "message-like-content",
+      "status-not-public",
+      "thread-not-public",
+      "visibility-not-public",
+      "visibility-not-public",
+    ],
+  );
+  assert.doesNotMatch(JSON.stringify(auditPayload), /Paid headline should not leak|Paid premium body|Encrypted body|Private body|Draft body|Message body|Mixed thread body/);
+});
+
 test("article normalization keeps safe longform HTML and moves IPFS images to attachments", () => {
   const article = normalizeArticleObject({
     actor: { actorUrl: "https://matters.example/users/alice" },

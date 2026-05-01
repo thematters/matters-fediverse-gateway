@@ -1435,7 +1435,7 @@ export function createGatewayApp({
     store,
     cacheTtlMs: config.remoteDiscovery?.cacheTtlMs ?? 60 * 60 * 1000,
   }),
-  outboxBridge = createStaticOutboxBridge(),
+  outboxBridge = null,
   clock = () => new Date(),
 }) {
   const deliveryProcessor = createDeliveryProcessor({
@@ -1449,6 +1449,16 @@ export function createGatewayApp({
     Number.isFinite(config.remoteDiscovery?.mentionFailureRetryMs) && config.remoteDiscovery.mentionFailureRetryMs > 0
       ? Math.floor(config.remoteDiscovery.mentionFailureRetryMs)
       : DEFAULT_MENTION_FAILURE_RETRY_MS;
+  const effectiveOutboxBridge = outboxBridge ?? createStaticOutboxBridge({
+    async recordAudit(entry) {
+      await store.recordTrace(
+        makeTrace(clock, {
+          event: `visibility.${entry.decision}`,
+          ...entry,
+        }),
+      );
+    },
+  });
 
   function buildEvidenceRecord({
     category,
@@ -3120,7 +3130,7 @@ export function createGatewayApp({
       }
 
       if (request.method === "GET" && handle && pathname === `/users/${handle}/outbox` && actor) {
-        const outbox = await outboxBridge.getOutbox(actor);
+        const outbox = await effectiveOutboxBridge.getOutbox(actor);
         return activityResponse(outbox);
       }
 
@@ -4033,6 +4043,32 @@ export function createGatewayApp({
         return jsonResponse({
           items: store.getAuditLog?.(Number.isNaN(limit) ? 50 : limit) ?? [],
         });
+      }
+
+      if (request.method === "GET" && pathname === "/admin/visibility-audit") {
+        const limit = Number.parseInt(url.searchParams.get("limit") ?? "50", 10);
+        const normalizedLimit = Math.min(Math.max(Number.isNaN(limit) ? 50 : limit, 1), 500);
+        const actorHandle = url.searchParams.get("actorHandle") || null;
+        const decision = url.searchParams.get("decision") || null;
+        const traces = store.getTraces?.({ limit: normalizedLimit, eventPrefix: "visibility." }) ?? [];
+        const items = traces
+          .filter((entry) => !actorHandle || entry.actorHandle === actorHandle)
+          .filter((entry) => !decision || entry.decision === decision)
+          .map((entry) => ({
+            timestamp: entry.timestamp ?? null,
+            event: entry.event,
+            source: entry.source ?? null,
+            actorHandle: entry.actorHandle ?? null,
+            actorUrl: entry.actorUrl ?? null,
+            decision: entry.decision ?? null,
+            reason: entry.reason ?? null,
+            visibility: entry.visibility ?? null,
+            activityId: entry.activityId ?? null,
+            objectId: entry.objectId ?? null,
+            objectType: entry.objectType ?? null,
+          }));
+
+        return jsonResponse({ items });
       }
 
       if (request.method === "GET" && pathname === "/admin/evidence") {
