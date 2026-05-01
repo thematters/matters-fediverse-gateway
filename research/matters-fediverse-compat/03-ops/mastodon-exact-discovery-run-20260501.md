@@ -4,12 +4,14 @@
 
 We tested exact Mastodon discovery for the Cloudflare Worker ActivityPub surface after moving the demo onto Matters-controlled domains.
 
-The Worker endpoints are live and internally consistent, but `mastodon.social` did not return an exact remote account for the tested handles. No follow was attempted because discovery did not produce a Mastodon account id.
+`g0v.social` successfully resolved the Worker actors, including the canonical `acct:matters@matters.town` actor. `mastodon.social` did not return an exact remote account for the same surface during this run. No follow was attempted because following changes the tester account's relationship state and requires explicit action-time confirmation.
 
 ## Runtime Context
 
 - Mastodon instance: `https://mastodon.social`
 - Mastodon version observed in web UI: `4.6.0-nightly.2026-04-30`
+- Secondary Mastodon instance: `https://g0v.social`
+- Secondary Mastodon version observed in web UI: `4.5.9`
 - Canonical actor: `acct:matters@matters.town`
 - Diagnostic actor on canonical domain: `acct:mattersprobe02@matters.town`
 - Diagnostic actor on isolated Worker custom domain: `acct:mattersprobe02@gateway-probe.matters.town`
@@ -34,6 +36,26 @@ The live actor JSON was hardened to match a minimal Mastodon-compatible shape:
 
 ## Mastodon Results
 
+### g0v.social
+
+Authenticated web UI checks:
+
+- `@mattersprobe02@gateway-probe.matters.town`: exact profile result returned as `Matters Interop`
+- `@mattersprobe02@matters.town`: exact profile result returned as `Matters Interop`
+- `@matters@matters.town`: exact profile result returned as `Matters`
+
+Cloudflare tail showed `g0v.social` fetching the expected gateway resources:
+
+- `/.well-known/webfinger`
+- actor document
+- actor outbox
+- actor following collection
+- actor followers collection
+
+This confirms that the hardened Worker ActivityPub surface can be discovered and ingested by Mastodon 4.5.9.
+
+### mastodon.social
+
 Authenticated API checks:
 
 - `GET /api/v1/accounts/verify_credentials`: token valid, account resolved as `mashbean`
@@ -51,13 +73,13 @@ Cloudflare tail confirmed our own endpoint probes. Earlier in the run, Mastodon 
 
 ## Interpretation
 
-The current blocker is not basic WebFinger or actor endpoint availability. The live Worker surface is reachable, returns the expected ActivityPub content types, and passes the source-level checks Mastodon performs before account processing.
+The current blocker is not basic WebFinger or actor endpoint availability. The live Worker surface is reachable, returns the expected ActivityPub content types, passes the source-level checks Mastodon performs before account processing, and is successfully ingested by `g0v.social`.
 
-The remaining issue is on the Mastodon.social exact discovery path: either the account processing failed after the initial fetch and Mastodon retained a short-lived negative state, or the current Mastodon.social search/interaction path is not consistently invoking remote resolve for these queries. Because there is no admin access to Mastodon.social logs, the exact server-side rejection point is not observable from this client-side run.
+The remaining issue is specific to the `mastodon.social` exact discovery path: either the account processing failed after the initial fetch and Mastodon retained a short-lived negative state, or the current Mastodon.social nightly search/interaction path is not consistently invoking remote resolve for these queries. Because there is no admin access to Mastodon.social logs, the exact server-side rejection point is not observable from this client-side run.
 
 ## Next Checks
 
-1. Retry exact discovery after Mastodon.social negative caches expire.
-2. Run the same endpoint against a second Mastodon-compatible instance to separate Mastodon.social-specific state from protocol compatibility.
-3. If a controlled Mastodon test instance is available, inspect server logs around `ResolveAccountService`, `FetchRemoteActorService`, and `ProcessAccountService`.
-4. Only attempt the follow step after search or lookup returns a concrete remote account id.
+1. If approved, perform the follow action from `g0v.social` against `acct:matters@matters.town` and observe whether the Worker receives the signed Follow activity.
+2. Retry exact discovery on `mastodon.social` after negative caches expire.
+3. Run the same endpoint against one additional Mastodon-compatible instance to broaden evidence beyond `g0v.social`.
+4. If a controlled Mastodon test instance is available, inspect server logs around `ResolveAccountService`, `FetchRemoteActorService`, and `ProcessAccountService`.
