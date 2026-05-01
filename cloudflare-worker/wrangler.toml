@@ -9,6 +9,10 @@ pattern = "gateway-demo.matters.town"
 custom_domain = true
 
 [[routes]]
+pattern = "gateway-probe.matters.town"
+custom_domain = true
+
+[[routes]]
 pattern = "matters.town/.well-known/webfinger*"
 zone_name = "matters.town"
 

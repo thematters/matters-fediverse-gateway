@@ -2,18 +2,11 @@ const PUBLIC_AUDIENCE = "https://www.w3.org/ns/activitystreams#Public";
 const ACTIVITY_CONTEXT = [
   "https://www.w3.org/ns/activitystreams",
   "https://w3id.org/security/v1",
-  "https://purl.archive.org/socialweb/webfinger",
-  {
-    toot: "http://joinmastodon.org/ns#",
-    discoverable: "toot:discoverable",
-    alsoKnownAs: {
-      "@id": "as:alsoKnownAs",
-      "@type": "@id",
-    },
-  },
 ];
 
-const ACTOR_HANDLE = "matters";
+const DEFAULT_ACTOR_HANDLE = "matters";
+const DIAGNOSTIC_ACTOR_HANDLE = "mattersprobe02";
+const SUPPORTED_ACTOR_HANDLES = new Set([DEFAULT_ACTOR_HANDLE, DIAGNOSTIC_ACTOR_HANDLE]);
 const ARTICLE_SLUG = "matters-main-site-open-social-demo";
 const ARTICLE_SOURCE_URL = "https://matters.town";
 const PROJECT_REPOSITORY_URL = "https://github.com/thematters/matters-fediverse-gateway";
@@ -32,8 +25,8 @@ function activityPrefix(request, env) {
   return host === MATTERS_CANONICAL_HOST ? "/ap" : "";
 }
 
-function actorUrl(base, prefix = "") {
-  return `${base}${prefix}/users/${ACTOR_HANDLE}`;
+function actorUrl(base, prefix = "", handle = DEFAULT_ACTOR_HANDLE) {
+  return `${base}${prefix}/users/${handle}`;
 }
 
 function articleUrl(base, prefix = "") {
@@ -44,12 +37,25 @@ function inboxUrl(base, prefix = "") {
   return `${base}${prefix}/inbox`;
 }
 
-function subjectFor(request, env) {
+function subjectFor(request, env, handle = DEFAULT_ACTOR_HANDLE) {
   const host = new URL(publicBase(request, env)).host;
-  return `acct:${ACTOR_HANDLE}@${host}`;
+  return `acct:${handle}@${host}`;
 }
 
-function withCommonHeaders(headers = {}, cache = "public, max-age=60, s-maxage=300") {
+function handleFromResource(resource) {
+  const match = /^acct:([^@]+)@([^@]+)$/.exec(resource || "");
+  return match && SUPPORTED_ACTOR_HANDLES.has(match[1]) ? match[1] : null;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function actorRouteMatch(path, prefix = "") {
+  return path.match(new RegExp(`^${escapeRegExp(prefix)}/users/([^/]+)(?:\\.json)?(?:/(outbox|followers|following|inbox))?$`));
+}
+
+function withCommonHeaders(headers = {}, cache = "no-store") {
   return {
     "access-control-allow-origin": "*",
     "cache-control": cache,
@@ -87,8 +93,8 @@ function withoutBody(response) {
   });
 }
 
-function mattersArticle(base, prefix = "") {
-  const actor = actorUrl(base, prefix);
+function mattersArticle(base, prefix = "", handle = DEFAULT_ACTOR_HANDLE) {
+  const actor = actorUrl(base, prefix, handle);
   const url = articleUrl(base, prefix);
 
   return {
@@ -123,8 +129,8 @@ function mattersArticle(base, prefix = "") {
   };
 }
 
-function createActivity(base, prefix = "") {
-  const actor = actorUrl(base, prefix);
+function createActivity(base, prefix = "", handle = DEFAULT_ACTOR_HANDLE) {
+  const actor = actorUrl(base, prefix, handle);
 
   return {
     "@context": "https://www.w3.org/ns/activitystreams",
@@ -134,20 +140,20 @@ function createActivity(base, prefix = "") {
     published: "2026-04-30T00:00:00.000Z",
     to: [PUBLIC_AUDIENCE],
     cc: [`${actor}/followers`],
-    object: mattersArticle(base, prefix),
+    object: mattersArticle(base, prefix, handle),
   };
 }
 
-function actorDocument(base, prefix, request, env) {
-  const actor = actorUrl(base, prefix);
+function actorDocument(base, prefix, request, env, handle = DEFAULT_ACTOR_HANDLE) {
+  const actor = actorUrl(base, prefix, handle);
+  const isDiagnostic = handle === DIAGNOSTIC_ACTOR_HANDLE;
 
   return {
     "@context": ACTIVITY_CONTEXT,
     id: actor,
     type: "Person",
-    webfinger: subjectFor(request, env).replace(/^acct:/, ""),
-    preferredUsername: ACTOR_HANDLE,
-    name: "Matters",
+    preferredUsername: handle,
+    name: isDiagnostic ? "Matters Interop" : "Matters",
     summary:
       "Matters is a long-form publishing community. This demo actor shows how public Matters articles can be exposed to the Fediverse through an ActivityPub gateway.",
     url: env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL,
@@ -155,13 +161,9 @@ function actorDocument(base, prefix, request, env) {
     outbox: `${actor}/outbox`,
     followers: `${actor}/followers`,
     following: `${actor}/following`,
+    manuallyApprovesFollowers: false,
     discoverable: true,
-    alsoKnownAs: [env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL],
-    icon: {
-      type: "Image",
-      mediaType: "image/svg+xml",
-      url: `${base}${prefix}/icon.svg`,
-    },
+    indexable: true,
     publicKey: {
       id: `${actor}#main-key`,
       owner: actor,
@@ -181,12 +183,15 @@ function webfinger(request, env) {
   const url = new URL(request.url);
   const resource = url.searchParams.get("resource") || subjectFor(request, env);
   const host = new URL(base).host;
+  const handle = handleFromResource(resource);
   const acceptedSubjects = new Set([
-    `acct:${ACTOR_HANDLE}@${host}`,
-    `acct:${ACTOR_HANDLE}@matters.town`,
+    `acct:${DEFAULT_ACTOR_HANDLE}@${host}`,
+    `acct:${DEFAULT_ACTOR_HANDLE}@matters.town`,
+    `acct:${DIAGNOSTIC_ACTOR_HANDLE}@${host}`,
+    `acct:${DIAGNOSTIC_ACTOR_HANDLE}@matters.town`,
   ]);
 
-  if (!acceptedSubjects.has(resource)) {
+  if (!handle || !acceptedSubjects.has(resource)) {
     return jsonResponse(
       {
         error: "unknown_resource",
@@ -201,7 +206,7 @@ function webfinger(request, env) {
   return jsonResponse(
     {
       subject: resource,
-      aliases: [env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL, actorUrl(base, prefix)],
+      aliases: [env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL, actorUrl(base, prefix, handle)],
       links: [
         {
           rel: "http://webfinger.net/rel/profile-page",
@@ -211,7 +216,12 @@ function webfinger(request, env) {
         {
           rel: "self",
           type: "application/activity+json",
-          href: actorUrl(base, prefix),
+          href: actorUrl(base, prefix, handle),
+        },
+        {
+          rel: "self",
+          type: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
+          href: actorUrl(base, prefix, handle),
         },
       ],
     },
@@ -270,19 +280,19 @@ function nodeInfo() {
   };
 }
 
-function outbox(base, prefix = "") {
+function outbox(base, prefix = "", handle = DEFAULT_ACTOR_HANDLE) {
   return {
     "@context": "https://www.w3.org/ns/activitystreams",
-    id: `${actorUrl(base, prefix)}/outbox`,
+    id: `${actorUrl(base, prefix, handle)}/outbox`,
     type: "OrderedCollection",
     totalItems: 1,
     first: {
-      id: `${actorUrl(base, prefix)}/outbox?page=true`,
+      id: `${actorUrl(base, prefix, handle)}/outbox?page=true`,
       type: "OrderedCollectionPage",
-      partOf: `${actorUrl(base, prefix)}/outbox`,
-      orderedItems: [createActivity(base, prefix)],
+      partOf: `${actorUrl(base, prefix, handle)}/outbox`,
+      orderedItems: [createActivity(base, prefix, handle)],
     },
-    orderedItems: [createActivity(base, prefix)],
+    orderedItems: [createActivity(base, prefix, handle)],
   };
 }
 
@@ -292,6 +302,12 @@ function collection(id, items = []) {
     id,
     type: "OrderedCollection",
     totalItems: items.length,
+    first: {
+      id: `${id}?page=true`,
+      type: "OrderedCollectionPage",
+      partOf: id,
+      orderedItems: items,
+    },
     orderedItems: items,
   };
 }
@@ -303,8 +319,8 @@ function seedManifest(base, prefix, request, env) {
     generatedAt: "2026-04-30T00:00:00.000Z",
     caseStudy: "Matters main-site public publishing",
     actor: {
-      handle: ACTOR_HANDLE,
-      sourceActorId: `${env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL}/@${ACTOR_HANDLE}`,
+      handle: DEFAULT_ACTOR_HANDLE,
+      sourceActorId: `${env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL}/@${DEFAULT_ACTOR_HANDLE}`,
       canonicalActorId: actorUrl(base, prefix),
       webfingerSubject: subjectFor(request, env),
       profileUrl: env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL,
@@ -330,9 +346,9 @@ function seedManifest(base, prefix, request, env) {
 function seedActor(base, prefix, request, env) {
   return {
     "@context": ACTIVITY_CONTEXT,
-    id: `${env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL}/@${ACTOR_HANDLE}`,
+    id: `${env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL}/@${DEFAULT_ACTOR_HANDLE}`,
     type: "Person",
-    preferredUsername: ACTOR_HANDLE,
+    preferredUsername: DEFAULT_ACTOR_HANDLE,
     name: "Matters",
     summary: "Static ActivityPub seed actor emitted by the publishing layer before gateway canonicalization.",
     url: env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL,
@@ -349,7 +365,7 @@ function seedActor(base, prefix, request, env) {
 }
 
 function seedOutbox(base, prefix, env) {
-  const sourceActor = `${env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL}/@${ACTOR_HANDLE}`;
+  const sourceActor = `${env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL}/@${DEFAULT_ACTOR_HANDLE}`;
   const article = {
     ...mattersArticle(base, prefix),
     id: `${env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL}/articles/${ARTICLE_SLUG}`,
@@ -427,11 +443,15 @@ function landing(request, env) {
     {
       name: "Matters Fediverse Gateway Worker Demo",
       docs: env.PROJECT_DOCS_URL || "https://thematters.github.io/matters-fediverse-gateway/",
-      actor: `acct:${ACTOR_HANDLE}@${host}`,
+      actor: `acct:${DEFAULT_ACTOR_HANDLE}@${host}`,
+      diagnosticActor: `acct:${DIAGNOSTIC_ACTOR_HANDLE}@${host}`,
       endpoints: {
-        webfinger: `${base}/.well-known/webfinger?resource=acct:${ACTOR_HANDLE}@${host}`,
+        webfinger: `${base}/.well-known/webfinger?resource=acct:${DEFAULT_ACTOR_HANDLE}@${host}`,
         actor: actorUrl(base, prefix),
         outbox: `${actorUrl(base, prefix)}/outbox`,
+        diagnosticWebfinger: `${base}/.well-known/webfinger?resource=acct:${DIAGNOSTIC_ACTOR_HANDLE}@${host}`,
+        diagnosticActor: actorUrl(base, prefix, DIAGNOSTIC_ACTOR_HANDLE),
+        diagnosticOutbox: `${actorUrl(base, prefix, DIAGNOSTIC_ACTOR_HANDLE)}/outbox`,
         article: articleUrl(base, prefix),
         nodeinfo: `${base}/nodeinfo/2.1`,
         seedManifest: `${base}${prefix}/seed/activitypub-manifest.json`,
@@ -456,7 +476,9 @@ export default {
     const base = publicBase(request, env);
     const prefix = activityPrefix(request, env);
     const path = url.pathname.replace(/\/$/, "") || "/";
-    const actorPath = `${prefix}/users/${ACTOR_HANDLE}`;
+    const actorMatch = actorRouteMatch(path, prefix);
+    const actorHandle = actorMatch && SUPPORTED_ACTOR_HANDLES.has(actorMatch[1]) ? actorMatch[1] : null;
+    const actorSubpath = actorHandle ? actorMatch[2] || null : null;
 
     if (request.method === "OPTIONS") {
       return new Response(null, {
@@ -471,7 +493,7 @@ export default {
 
     if (
       request.method === "POST" &&
-      (path === inboxUrl("", prefix) || path === `${actorPath}/inbox` || path === "/inbox" || path === `/users/${ACTOR_HANDLE}/inbox`)
+      (path === inboxUrl("", prefix) || path === "/inbox" || (actorHandle && actorSubpath === "inbox"))
     ) {
       return handleInbox(request, env);
     }
@@ -503,17 +525,23 @@ export default {
     if (path === "/nodeinfo/2.1") {
       return respond(jsonResponse(nodeInfo()));
     }
-    if (path === actorPath || path === `${actorPath}.json`) {
-      return respond(activityResponse(actorDocument(base, prefix, request, env)));
+    if (path === inboxUrl("", prefix) || path === "/inbox") {
+      return respond(activityResponse(collection(inboxUrl(base, prefix))));
     }
-    if (path === `${actorPath}/outbox`) {
-      return respond(activityResponse(outbox(base, prefix)));
+    if (actorHandle && actorSubpath === null) {
+      return respond(activityResponse(actorDocument(base, prefix, request, env, actorHandle)));
     }
-    if (path === `${actorPath}/followers`) {
-      return respond(activityResponse(collection(`${actorUrl(base, prefix)}/followers`)));
+    if (actorHandle && actorSubpath === "outbox") {
+      return respond(activityResponse(outbox(base, prefix, actorHandle)));
     }
-    if (path === `${actorPath}/following`) {
-      return respond(activityResponse(collection(`${actorUrl(base, prefix)}/following`)));
+    if (actorHandle && actorSubpath === "followers") {
+      return respond(activityResponse(collection(`${actorUrl(base, prefix, actorHandle)}/followers`)));
+    }
+    if (actorHandle && actorSubpath === "following") {
+      return respond(activityResponse(collection(`${actorUrl(base, prefix, actorHandle)}/following`)));
+    }
+    if (actorHandle && actorSubpath === "inbox") {
+      return respond(activityResponse(collection(`${actorUrl(base, prefix, actorHandle)}/inbox`)));
     }
     if (path === `${prefix}/articles/${ARTICLE_SLUG}`) {
       return respond(activityResponse(mattersArticle(base, prefix)));
