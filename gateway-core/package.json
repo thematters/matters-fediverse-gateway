@@ -4,9 +4,6 @@
   "private": true,
   "type": "module",
   "description": "Minimum federation gateway slice for Matters instances",
-  "dependencies": {
-    "better-sqlite3": "^12.4.1"
-  },
   "scripts": {
     "start": "node src/server.mjs --config ./config/dev.instance.json",
     "test": "node --test",
