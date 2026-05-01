@@ -8,6 +8,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { generateKeyPairSync } from "node:crypto";
 import { promisify } from "node:util";
 import { createGatewayApp } from "../src/app.mjs";
+import { normalizeArticleObject } from "../src/lib/article-normalization.mjs";
 import { normalizeContentDeliveryReviewSnapshot } from "../src/lib/content-delivery-ops.mjs";
 import { signHttpRequest } from "../src/security/http-signatures.mjs";
 import { FileStateStore } from "../src/store/file-state-store.mjs";
@@ -1138,10 +1139,121 @@ test("outbox bridge rewrites static publisher output to canonical actor URLs", a
     payload.orderedItems[0].object.attributedTo,
     "https://matters.example/users/alice",
   );
+  assert.equal(payload.orderedItems[0].object.type, "Article");
+  assert.match(payload.orderedItems[0].object.content, /Original Matters link:/);
   assert.equal(
     payload.orderedItems[0].cc[0],
     "https://matters.example/users/alice/followers",
   );
+});
+
+test("article normalization keeps safe longform HTML and moves IPFS images to attachments", () => {
+  const article = normalizeArticleObject({
+    actor: { actorUrl: "https://matters.example/users/alice" },
+    object: {
+      id: "https://matters.example/articles/ipfs-image",
+      type: "Article",
+      name: "IPFS image article",
+      summary: "A safe summary",
+      url: "https://matters.town/@alice/ipfs-image",
+      content: [
+        "<h2>Heading</h2>",
+        "<p>Hello <strong>fediverse</strong> <a href=\"https://example.com\" target=\"_blank\">link</a></p>",
+        "<iframe src=\"https://video.example/embed\"></iframe>",
+        "<img src=\"ipfs://bafycover/cover.png\" alt=\"Cover image\">",
+      ].join(""),
+    },
+  });
+
+  assert.equal(article.type, "Article");
+  assert.match(article.content, /<h2>Heading<\/h2>/);
+  assert.match(article.content, /<strong>fediverse<\/strong>/);
+  assert.match(article.content, /rel="noopener noreferrer ugc"/);
+  assert.doesNotMatch(article.content, /iframe|<img/i);
+  assert.match(article.content, /Original Matters link:/);
+  assert.equal(article.attachment[0].type, "Document");
+  assert.equal(article.attachment[0].url, "https://ipfs.io/ipfs/bafycover/cover.png");
+  assert.equal(article.attachment[0]["ipfs:hash"], "bafycover");
+});
+
+test("article normalization maps existing external image attachments to Document", () => {
+  const article = normalizeArticleObject({
+    object: {
+      id: "https://matters.example/articles/external-image",
+      type: "Article",
+      url: "https://matters.town/@alice/external-image",
+      content: "<p>External image</p>",
+      attachment: {
+        type: "Image",
+        mediaType: "image/webp",
+        url: "https://cdn.example/image.webp",
+        name: "External cover",
+      },
+    },
+  });
+
+  assert.equal(article.attachment.length, 1);
+  assert.equal(article.attachment[0].type, "Document");
+  assert.equal(article.attachment[0].mediaType, "image/webp");
+  assert.equal(article.attachment[0].url, "https://cdn.example/image.webp");
+});
+
+test("article normalization truncates long summaries deterministically", () => {
+  const article = normalizeArticleObject({
+    object: {
+      id: "https://matters.example/articles/long-summary",
+      type: "Article",
+      url: "https://matters.town/@alice/long-summary",
+      summary: "a".repeat(400),
+      content: "<p>Body</p>",
+    },
+  });
+
+  assert.equal(article.summary.length, 280);
+  assert.match(article.summary, /\.\.\.$/);
+});
+
+test("article normalization derives an empty summary from content text", () => {
+  const article = normalizeArticleObject({
+    object: {
+      id: "https://matters.example/articles/empty-summary",
+      type: "Article",
+      url: "https://matters.town/@alice/empty-summary",
+      summary: "",
+      content: "<p>Derived <em>summary</em> text</p>",
+    },
+  });
+
+  assert.equal(article.summary, "Derived summary text");
+});
+
+test("article normalization preserves code language class and strips unsafe attributes", () => {
+  const article = normalizeArticleObject({
+    object: {
+      id: "https://matters.example/articles/code-block",
+      type: "Article",
+      url: "https://matters.town/@alice/code-block",
+      content: "<pre><code class=\"language-js extra\" onclick=\"bad()\">const ok = true;</code></pre>",
+    },
+  });
+
+  assert.match(article.content, /<pre><code class="language-js">const ok = true;<\/code><\/pre>/);
+  assert.doesNotMatch(article.content, /onclick|extra/);
+});
+
+test("article normalization preserves cross-language summary text", () => {
+  const article = normalizeArticleObject({
+    object: {
+      id: "https://matters.example/articles/multilingual",
+      type: "Article",
+      name: "Multilingual",
+      url: "https://matters.town/@alice/multilingual",
+      content: "<p>中文段落 English paragraph 日本語の段落</p>",
+    },
+  });
+
+  assert.equal(article.summary, "中文段落 English paragraph 日本語の段落");
+  assert.equal(article.name, "Multilingual");
 });
 
 test("admin domain block and abuse endpoints expose moderation state", async () => {
@@ -2477,6 +2589,79 @@ test("outbox Update fans out to accepted followers", async () => {
   assert.equal(payload.deliveries.length, 1);
   assert.equal(deliveries[0].activity.type, "Update");
   assert.equal(deliveries[0].activity.object.id, "https://matters.example/articles/hello-fediverse");
+});
+
+test("outbox Update normalizes Article content before fanout", async () => {
+  const { app, store, deliveries } = await createHarness();
+  await store.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    inbox: "https://remote.example/users/zoe/inbox",
+    sharedInbox: "https://remote.example/inbox",
+    status: "accepted",
+    followedAt: "2026-03-21T00:00:00.000Z",
+    lastActivityId: "https://remote.example/activities/follow-1",
+  });
+
+  const response = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/update", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: "https://matters.example/articles/normalized-update",
+          type: "Article",
+          url: "https://matters.town/@alice/normalized-update",
+          content: "<h3>Update</h3><img src=\"ipfs://bafyupdate/photo.jpg\" alt=\"Update photo\"><script>bad()</script>",
+        },
+      }),
+    }),
+  );
+
+  assert.equal(response.status, 202);
+  const object = deliveries[0].activity.object;
+  assert.equal(object.type, "Article");
+  assert.match(object.content, /<h3>Update<\/h3>/);
+  assert.doesNotMatch(object.content, /img|script|bad\(\)/);
+  assert.equal(object.attachment[0].url, "https://ipfs.io/ipfs/bafyupdate/photo.jpg");
+});
+
+test("outbox Create normalizes public Article before fanout", async () => {
+  const { app, store, deliveries } = await createHarness();
+  await store.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    inbox: "https://remote.example/users/zoe/inbox",
+    sharedInbox: "https://remote.example/inbox",
+    status: "accepted",
+    followedAt: "2026-03-21T00:00:00.000Z",
+    lastActivityId: "https://remote.example/activities/follow-1",
+  });
+
+  const response = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: "https://matters.example/articles/normalized-create",
+          type: "Article",
+          name: "Normalized Create",
+          url: "https://matters.town/@alice/normalized-create",
+          content: "<p>Create body</p><a href=\"javascript:bad()\">bad link</a>",
+        },
+      }),
+    }),
+  );
+
+  assert.equal(response.status, 202);
+  const object = deliveries[0].activity.object;
+  assert.equal(object.type, "Article");
+  assert.equal(object.name, "Normalized Create");
+  assert.doesNotMatch(object.content, /javascript:|<\/a>bad link/);
+  assert.match(object.content, /Original Matters link:/);
 });
 
 test("outbox Create reply fans out to followers, explicit targets, and mention recipients", async () => {

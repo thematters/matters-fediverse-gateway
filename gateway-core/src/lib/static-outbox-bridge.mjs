@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { normalizeArticleObject } from "./article-normalization.mjs";
 
 const PUBLIC_AUDIENCE = "https://www.w3.org/ns/activitystreams#Public";
 
@@ -25,12 +26,13 @@ function normalizeAudience(values, fallback = []) {
 }
 
 function rewriteObject(object, actor) {
-  return {
+  const rewritten = {
     ...object,
     attributedTo: actor.actorUrl,
     to: normalizeAudience(object.to, [PUBLIC_AUDIENCE]),
     cc: normalizeAudience(object.cc, []),
   };
+  return normalizeArticleObject({ object: rewritten, actor });
 }
 
 function rewriteCreateActivity(item, actor) {
