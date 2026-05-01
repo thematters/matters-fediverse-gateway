@@ -1389,14 +1389,41 @@ function getEvidenceRetentionDays(config) {
 
 async function verifySignatureWithRemoteActor({ request, bodyText, remoteActor }) {
   const url = new URL(request.url);
-  return verifyHttpSignature({
-    method: request.method,
-    pathnameWithQuery: `${url.pathname}${url.search}`,
-    headers: request.headers,
-    body: bodyText,
-    publicKeyPem: remoteActor.publicKeyPem,
-    expectedKeyId: remoteActor.keyId,
-  });
+  const candidates = [
+    {
+      publicKeyPem: remoteActor.publicKeyPem,
+      keyId: remoteActor.keyId,
+      phase: "current",
+    },
+    {
+      publicKeyPem: remoteActor.previousPublicKeyPem,
+      keyId: remoteActor.previousKeyId,
+      phase: "previous",
+    },
+  ].filter((candidate) => candidate.publicKeyPem?.trim() && candidate.keyId?.trim());
+
+  let lastError = null;
+  for (const candidate of candidates) {
+    try {
+      const verification = verifyHttpSignature({
+        method: request.method,
+        pathnameWithQuery: `${url.pathname}${url.search}`,
+        headers: request.headers,
+        body: bodyText,
+        publicKeyPem: candidate.publicKeyPem,
+        expectedKeyId: candidate.keyId,
+      });
+
+      return {
+        ...verification,
+        keyPhase: candidate.phase,
+      };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError ?? new Error("No usable remote actor key");
 }
 
 async function verifyInboundFollow({ request, bodyText, activity, remoteActorDirectory }) {

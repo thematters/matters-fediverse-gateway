@@ -8,6 +8,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { generateKeyPairSync } from "node:crypto";
 import { promisify } from "node:util";
 import { createGatewayApp } from "../src/app.mjs";
+import { loadGatewayConfig } from "../src/config.mjs";
 import { normalizeArticleObject } from "../src/lib/article-normalization.mjs";
 import { normalizeContentDeliveryReviewSnapshot } from "../src/lib/content-delivery-ops.mjs";
 import { signHttpRequest } from "../src/security/http-signatures.mjs";
@@ -297,6 +298,37 @@ test("webfinger resolves a single canonical actor", async () => {
   const payload = await response.json();
   assert.equal(payload.subject, "acct:alice@matters.example");
   assert.equal(payload.links[0].href, "https://matters.example/users/alice");
+});
+
+test("actor document exposes previous public key during rotation overlap", async () => {
+  const { app, config } = await createHarness();
+  const previousKeys = pemPair();
+  config.actors.alice.keyId = "https://matters.example/users/alice#key-20260501";
+  config.actors.alice.previousKeyId = "https://matters.example/users/alice#main-key";
+  config.actors.alice.previousPublicKeyPem = previousKeys.publicKeyPem;
+
+  const response = await app.handle(new Request("https://matters.example/users/alice"));
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.publicKey.id, "https://matters.example/users/alice#key-20260501");
+  assert.equal(payload.previousPublicKey.id, "https://matters.example/users/alice#main-key");
+  assert.equal(payload.previousPublicKey.owner, "https://matters.example/users/alice");
+  assert.equal(payload.previousPublicKey.publicKeyPem, previousKeys.publicKeyPem);
+});
+
+test("actor document omits previous public key after rotation overlap retires", async () => {
+  const { app, config } = await createHarness();
+  config.actors.alice.keyId = "https://matters.example/users/alice#key-20260501";
+  config.actors.alice.previousKeyId = null;
+  config.actors.alice.previousPublicKeyPem = null;
+
+  const response = await app.handle(new Request("https://matters.example/users/alice"));
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.publicKey.id, "https://matters.example/users/alice#key-20260501");
+  assert.equal(payload.previousPublicKey, undefined);
 });
 
 test("content delivery review snapshot normalizer backfills canonical contract fields", () => {
@@ -5385,6 +5417,60 @@ test("key refresh path re-fetches remote actor after signature rotation", async 
   assert.equal(refreshCount, 1);
 });
 
+test("inbound signature verification accepts remote previous key during overlap", async () => {
+  const { config, remoteKeys } = await createHarness();
+  const previousRemoteKeys = pemPair();
+  const activity = {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    id: "https://remote.example/activities/follow-previous-key",
+    type: "Follow",
+    actor: "https://remote.example/users/zoe",
+    object: "https://matters.example/users/alice",
+  };
+
+  config.remoteActors["https://remote.example/users/zoe"] = {
+    keyId: "https://remote.example/users/zoe#key-current",
+    inbox: "https://remote.example/users/zoe/inbox",
+    sharedInbox: "https://remote.example/inbox",
+    publicKeyPem: remoteKeys.publicKeyPem,
+    previousKeyId: "https://remote.example/users/zoe#main-key",
+    previousPublicKeyPem: previousRemoteKeys.publicKeyPem,
+  };
+
+  const store = new FileStateStore({
+    stateFile: path.join(
+      os.tmpdir(),
+      `matters-gateway-previous-key-${Date.now()}-${Math.random().toString(16).slice(2)}.json`,
+    ),
+  });
+  await store.init();
+
+  const previousKeyApp = createGatewayApp({
+    config,
+    store,
+    deliveryClient: {
+      async deliver() {
+        return { status: 202 };
+      },
+    },
+  });
+
+  const body = JSON.stringify(activity);
+  const response = await previousKeyApp.handle(
+    signedRequest({
+      method: "POST",
+      url: "https://matters.example/users/alice/inbox",
+      body,
+      keyId: "https://remote.example/users/zoe#main-key",
+      privateKeyPem: previousRemoteKeys.privateKeyPem,
+    }),
+  );
+
+  assert.equal(response.status, 202);
+  const snapshot = store.getSnapshot();
+  assert.equal(snapshot.actors.alice.followers["https://remote.example/users/zoe"].status, "accepted");
+});
+
 test("temporary delivery failure schedules retry and then dead-letters", async () => {
   const localKeys = pemPair();
   const remoteKeys = pemPair();
@@ -6433,6 +6519,180 @@ test("secret layout check script reports configured file references", async () =
       "runtime.metrics.dispatch.webhookBearerTokenFile",
     ],
   );
+});
+
+test("config loader normalizes actor key rotation overlap fields", async () => {
+  const tmpDir = path.join(os.tmpdir(), `matters-gateway-key-overlap-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(tmpDir, { recursive: true });
+  const currentKeys = pemPair();
+  const previousKeys = pemPair();
+  const configPath = path.join(tmpDir, "instance.json");
+  const publicKeyFile = path.join(tmpDir, "current-public.pem");
+  const privateKeyFile = path.join(tmpDir, "current-private.pem");
+  const previousPublicKeyFile = path.join(tmpDir, "previous-public.pem");
+
+  await writeFile(publicKeyFile, currentKeys.publicKeyPem);
+  await writeFile(privateKeyFile, currentKeys.privateKeyPem);
+  await writeFile(previousPublicKeyFile, previousKeys.publicKeyPem);
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        instance: {
+          domain: "matters.example",
+        },
+        actors: {
+          alice: {
+            keyId: "https://matters.example/users/alice#key-current",
+            previousKeyId: "https://matters.example/users/alice#main-key",
+            publicKeyPemFile: "./current-public.pem",
+            privateKeyPemFile: "./current-private.pem",
+            previousPublicKeyPemFile: "./previous-public.pem",
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  const config = await loadGatewayConfig(configPath);
+
+  assert.equal(config.actors.alice.keyId, "https://matters.example/users/alice#key-current");
+  assert.equal(config.actors.alice.previousKeyId, "https://matters.example/users/alice#main-key");
+  assert.equal(config.actors.alice.previousPublicKeyPem, previousKeys.publicKeyPem);
+});
+
+test("key rotation script writes overlap config and local actor update artifact", async () => {
+  const tmpDir = path.join(os.tmpdir(), `matters-gateway-rotate-key-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(tmpDir, { recursive: true });
+  const currentKeys = pemPair();
+  const configPath = path.join(tmpDir, "instance.json");
+  const publicKeyFile = path.join(tmpDir, "current-public.pem");
+  const privateKeyFile = path.join(tmpDir, "current-private.pem");
+  const outputDir = path.join(tmpDir, "rotation");
+
+  await writeFile(publicKeyFile, currentKeys.publicKeyPem);
+  await writeFile(privateKeyFile, currentKeys.privateKeyPem);
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        instance: {
+          domain: "matters.example",
+        },
+        actors: {
+          alice: {
+            publicKeyPemFile: "./current-public.pem",
+            privateKeyPemFile: "./current-private.pem",
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  const { stdout } = await execFile(
+    "node",
+    [
+      "scripts/rotate-key.mjs",
+      "--config",
+      configPath,
+      "--actor",
+      "alice",
+      "--output-dir",
+      outputDir,
+      "--overlap-days",
+      "7",
+      "--write",
+    ],
+    {
+      cwd: path.resolve(process.cwd()),
+    },
+  );
+
+  const report = JSON.parse(stdout);
+  const updatedConfig = JSON.parse(await readFile(configPath, "utf8"));
+  const actorUpdate = JSON.parse(await readFile(report.files.actorUpdateFile, "utf8"));
+  const rotationEvent = JSON.parse(await readFile(report.files.rotationEventFile, "utf8"));
+
+  assert.equal(report.status, "written");
+  assert.equal(updatedConfig.actors.alice.previousKeyId, "https://matters.example/users/alice#main-key");
+  assert.equal(updatedConfig.actors.alice.previousPublicKeyPemFile, "./current-public.pem");
+  assert.match(updatedConfig.actors.alice.keyId, /^https:\/\/matters\.example\/users\/alice#key-/);
+  assert.equal(actorUpdate.type, "Update");
+  assert.equal(actorUpdate.object.previousPublicKey.id, "https://matters.example/users/alice#main-key");
+  assert.equal(rotationEvent.overlapEndsAt > rotationEvent.overlapStartedAt, true);
+});
+
+test("key rotation script retires previous key after overlap", async () => {
+  const tmpDir = path.join(os.tmpdir(), `matters-gateway-retire-key-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(tmpDir, { recursive: true });
+  const currentKeys = pemPair();
+  const previousKeys = pemPair();
+  const configPath = path.join(tmpDir, "instance.json");
+  const publicKeyFile = path.join(tmpDir, "current-public.pem");
+  const privateKeyFile = path.join(tmpDir, "current-private.pem");
+  const previousPublicKeyFile = path.join(tmpDir, "previous-public.pem");
+  const outputDir = path.join(tmpDir, "rotation-retire");
+
+  await writeFile(publicKeyFile, currentKeys.publicKeyPem);
+  await writeFile(privateKeyFile, currentKeys.privateKeyPem);
+  await writeFile(previousPublicKeyFile, previousKeys.publicKeyPem);
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        instance: {
+          domain: "matters.example",
+        },
+        actors: {
+          alice: {
+            keyId: "https://matters.example/users/alice#key-current",
+            previousKeyId: "https://matters.example/users/alice#main-key",
+            publicKeyPemFile: "./current-public.pem",
+            privateKeyPemFile: "./current-private.pem",
+            previousPublicKeyPemFile: "./previous-public.pem",
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  const { stdout } = await execFile(
+    "node",
+    [
+      "scripts/rotate-key.mjs",
+      "--config",
+      configPath,
+      "--actor",
+      "alice",
+      "--output-dir",
+      outputDir,
+      "--retire-previous-key",
+      "--write",
+    ],
+    {
+      cwd: path.resolve(process.cwd()),
+    },
+  );
+
+  const report = JSON.parse(stdout);
+  const updatedConfig = JSON.parse(await readFile(configPath, "utf8"));
+  const actorUpdate = JSON.parse(await readFile(report.files.actorUpdateFile, "utf8"));
+  const rotationEvent = JSON.parse(await readFile(report.files.rotationEventFile, "utf8"));
+
+  assert.equal(report.status, "written");
+  assert.equal(report.mode, "retire-previous-key");
+  assert.equal(updatedConfig.actors.alice.keyId, "https://matters.example/users/alice#key-current");
+  assert.equal(updatedConfig.actors.alice.previousKeyId, undefined);
+  assert.equal(updatedConfig.actors.alice.previousPublicKeyPemFile, undefined);
+  assert.equal(actorUpdate.object.publicKey.id, "https://matters.example/users/alice#key-current");
+  assert.equal(actorUpdate.object.previousPublicKey, undefined);
+  assert.equal(rotationEvent.event, "actor-key-retire-previous");
 });
 
 test("rollout artifact check script validates required env keys and paths", async () => {

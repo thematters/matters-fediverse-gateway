@@ -24,7 +24,7 @@ export function buildWebFinger({ instance, actor }) {
 }
 
 export function buildActorDocument({ instance, actor }) {
-  return {
+  const document = {
     "@context": [ACTIVITY_STREAMS, SECURITY_V1],
     id: actor.actorUrl,
     type: "Person",
@@ -47,6 +47,16 @@ export function buildActorDocument({ instance, actor }) {
       publicKeyPem: actor.publicKeyPem,
     },
   };
+
+  if (actor.previousPublicKeyPem && actor.previousKeyId) {
+    document.previousPublicKey = {
+      id: actor.previousKeyId,
+      owner: actor.actorUrl,
+      publicKeyPem: actor.previousPublicKeyPem,
+    };
+  }
+
+  return document;
 }
 
 export function buildOrderedCollection({ id, items }) {
