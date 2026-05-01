@@ -5467,6 +5467,163 @@ test("restore script restores sqlite backup and stamps runtime metadata", async 
   assert.equal(metadata.restoredFromBackup, backupFile);
 });
 
+test("consistency scan script reports follower, inbound object, and engagement drift", async () => {
+  const { store: sqliteStore, sqliteFile } = await createSqliteStoreHarness();
+  const tmpDir = path.dirname(sqliteFile);
+  const stateFile = path.join(tmpDir, "state.json");
+  const fileStore = new FileStateStore({ stateFile });
+  await fileStore.init();
+
+  await fileStore.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    status: "accepted",
+    followedAt: "2026-03-21T00:00:00.000Z",
+  });
+  await sqliteStore.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    status: "pending",
+    followedAt: "2026-03-21T00:00:00.000Z",
+  });
+  await fileStore.upsertInboundObject("alice", {
+    objectId: "https://remote.example/notes/file-only",
+    activityId: "https://remote.example/activities/create-file-only",
+    type: "Create",
+  });
+  await sqliteStore.upsertInboundObject("alice", {
+    objectId: "https://remote.example/notes/sqlite-only",
+    activityId: "https://remote.example/activities/create-sqlite-only",
+    type: "Create",
+  });
+  await fileStore.upsertInboundEngagement("alice", {
+    activityId: "https://remote.example/activities/like-1",
+    type: "Like",
+    objectId: "https://remote.example/notes/file-only",
+  });
+  await sqliteStore.upsertInboundEngagement("alice", {
+    activityId: "https://remote.example/activities/like-1",
+    type: "Like",
+    objectId: "https://remote.example/notes/file-only",
+  });
+
+  const configPath = path.join(tmpDir, "consistency-test.instance.json");
+  const outputDir = path.join(tmpDir, "scan-reports");
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        instance: {
+          domain: "matters.example",
+        },
+        actors: {},
+        runtime: {
+          stateFile,
+          sqliteFile,
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  const { stdout } = await execFile(
+    "node",
+    [
+      "scripts/scan-consistency.mjs",
+      "--config",
+      configPath,
+      "--output-dir",
+      outputDir,
+      "--now",
+      "2026-03-21T00:00:00.000Z",
+    ],
+    {
+      cwd: path.resolve(process.cwd()),
+    },
+  );
+  const payload = JSON.parse(stdout);
+  const report = JSON.parse(await readFile(payload.jsonReportFile, "utf8"));
+  const markdown = await readFile(payload.markdownReportFile, "utf8");
+
+  assert.equal(report.dryRun, true);
+  assert.equal(report.summary.totalDiffs, 3);
+  assert.equal(report.summary.byCollection.followers.valueMismatches, 1);
+  assert.equal(report.summary.byCollection.inboundObjects.missingInFile, 1);
+  assert.equal(report.summary.byCollection.inboundObjects.missingInSqlite, 1);
+  assert.equal(report.summary.byCollection.inboundEngagements.total, 0);
+  assert.equal(markdown.includes("Gateway Consistency Scan"), true);
+  assert.equal(markdown.includes("Missing in SQLite"), true);
+});
+
+test("consistency scan script repairs sqlite from file store when requested", async () => {
+  const { store: sqliteStore, sqliteFile } = await createSqliteStoreHarness();
+  const tmpDir = path.dirname(sqliteFile);
+  const stateFile = path.join(tmpDir, "state.json");
+  const fileStore = new FileStateStore({ stateFile });
+  await fileStore.init();
+
+  await fileStore.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    status: "accepted",
+    followedAt: "2026-03-21T00:00:00.000Z",
+  });
+  await sqliteStore.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    status: "pending",
+    followedAt: "2026-03-21T00:00:00.000Z",
+  });
+  await fileStore.upsertInboundObject("alice", {
+    objectId: "https://remote.example/notes/file-only",
+    activityId: "https://remote.example/activities/create-file-only",
+    type: "Create",
+  });
+
+  const configPath = path.join(tmpDir, "consistency-repair-test.instance.json");
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        instance: {
+          domain: "matters.example",
+        },
+        actors: {},
+        runtime: {
+          stateFile,
+          sqliteFile,
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  const { stdout } = await execFile(
+    "node",
+    [
+      "scripts/scan-consistency.mjs",
+      "--config",
+      configPath,
+      "--repair",
+      "--repair-target",
+      "sqlite",
+      "--now",
+      "2026-03-21T00:05:00.000Z",
+    ],
+    {
+      cwd: path.resolve(process.cwd()),
+    },
+  );
+  const payload = JSON.parse(stdout);
+  assert.equal(payload.repair.target, "sqlite");
+  assert.equal(payload.repair.applied, 2);
+  assert.equal(payload.summary.totalDiffs, 0);
+
+  const repaired = new SqliteStateStore({ sqliteFile });
+  await repaired.init();
+  assert.equal(repaired.getFollower("alice", "https://remote.example/users/zoe").status, "accepted");
+  assert.equal(repaired.getInboundObject("alice", "https://remote.example/notes/file-only").type, "Create");
+  repaired.close();
+});
+
 test("alert dispatch script writes structured payload with metrics and alerts", async () => {
   const { store, sqliteFile } = await createSqliteStoreHarness();
   const webhookServer = await createWebhookCaptureServer();

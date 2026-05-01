@@ -9,6 +9,7 @@
     "test": "node --test",
     "backup:sqlite": "node scripts/backup-sqlite.mjs --config ./config/dev.instance.json",
     "restore:sqlite": "node scripts/restore-sqlite.mjs --config ./config/dev.instance.json",
+    "scan:consistency": "node scripts/scan-consistency.mjs --config ./config/dev.instance.json",
     "dispatch:metrics": "node scripts/dispatch-runtime-metrics.mjs --config ./config/dev.instance.json",
     "dispatch:logs": "node scripts/dispatch-runtime-logs.mjs --config ./config/dev.instance.json",
     "dispatch:alerts": "node scripts/dispatch-runtime-alerts.mjs --config ./config/dev.instance.json",
