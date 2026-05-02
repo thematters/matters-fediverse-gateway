@@ -2,7 +2,7 @@
   auto_https off
 }
 
-http://staging-gateway.example:8080 {
+http://staging-gateway.matters.town:8080 {
   encode zstd gzip
 
   @private path /admin /admin/* /jobs /jobs/*
@@ -16,7 +16,7 @@ http://staging-gateway.example:8080 {
   }
 }
 
-http://staging-admin.example:8080 {
+http://staging-admin.matters.town:8080 {
   encode zstd gzip
   reverse_proxy 127.0.0.1:8787
 

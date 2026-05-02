@@ -7,10 +7,10 @@ tunnel: STAGING_TUNNEL_UUID
 credentials-file: /etc/cloudflared/STAGING_TUNNEL_UUID.json
 
 ingress:
-  - hostname: staging-gateway.example
+  - hostname: staging-gateway.matters.town
     service: http://127.0.0.1:8080
-  - hostname: staging-admin.example
+  - hostname: staging-admin.matters.town
     service: http://127.0.0.1:8080
-  - hostname: staging-hooks.example
+  - hostname: staging-hooks.matters.town
     service: http://127.0.0.1:8788
   - service: http_status:404

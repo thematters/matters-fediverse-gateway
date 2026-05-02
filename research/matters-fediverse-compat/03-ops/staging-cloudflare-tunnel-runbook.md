@@ -2,26 +2,26 @@
 
 ## Goal
 
-用既有 Cloudflare 帳號建立一個低成本 staging 入口，讓 `gateway-core` 可以在小型 VM 或 container host 上完成 W1 observability drill。這份 runbook 不處理正式部署、不建立 production credential，也不把 token 寫進 repo。
+用既有 Cloudflare 帳號建立一個低成本 staging 入口，讓 `gateway-core` 可以先在本機 Mac 或小型 VM/container host 上完成 W1 observability drill。Cloudflare 在第一輪負責 Tunnel、DNS 與 Access，不作為 `gateway-core` 的 compute host。這份 runbook 不處理正式部署、不建立 production credential，也不把 token 寫進 repo。
 
 ## Recommended Hostnames
 
-- `staging-gateway.<domain>`
+- `staging-gateway.matters.town`
   公開 federation staging 入口，給 WebFinger、NodeInfo、Actor、Outbox、Inbox 測試使用。不要放在 Cloudflare Access 後面，否則 Mastodon、Misskey、GoToSocial 等遠端 server 無法自動存取。
-- `staging-hooks.<domain>`
+- `staging-hooks.matters.town`
   webhook receiver 入口，接 alerts / metrics / logs dispatch。建議放在 Cloudflare Access 後面；receiver 本身也要開 bearer token。
-- `staging-admin.<domain>`
+- `staging-admin.matters.town`
   管理介面入口。若要公開到網路，必須放在 Cloudflare Access 後面；沒有 Access 前先只綁 localhost 或 VPN。
 
 ## Preflight Checklist
 
-- Cloudflare 帳號持有人已核准 DNS zone、Tunnel、Access policy 與 staging host 使用方式。
-- staging host 已準備 Node/npm、`cloudflared`、Caddy、SQLite runtime 目錄與 system service 或 container runtime。
-- hostname 已定案：`staging-gateway.<domain>`、`staging-admin.<domain>`、`staging-hooks.<domain>`。
-- public federation hostname `staging-gateway.<domain>` 沒有套 Cloudflare Access。
-- `staging-admin.<domain>` 與 `staging-hooks.<domain>` 的 Cloudflare Access policy 已由帳號持有人核准。
+- Cloudflare 帳號持有人已核准 `matters.town` DNS zone、Tunnel、Access policy 與 staging host 使用方式。
+- staging host 已準備 Node/npm、`cloudflared`、Caddy、SQLite runtime 目錄與 system service 或 container runtime。第一輪可用本機 Mac；若需要長時間開放，再換小型 VM/container。
+- hostname 已定案：`staging-gateway.matters.town`、`staging-admin.matters.town`、`staging-hooks.matters.town`。
+- public federation hostname `staging-gateway.matters.town` 沒有套 Cloudflare Access。
+- `staging-admin.matters.town` 與 `staging-hooks.matters.town` 的 Cloudflare Access policy 已由帳號持有人核准。
 - actor key files、receiver bearer token、alerts/metrics/logs dispatch token 已由 staging owner 放在 staging host；不要寫進 git。
-- webhook payload 留存、清除、雜湊或搬移策略已由 staging owner 決定。
+- webhook payload 留存策略：保留 14 天；內部報告預設只記錄檔名、時間、狀態與 SHA-256 hash；14 天後刪除或封存 `runtime/webhooks/` 與 `runtime/drills/`。
 - production route 與 production credential 不在本次 staging drill 範圍內。
 
 ## Local Services
@@ -58,7 +58,7 @@ Security model and limitations:
 
 - The receiver is bearer-token-only. It checks `Authorization: Bearer ...` when `--bearer-token` or `--bearer-token-file` is configured.
 - It is not an HMAC signature verifier and does not validate provider-style webhook signatures.
-- Protect `staging-hooks.<domain>` with Cloudflare Access or a private network boundary when possible, then use the receiver bearer token as the inner check.
+- Protect `staging-hooks.matters.town` with Cloudflare Access or a private network boundary when possible, then use the receiver bearer token as the inner check.
 - Token-like headers are masked before files are written, but `bodyText` is retained in full. Drill payloads must not include secrets.
 - Each captured payload includes `bodySha256` so the report can cite payload hashes without copying payload bodies.
 
@@ -79,11 +79,11 @@ tunnel: STAGING_TUNNEL_UUID
 credentials-file: /etc/cloudflared/STAGING_TUNNEL_UUID.json
 
 ingress:
-  - hostname: staging-gateway.example
+  - hostname: staging-gateway.matters.town
     service: http://127.0.0.1:8080
-  - hostname: staging-admin.example
+  - hostname: staging-admin.matters.town
     service: http://127.0.0.1:8080
-  - hostname: staging-hooks.example
+  - hostname: staging-hooks.matters.town
     service: http://127.0.0.1:8788
   - service: http_status:404
 ```
@@ -92,18 +92,18 @@ Minimum checks before running the drill:
 
 ```bash
 cloudflared tunnel ingress validate
-cloudflared tunnel ingress rule https://staging-gateway.example/.well-known/webfinger
-cloudflared tunnel ingress rule https://staging-admin.example/admin/dashboard
-cloudflared tunnel ingress rule https://staging-hooks.example/healthz
+cloudflared tunnel ingress rule https://staging-gateway.matters.town/.well-known/webfinger
+cloudflared tunnel ingress rule https://staging-admin.matters.town/admin/dashboard
+cloudflared tunnel ingress rule https://staging-hooks.matters.town/healthz
 ```
 
 Run `cloudflared` as a service on the staging host after the tunnel and public hostnames are created in the Cloudflare dashboard or CLI. Keep tunnel tokens and credentials files outside git.
 
 Cloudflare Access policy:
 
-- Enable Access for `staging-admin.<domain>`.
-- Enable Access for `staging-hooks.<domain>` unless the drill needs to receive unauthenticated external callbacks.
-- Do not enable Access for `staging-gateway.<domain>` federation paths.
+- Enable Access for `staging-admin.matters.town`.
+- Enable Access for `staging-hooks.matters.town` unless the drill needs to receive unauthenticated external callbacks.
+- Do not enable Access for `staging-gateway.matters.town` federation paths.
 
 References:
 
@@ -128,19 +128,19 @@ Set the dispatch URLs:
   "runtime": {
     "alerting": {
       "dispatch": {
-        "webhookUrl": "https://staging-hooks.<domain>/runtime-alerts",
+        "webhookUrl": "https://staging-hooks.matters.town/runtime-alerts",
         "webhookBearerTokenFile": "./staging.secrets/alert-webhook.token"
       }
     },
     "metrics": {
       "dispatch": {
-        "webhookUrl": "https://staging-hooks.<domain>/runtime-metrics",
+        "webhookUrl": "https://staging-hooks.matters.town/runtime-metrics",
         "webhookBearerTokenFile": "./staging.secrets/metrics-webhook.token"
       }
     },
     "logs": {
       "dispatch": {
-        "webhookUrl": "https://staging-hooks.<domain>/runtime-logs",
+        "webhookUrl": "https://staging-hooks.matters.town/runtime-logs",
         "webhookBearerTokenFile": "./staging.secrets/logs-webhook.token"
       }
     }
@@ -177,8 +177,8 @@ Troubleshooting:
 - A POST with the expected bearer token should return 202 and write one JSON file under `runtime/webhooks/`.
 - Compare `bodySha256` in the receiver response with the captured file when checking payload integrity.
 - If `cloudflared tunnel ingress rule` does not match the expected hostname, fix the tunnel ingress config before running the drill.
-- If Cloudflare Access blocks `staging-gateway.<domain>`, remove Access from the public federation hostname and keep Access only on admin/hooks hostnames.
-- If Caddy returns 404 for `/admin` on `staging-gateway.<domain>`, that is expected; use `staging-admin.<domain>` through Access for admin checks.
+- If Cloudflare Access blocks `staging-gateway.matters.town`, remove Access from the public federation hostname and keep Access only on admin/hooks hostnames.
+- If Caddy returns 404 for `/admin` on `staging-gateway.matters.town`, that is expected; use `staging-admin.matters.town` through Access for admin checks.
 
 ## Disable and Roll Back
 
@@ -196,7 +196,7 @@ Then:
 - Disable or tighten the Cloudflare Access apps for admin/hooks hostnames.
 - Rotate receiver bearer token and alert/metrics/logs dispatch tokens if they were used from a shared host.
 - Rotate actor key files if they were exposed outside the staging host or copied into an unsafe location.
-- Move, hash, encrypt, or delete `runtime/webhooks/` and `runtime/drills/` according to the approved payload retention policy.
+- Delete or archive `runtime/webhooks/` and `runtime/drills/` after 14 days. Internal reports should cite file names, timestamps, statuses, and SHA-256 hashes by default.
 - Re-run public federation smoke checks on production hostnames to confirm staging routes did not affect production.
 
 ## Report Naming

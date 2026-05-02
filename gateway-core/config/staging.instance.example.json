@@ -1,6 +1,6 @@
 {
   "instance": {
-    "domain": "staging-gateway.example",
+    "domain": "staging-gateway.matters.town",
     "title": "Matters Gateway Staging",
     "summary": "Staging instance for gateway-core deployment topology verification",
     "softwareName": "matters-gateway-core",
@@ -60,7 +60,7 @@
       "openAbuseCaseThreshold": 0,
       "pendingQueueThreshold": 25,
       "dispatch": {
-        "webhookUrl": "https://staging-hooks.example/runtime-alerts",
+        "webhookUrl": "https://staging-hooks.matters.town/runtime-alerts",
         "webhookBearerTokenFile": "./staging.secrets.example/alert-webhook.token",
         "slackWebhookUrl": "",
         "slackChannel": "#gateway-alerts",
@@ -71,14 +71,14 @@
     },
     "metrics": {
       "dispatch": {
-        "webhookUrl": "https://staging-hooks.example/runtime-metrics",
+        "webhookUrl": "https://staging-hooks.matters.town/runtime-metrics",
         "webhookBearerTokenFile": "./staging.secrets.example/metrics-webhook.token",
         "timeoutMs": 10000
       }
     },
     "logs": {
       "dispatch": {
-        "webhookUrl": "https://staging-hooks.example/runtime-logs",
+        "webhookUrl": "https://staging-hooks.matters.town/runtime-logs",
         "webhookBearerTokenFile": "./staging.secrets.example/logs-webhook.token",
         "timeoutMs": 10000,
         "auditLimit": 200,

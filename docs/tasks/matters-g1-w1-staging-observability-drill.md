@@ -26,8 +26,8 @@ local_paths:
 start_command: none
 stop_command: none
 verify_command: cd gateway-core && npm run drill:observability
-next_step: 依 Decision 07 使用既有 Cloudflare 帳號建立 Cloudflare Tunnel；先跑免費自架 generic webhook receiver，跑 drill 後封存 staging-observability-drill-YYYYMMDD.md
-blockers: 需要 mashbean 在 Cloudflare 帳號建立 staging DNS / Tunnel / Access policy，並在 staging host provision secret files
+next_step: 使用既有 Cloudflare 帳號建立 Tunnel，綁定 staging-gateway/admin/hooks.matters.town；第一輪 staging host 可用本機 Mac，先跑免費自架 generic webhook receiver，跑 drill 後封存 staging-observability-drill-YYYYMMDD.md
+blockers: 需要 mashbean 在 Cloudflare 帳號建立 staging DNS / Tunnel / Access policy，並把 Notes app 內的 actor key 與 webhook token 寫入 staging host secret files
 ---
 
 # Task Handoff
@@ -49,6 +49,7 @@ G1 工作項目 W1。Stage 03 的最後一步：本機 drill 已通，但所有�
 - 2026-04-25 created from G1 roadmap; not yet started
 - 2026-05-01 Decision 07 confirmed staging ownership and no-cost webhook preference; still waiting for staging host and secret material
 - 2026-05-01 added Cloudflare Tunnel staging runbook, generic webhook receiver, and staging config template updates; still waiting for real Cloudflare/DNS/secret provisioning
+- 2026-05-01 user delegated hostname and retention decisions; selected staging-gateway/admin/hooks.matters.town, local Mac or small VM through Cloudflare Tunnel, and 14-day payload retention
 
 ## Validation
 

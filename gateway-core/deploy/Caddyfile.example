@@ -1,4 +1,4 @@
-staging-gateway.example {
+staging-gateway.matters.town {
   encode zstd gzip
 
   header {

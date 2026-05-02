@@ -25,11 +25,18 @@ Public filtering policy:
 
 Recommended staging topology:
 
-- one small VM or container host for `gateway-core`
+- first drill can use the local Mac as staging host through Cloudflare Tunnel;
+  use a small VM or container host when longer uptime is needed
 - SQLite on a persistent local volume
 - Caddy or equivalent reverse proxy with TLS
-- Cloudflare Tunnel or a DNS-backed staging hostname
+- Cloudflare Tunnel on the existing Cloudflare account
 - secret files managed by mashbean
+
+Chosen staging hostnames:
+
+- `staging-gateway.matters.town`
+- `staging-admin.matters.town`
+- `staging-hooks.matters.town`
 
 Webhook choice:
 
@@ -38,6 +45,15 @@ Webhook choice:
 - For the drill, use generic webhook dispatch for alerts, metrics, and logs.
 - Slack incoming webhook is optional for the first free path. If Slack is already
   available at no extra cost, use it for alerts only.
+
+Payload retention:
+
+- Keep staging webhook payloads and drill bundles for 14 days.
+- Internal reports should record file names, timestamps, statuses, and SHA-256
+  hashes by default.
+- Do not retain token-bearing request bodies. Drill payloads must not contain
+  secrets.
+- Delete or archive `runtime/webhooks/` and `runtime/drills/` after 14 days.
 
 Drill report naming:
 
