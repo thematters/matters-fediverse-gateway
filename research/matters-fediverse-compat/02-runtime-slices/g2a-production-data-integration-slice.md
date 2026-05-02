@@ -115,6 +115,9 @@ Required `HomepageContext` mapping:
 - Public API read selected `charlesmungerai` articles `1182465` (`wdzgj6wllhrf`), `1181808` (`mgbaikfdg7a9`), and `1181797` (`drxqcpmy0obk`) with `state=active` and `access=public`; no private credential was required.
 - The generated `charlesmungerai` bundle is stored outside git at `triad-ops/team/artifacts/O-0020/charlesmungerai-public-api-bundle/site`.
 - Local HTTP probes passed: WebFinger resolved `acct:charlesmungerai@staging-gateway.matters.town`, `/users/charlesmungerai` returned `Person`, and `/users/charlesmungerai/outbox` returned three `Article` items.
+- The generated `charlesmungerai` bundle was exposed through the existing local Cloudflare Tunnel staging hostname. Public probes passed for WebFinger, actor, and outbox; `staging-admin` still returned `admin_local_only`.
+- Misskey public interop on gyutte.site resolved and followed `charlesmungerai@staging-gateway.matters.town`. Existing generated outbox Articles were not backfilled into `users/notes`.
+- A fresh gateway `outbox/create` delivery for public Matters article `1182465` reached the gyutte.site follower with status `delivered`, and Misskey `users/notes` matched the Article object.
 - `matters-server` verification passed: `npm run build`, targeted `federationExportService` Jest 7/7, targeted ESLint, `git diff --check`, CLI fixture export, and commit hook build/gen/lint/prettier checks.
 
 ## Blocked Human Decisions
@@ -128,4 +131,4 @@ Required `HomepageContext` mapping:
 
 ## Next Engineering Action
 
-Decide whether the generated `charlesmungerai` public-API bundle should be exposed through the existing local Cloudflare Tunnel staging hostname before Zero Trust is available. Keep npm registry migration deferred: after npm `@matters` scope permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from the vendored tarball to `^0.1.9`, and rerun the same Node 18 checks before any staging deployment.
+Continue G2-B contract scaffolding locally: author opt-in state, per-article federation setting shape, and export trigger boundaries. Keep npm registry migration deferred: after npm `@matters` scope permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from the vendored tarball to `^0.1.9`, and rerun the same Node 18 checks before any staging deployment.

@@ -5,12 +5,12 @@
 - Status: `pass-with-limits`
 - Scope: W4a Article display follow-up after W3 Misskey public interop
 - Gateway: `https://staging-gateway.matters.town`
-- Actor: `alice`
+- Actors: `alice`, `charlesmungerai`
 - Misskey instance: `https://gyutte.site`
 - Misskey operator account: `https://gyutte.site/@mashbean`
 - GoToSocial: skipped by current product decision
 
-This report records what can be concluded from the current public Misskey run and the follow-up public staging `Create` probes.
+This report records what can be concluded from the current public Misskey run, the follow-up public staging `Create` probes, and the real public Matters Article delivery for `charlesmungerai`.
 
 ## Probe Automation
 
@@ -162,20 +162,44 @@ Media fixture inputs:
 
 Misskey copies remote attachment files into its own media storage, so the final `files[].url` values are gyutte.site media URLs rather than the original source URLs. The important compatibility signal is that both attachments survived delivery, were typed as images, and produced thumbnails.
 
+## Real Matters Article Delivery Result
+
+After the `charlesmungerai` public API bundle was exposed through the local Cloudflare Tunnel staging hostname, the gateway sent the first generated public Matters Article through `POST /users/charlesmungerai/outbox/create`.
+
+| Probe | Result |
+|---|---|
+| Gateway actor | `acct:charlesmungerai@staging-gateway.matters.town` |
+| Source Matters article ID | `1182465` |
+| Article object | `https://staging-gateway.matters.town/1182465-我的人生帳本-7-賭一把或求穩健-背後是哪一種人格底色/` |
+| Gateway `outbox/create` | 202, `status: queued` |
+| Recipient count | 1 gyutte.site follower |
+| Delivery status | `delivered` |
+| Misskey `users/notes` before delivery | 0 matching notes |
+| Misskey `users/notes` after delivery | 1 matched note |
+| Matched note ID | `819d5dff5b28d238b7ea5d9c` |
+| Matched note URI | same as the Article object URL |
+| Matched note files | 2 `image/jpeg` entries with gyutte.site media URLs and thumbnails |
+
+This validates the real public Matters Article path at API level: public GraphQL snapshot -> `ipns-site-generator` ActivityPub bundle -> `gateway-core` static manifest ingestion -> staging actor/outbox exposure -> signed delivery to Misskey -> `users/notes` visibility.
+
+Known display note: the generated Article includes both an inline image and an attachment image. Misskey surfaced two JPEG file entries that point to the same copied gyutte.site media object. This is acceptable for the current API-level gate, but it should be revisited before polishing the final long-form display mapping.
+
 ## Compatibility Matrix
 
 | Implementation | Discovery | Follow relation | Article object visible in remote notes/timeline | Notes |
 |---|---:|---:|---:|---|
 | Mastodon | pass | pending/requested in recorded run | not verified in that run | 2026-03-21 report checked discoverability and follow loop only |
-| Misskey | pass | pass | pass | Fresh public staging `Create` appears in `users/notes`; HTML is flattened, summary maps to `cw`; external and IPFS-normalized image attachments appear as Misskey files |
+| Misskey | pass | pass | pass | Fresh public staging `Create` and one real public Matters Article appear in `users/notes`; HTML is flattened, summary maps to `cw`; external, IPFS-normalized, and real Matters image attachments appear as Misskey files |
 | GoToSocial | skipped | skipped | skipped | user decision: skip for now |
 
 ## W4a Implications
 
 - Current W4a normalization remains appropriate for gateway-served Article objects: `Article`, `name`, `summary`, `content`, canonical `url`, and original-link preservation are visible at the gateway boundary.
 - Misskey compatibility for freshly delivered `Article` is now verified at API level for text, summary, canonical URL, external image attachment, and IPFS-normalized image attachment.
+- Real public Matters Article delivery is now verified at API level for one `charlesmungerai` Article generated from the public API snapshot.
 - Misskey flattens Article HTML into note text and maps `summary` to `cw`; this is acceptable for API-level interop but not equivalent to full long-form layout preservation.
 - Misskey stores remote attachments under gyutte.site media URLs, so evidence should compare file count/type/thumbnail presence rather than expecting original attachment URLs to remain visible.
+- Duplicate image surfacing can happen when a real Article has both inline image HTML and attachment metadata for the same visual; final display polish should decide whether to de-duplicate before delivery.
 - Manual UI presentation quality was human-reviewed and accepted on 2026-05-02. W4a engineering acceptance is no longer blocked.
 
 ## Text Public Probe Payload
@@ -197,7 +221,9 @@ The body is explicitly labeled as staging-only and says it contains no token, pr
 ## Evidence
 
 - Misskey public interop report: `research/matters-fediverse-compat/03-ops/misskey-public-run-20260502T152117Z.md`
+- `charlesmungerai` public Matters Article interop report: `research/matters-fediverse-compat/03-ops/misskey-public-run-20260502T224743-charlesmungerai.md`
 - Runtime-only Misskey display probe: `gateway-core/runtime/interop/misskey-article-display-probe-20260502.json`
+- Runtime-only real Matters Article delivery report: `gateway-core/runtime/interop/misskey-article-delivery-charlesmungerai-20260502T225026Z.json`
 - Runtime-only gateway surface capture: `gateway-core/runtime/interop/staging-article-surface-20260502.json`
 - Runtime-only local admin probe: `gateway-core/runtime/interop/admin--admin-local-content-actorHandle-alice.json`
 - Guarded text/media display probe: `gateway-core/scripts/run-misskey-article-display-probe.mjs`

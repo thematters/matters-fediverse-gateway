@@ -7,7 +7,7 @@ executor: codex-local
 host: any
 branch: codex/add-fediverse-execution-plan
 latest_commit: local
-last_updated: 2026-05-02T20:05:00-04:00
+last_updated: 2026-05-02T22:55:00-04:00
 tmux_session: none
 host_affinity: none
 outputs_scope: matters-server, ipns-site-generator, gateway-core
@@ -29,7 +29,7 @@ local_paths:
 start_command: none
 stop_command: none
 verify_command: matters-server npm ci, npm run build, targeted federationExportService Jest, targeted ESLint, git diff --check
-next_step: Decide whether to expose this bundle through the existing local Cloudflare Tunnel staging hostname, or keep it local until Zero Trust and staging deployment permissions are available.
+next_step: Continue with non-production G2-B contract scaffolding while npm registry migration, production credentials, canonical identity, author opt-in, and legal/privacy gates remain deferred.
 blockers: npm @matters scope publish permission for registry migration; production author allowlist, opt-in semantics, canonical acct:user@matters.town cutover timing, and production credentials remain human/product gates.
 ---
 
@@ -68,6 +68,9 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - 2026-05-02 local endpoint probe passed: WebFinger returned `acct:mashbean@staging-gateway.matters.town`, actor endpoint returned `Person`, and outbox returned one `Article`
 - 2026-05-02 updated test author to `@charlesmungerai`; public API returned three `active` / `public` articles: `1182465` (`wdzgj6wllhrf`), `1181808` (`mgbaikfdg7a9`), and `1181797` (`drxqcpmy0obk`)
 - 2026-05-02 generated `charlesmungerai` bundle stored outside git at `triad-ops/team/artifacts/O-0020/charlesmungerai-public-api-bundle/site`; local gateway-core SQLite runtime served WebFinger, actor, and outbox successfully with three `Article` items
+- 2026-05-02 exposed the generated `charlesmungerai` bundle through the existing local Cloudflare Tunnel staging hostname; public WebFinger, actor, and outbox probes passed for `acct:charlesmungerai@staging-gateway.matters.town`, while `staging-admin` remained local-only
+- 2026-05-02 Misskey public run on gyutte.site resolved/followed `charlesmungerai@staging-gateway.matters.town`; existing outbox Articles were not backfilled into `users/notes`
+- 2026-05-02 gateway sent the first generated public Matters Article (`1182465`) through `POST /users/charlesmungerai/outbox/create`; delivery to the gyutte.site follower returned `delivered`, and Misskey `users/notes` matched the Article
 
 ## Current Repo-Backed Findings
 
@@ -95,7 +98,7 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - Manifest ingestion: `gateway-core/src/lib/static-outbox-bridge.mjs`
 - Config entry: actor `staticBundleManifestFile`
 - Manifest guard: `version: 1` and `visibility.federatedPublicOnly: true`
-- Remaining G2-A gap: a real emitted bundle path from Matters has not been wired into a staging config.
+- Current G2-A staging status: a real emitted bundle path from public Matters data is wired into local staging config and exposed through the existing Cloudflare Tunnel. The committed source of truth remains docs plus generated artifacts; ignored local runtime config and bundles are intentionally not committed.
 
 ## Minimal Engineering Slice
 
@@ -103,8 +106,8 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 2. Publish `@matters/ipns-site-generator@0.1.9` once the `@matters` scope permission is granted.
 3. Replace the `matters-server` file dependency with `@matters/ipns-site-generator@^0.1.9` and remove `vendor/matters-ipns-site-generator-0.1.9.tgz`.
 4. Use `npm run federation:export` in fixture mode for public API snapshots or in `--article-id` mode with read-only staging DB credentials.
-5. Point a `gateway-core` staging actor at the generated `activitypub-manifest.json` through `staticBundleManifestFile`.
-6. Run gateway bridge tests or local bridge probes against the generated manifest.
+5. Keep the local staging actor pointed at the generated `activitypub-manifest.json` through `staticBundleManifestFile` for continued non-production probes.
+6. Continue G2-B contract scaffolding without production deployment: author opt-in state, per-article federation setting shape, and export trigger boundaries.
 
 ## Human Gates
 
@@ -120,6 +123,6 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - Branch: `codex/add-fediverse-execution-plan`
 - Changed files: this task note plus the G2-A runtime slice
 - Verification: repo-backed source inspection; `ipns-site-generator` tests/lint pass; `matters-server npm ci`, build, targeted Jest, targeted ESLint, `git diff --check`, and commit hook checks pass under Node 18
-- Result: G2-A has a non-production exporter scaffold in `matters-server` commit `50e2219`, a local bundle writer in commit `bac7511`, and a CLI in commit `4761f78`; it produced public API snapshot bundles for `mashbean` and `charlesmungerai`, and gateway-core served both locally through WebFinger, actor, and outbox endpoints
-- Remaining risks: product gates above, npm `@matters` scope publish permission, registry migration from the temporary vendored tarball, and the human decision on whether to expose this local bundle through the existing staging tunnel before Zero Trust is available
-- Follow-up task: after npm permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from vendored tarball to registry dependency, then wire a staging actor to a generated manifest
+- Result: G2-A has a non-production exporter scaffold in `matters-server` commit `50e2219`, a local bundle writer in commit `bac7511`, and a CLI in commit `4761f78`; it produced public API snapshot bundles for `mashbean` and `charlesmungerai`, served `charlesmungerai` through public staging WebFinger/actor/outbox, and delivered one real public Matters Article to Misskey
+- Remaining risks: product gates above, npm `@matters` scope publish permission, registry migration from the temporary vendored tarball, production credential/storage choices, and canonical `acct:user@matters.town` cutover
+- Follow-up task: continue G2-B contract scaffolding locally; after npm permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from vendored tarball to registry dependency, and rerun the Node 18 checks
