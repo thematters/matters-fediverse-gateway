@@ -7,7 +7,7 @@
 - current engineering focus  
   `gateway-core`
 - current next step  
-  `Stage 03` production gap 已補 webhook alert sink、Slack incoming webhook alert routing、queue durability baseline、external metrics sink、structured logs、observability staging drill runner、deployment topology baseline artifact、secret layout check、reverse proxy baseline，以及 rollout artifact baseline；本機 staging-style generic webhook drill 與 Cloudflare Tunnel public transport smoke 已通；Zero Trust 權限尚未開通前採 temporary no-Zero-Trust mode：`staging-admin` public hostname 回 404，admin 只走本機，`staging-hooks` 維持 bearer-token public
+  `Stage 03` production gap 已補 webhook alert sink、Slack incoming webhook alert routing、queue durability baseline、external metrics sink、structured logs、observability staging drill runner、deployment topology baseline artifact、secret layout check、reverse proxy baseline，以及 rollout artifact baseline；本機 staging-style generic webhook drill 與 Cloudflare Tunnel public transport smoke 已通；Zero Trust 權限尚未開通前採 temporary no-Zero-Trust mode：`staging-admin` public hostname 回 404，admin 只走本機，`staging-hooks` 維持 bearer-token public；W2 consistency scan 已可比較 file state / SQLite 的 followers、inbound objects、engagements 並輸出 JSON + markdown 報表；W8 三份 runbook 已完成，實際 tabletop 停在真人參與 gate
 
 ## Stage Progress
 
@@ -169,7 +169,7 @@
 ## Verification Snapshot
 
 - `cd gateway-core && npm test`  
-  107 tests passing
+  108 tests passing
   local conversation projection 與 social reconcile `dryRun` 已覆蓋
   remote acct mention resolution 已覆蓋
   remote mention retryable / permanent failure policy、failure cache、admin mention query 已覆蓋
@@ -184,6 +184,8 @@
   2026-05-02 `better-sqlite3` 已確認安裝且可由 primary runtime Node 載入；測試子程序已改用 `process.execPath`，避免 Codex app Node 造成 macOS native module code-signature mismatch；`node --test` 107/107 passing
   2026-05-02 staging hosting / Access review 已封存於 `research/matters-fediverse-compat/03-ops/staging-hosting-access-plan-20260502.md`；Access setup blocked by Cloudflare dashboard because current login lacks required Billing edit permission
   2026-05-02 temporary no-Zero-Trust mode 已落地：新增 `scripts/run-staging-local-proxy.mjs`，Caddy tunnel 範例預設讓 `staging-admin` 回 404；測試覆蓋 public gateway pass-through、public admin/jobs blocking、admin hostname 404 與 unknown host 421
+  2026-05-02 W2 consistency scan 已確認可跑：`scan-consistency.mjs` 比對 followers、inbound objects、engagements，dry-run 預設輸出 JSON + markdown，`--repair --repair-target file|sqlite` 需顯式指定；本機 scan 顯示 0 diffs，targeted tests 2/2 passing
+  2026-05-02 W8 launch / incident / rollback runbooks 已完成；tabletop record template 已完成；實際 2+ participant tabletop 尚未執行，仍是下一個真人 gate
   `cd gateway-core && npm run check:secret-layout` 已可驗證 dev config 內的 key file 參考
   `cd gateway-core && npm run check:rollout-artifact` 已可驗證 rollout env example
   outbound queue processing lease、stale lease recovery、restart recovery 與 delivery job pre-dispatch recovery 已覆蓋

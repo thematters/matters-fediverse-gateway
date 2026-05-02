@@ -18,6 +18,7 @@
 - gateway 可完成 follow、accept、公開內容 delivery
 - HTTP Signatures 驗章與簽發可觀測
 - retry 與 dead letter 可運作
+- launch runbook 已定義 pre-flight、cutover、post-cutover smoke、go/no-go 與 evidence archive
 
 ## Social Loop
 
@@ -28,6 +29,7 @@
 
 - domain block、account suspend、abuse queue、takedown queue 都可操作
 - non-public content boundary 有自動化或黑箱驗收
+- incident playbook 已覆蓋 signature failure spike、queue backlog、SQLite restore、remote implementation outage 與 legal takedown escalation
 
 ## Multi-Instance
 
@@ -41,3 +43,5 @@
 - `docs/handoff/current.md` 已更新
 - task note 與 active run 狀態一致
 - 下一輪工程 task 已列出 verify command
+- rollback plan 已定義 routing、runtime、data restore 與 key rollback path
+- W8 tabletop record template 已建立；正式 2+ participant tabletop 尚未執行，完成紀錄應放內部文件
