@@ -35,6 +35,8 @@ That is the right seam for G1: the static publisher produces public Article seed
 
 ## Required Changes in ipns-site-generator
 
+Status as of 2026-05-01: minimal v1 is implemented in `ipns-site-generator` commit `4c46826`.
+
 1. Emit `Article`, not `Note`
 
 Current static ActivityPub output maps articles to `Note`. Matters long-form publishing should be represented as `Article` objects with `name`, `summary`, `content`, `url`, `published`, `updated`, `attributedTo`, `to`, `cc`, `tag`, and `attachment`.
@@ -55,6 +57,8 @@ The actor id should remain separate.
 3. Add a public-content gate
 
 Only articles that are intentionally public should enter ActivityPub output. Paid articles, encrypted articles, private drafts, private comments, and message-like data must not be serialized into the federation bundle.
+
+Decision 07 clarifies the G1 policy: missing visibility metadata is treated as public because current Matters article data is overwhelmingly public and legacy private articles are sunsetted. Explicit paid, encrypted, private, draft, and message-like markers are excluded.
 
 4. Produce a gateway seed manifest
 
@@ -88,6 +92,8 @@ Add a generated file such as `activitypub-manifest.json`:
 For personal static sites, `ipns-site-generator` can continue emitting WebFinger. For Matters production, WebFinger should be served by the gateway or Worker so the canonical actor and key material are controlled by runtime config.
 
 ## Required Changes in gateway-core
+
+Status as of 2026-05-01: minimal manifest read support is implemented in `gateway-core` commit `9dca186`.
 
 1. Accept a manifest, not only an outbox file
 

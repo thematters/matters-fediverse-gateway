@@ -97,7 +97,9 @@ The script keeps the current `keyId`, removes `previousKeyId` and `previousPubli
 
 ## Human-Owned Decisions
 
-- Production cutover timing.
-- Whether and where to publish the generated Actor Update.
+- Production cutover timing and overlap duration.
+- Publish the generated Actor Update after human approval for the production cutover.
 - Whether a suspected key exposure requires legal, privacy, or user-facing communication.
 - Whether remote peers need manual notification.
+- Production key material is created, stored, and deployed by mashbean.
+- Suspected key exposure is routed to legal review before any external communication.

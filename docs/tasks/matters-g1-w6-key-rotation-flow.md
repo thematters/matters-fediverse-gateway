@@ -25,7 +25,7 @@ local_paths:
 start_command: none
 stop_command: none
 verify_command: cd gateway-core && npm test
-next_step: production rotation 前，真人確認 cutover 日期、overlap 天數、rollback window 與 Actor Update publish 方式
+next_step: 依 Decision 07，由 mashbean 管理 production key material；production cutover 時採 overlap rotation 並 publish generated Actor Update，key exposure 情境留到 legal review
 blockers: none
 ---
 
@@ -50,6 +50,7 @@ G1 工作項目 W6。目前 gateway actor 只支援單把 publicKey；要支援�
 
 - 2026-04-25 created from G1 roadmap; not yet started
 - 2026-05-01 completed by codex-local in `4c847aa`; added current/previous key overlap model, previous-key inbound verification fallback, rotate-key script, runbook, and W6 tests
+- 2026-05-01 Decision 07 confirmed production key ownership, Actor Update publishing intent, and legal-review boundary for key exposure
 
 ## Validation
 

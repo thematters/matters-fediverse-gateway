@@ -18,7 +18,7 @@ This plan deliberately excludes DID / shared DID work, ZK anonymity, and Billboa
 
 | Stage | Status | Primary repo scope | Gate |
 |---|---|---|---|
-| G1-A Static Article Contract | queued | `ipns-site-generator`, `gateway-core` | Public Article seed bundle passes bridge and generator tests |
+| G1-A Static Article Contract | done | `ipns-site-generator`, `gateway-core` | Public Article seed bundle passes bridge and generator tests |
 | G1-B Gateway Hardening | queued | `gateway-core` | Gateway runtime passes hardening tests and staging drill |
 | G1-C Interop Validation | queued | `gateway-core`, ops reports | Mastodon, Misskey, and GoToSocial reports are archived |
 | G2-A Matters Production Data Integration | queued | `matters-server`, `ipns-site-generator`, `gateway-core` | Selected real Matters authors resolve and publish public Article objects |
@@ -45,6 +45,10 @@ G2 and G3 task notes should be created under `docs/tasks/` when those stages sta
 ### G1-A: Static Article Contract
 
 Objective: make the static publishing output safe and usable as the gateway's public Article seed source.
+
+Status:
+
+- 2026-05-01: minimal v1 completed. `ipns-site-generator` commit `4c46826` emits `Article` static bundles, `activitypub-manifest.json`, and explicit non-public filtering. `gateway-core` commit `9dca186` accepts `staticBundleManifestFile` and validates manifest visibility before reading the outbox.
 
 Dependencies:
 
@@ -168,7 +172,7 @@ Stop/go gate:
 - Owned areas: ActivityPub bundle generation and related tests.
 - Verification: run the package test command for `ipns-site-generator`.
 - Acceptance: generated outbox objects use `type: "Article"` with `name`, `summary`, `content`, `url`, `published`, `updated`, `attributedTo`, `to`, `cc`, `tag`, and `attachment` where available.
-- Handoff output: generated sample bundle path, test result, and compatibility notes.
+- Handoff output: `ipns-site-generator` commit `4c46826`; `npm test -- --runInBand` and `npm run lint` pass.
 
 ### G1-A2: Add Static Bundle Manifest
 
@@ -177,7 +181,7 @@ Stop/go gate:
 - Owned areas: manifest generation, manifest validation, bridge fixture.
 - Verification: generator tests plus `cd gateway-core && npm test`.
 - Acceptance: manifest declares generator, actor identity, file paths, and public-only visibility policy.
-- Handoff output: manifest sample, validation behavior, and migration note for existing static sites.
+- Handoff output: `activitypub-manifest.json` v1 in `ipns-site-generator` commit `4c46826`; gateway manifest read path in `gateway-core` commit `9dca186`; `node --test` passes with 103 tests.
 
 ### G1-A3: Enforce Public-Only Static Boundary
 
@@ -186,7 +190,7 @@ Stop/go gate:
 - Owned areas: public-content filtering, bridge rejection behavior, fixtures.
 - Verification: tests covering public, paid, encrypted, private, draft, and message-like inputs.
 - Acceptance: non-public items never appear in outbox or outbound Create activities.
-- Handoff output: visibility matrix and test evidence.
+- Handoff output: generator filters explicit non-public markers while treating missing visibility as public; gateway keeps the runtime visibility gate as a second defense.
 
 ### G1-B1: Systematize Article Normalization
 

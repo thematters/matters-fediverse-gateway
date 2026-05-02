@@ -26,8 +26,8 @@ local_paths:
 start_command: none
 stop_command: none
 verify_command: cd gateway-core && npm run drill:observability
-next_step: 部署 staging gateway-core，準備 webhook receiver（webhook.site 或自架），跑 drill，封存 report 到 03-ops/
-blockers: 需要 staging VM、TLS、reverse proxy 與 alerts/metrics/logs webhook 接收端
+next_step: 依 Decision 07 準備小型 VM/container + Caddy/TLS + SQLite persistent volume；優先用免費自架 generic webhook receiver，跑 drill 後封存 staging-observability-drill-YYYYMMDD.md
+blockers: 需要 mashbean 提供 staging host / DNS 或 Cloudflare Tunnel / secret files / webhook receiver URL
 ---
 
 # Task Handoff
@@ -47,6 +47,7 @@ G1 工作項目 W1。Stage 03 的最後一步：本機 drill 已通，但所有�
 ## Change Log
 
 - 2026-04-25 created from G1 roadmap; not yet started
+- 2026-05-01 Decision 07 confirmed staging ownership and no-cost webhook preference; still waiting for staging host and secret material
 
 ## Validation
 
