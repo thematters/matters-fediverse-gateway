@@ -103,6 +103,8 @@ Required `HomepageContext` mapping:
 - `npm ci` was attempted with local tooling and failed before install because `package-lock.json` is not in sync (`fsevents` / `msgpackr-extract` optional package entries missing) and the visible local npm runtime is Node 24 while `matters-server` requires Node `>=18.18.0 <19.0.0`.
 - No `matters-server` code scaffold is committed in this pass because importing unpublished `ipns-site-generator` ActivityPub exports would be unsafe.
 - `ipns-site-generator` release-readiness verification passed locally with the repository's existing `node_modules`: `npm test -- --runInBand` passed 9/9 and `npm run lint` passed. The repo remained clean and ahead by the existing ActivityPub manifest commit only.
+- `ipns-site-generator` package metadata is prepared as `0.1.9` on branch `codex/release-ipns-activitypub-bundle` commit `0cd6e88`; local tarball `/tmp/matters-ipns-site-generator-0.1.9.tgz` was generated for preflight.
+- `matters-server` branch `codex/g2a-federation-export-preflight` is clean and ready, but local Node 18 is not available. Do not use Node 24 to update its lockfile or run its CI-equivalent checks.
 
 ## Blocked Human Decisions
 
@@ -115,4 +117,4 @@ Required `HomepageContext` mapping:
 
 ## Next Engineering Action
 
-First make the local ActivityPub bundle-capable `ipns-site-generator` contract consumable by `matters-server` without breaking CI. Then implement the non-production exporter scaffold with tests. It should produce a local bundle and fail closed if the author or article set is not explicitly selected.
+First install/configure Node 18 for `matters-server`, then make the local ActivityPub bundle-capable `ipns-site-generator` contract consumable without breaking CI. After that, implement the non-production exporter scaffold with tests. It should produce a local bundle and fail closed if the author or article set is not explicitly selected.

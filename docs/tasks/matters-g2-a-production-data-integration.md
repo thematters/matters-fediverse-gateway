@@ -55,6 +55,8 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 
 - 2026-05-02 created from G2-A preflight under triad O-0020
 - 2026-05-02 `ipns-site-generator` release-readiness checked locally: `npm test -- --runInBand` passed 9/9 and `npm run lint` passed; no dirty diff after verification
+- 2026-05-02 `ipns-site-generator` branch `codex/release-ipns-activitypub-bundle` bumped package metadata to `0.1.9` in commit `0cd6e88`; local tarball generated at `/tmp/matters-ipns-site-generator-0.1.9.tgz`
+- 2026-05-02 `matters-server` branch `codex/g2a-federation-export-preflight` created; no code changes made because local Node 18 is unavailable and Node 24 should not be used to rewrite its lockfile
 
 ## Current Repo-Backed Findings
 
@@ -107,5 +109,5 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - Changed files: this task note plus the G2-A runtime slice
 - Verification: repo-backed source inspection; `ipns-site-generator` tests/lint pass; attempted `npm ci` in `matters-server` was blocked by existing lockfile drift and Node 24 vs required Node 18, so full server tests are deferred until the repo has a Node 18 install path and lockfile sync
 - Result: G2-A can start with a non-production exporter/manifest slice
-- Remaining risks: product gates above, `ipns-site-generator` package publication/linking, plus `matters-server` build/test environment once code begins
-- Follow-up task: publish or locally wire the ActivityPub bundle-capable `ipns-site-generator`, then implement the non-production exporter scaffold in `matters-server`
+- Remaining risks: product gates above, `ipns-site-generator` package publication/linking, plus `matters-server` Node 18 build/test environment once code begins
+- Follow-up task: install/configure Node 18 for `matters-server`, publish or locally wire the ActivityPub bundle-capable `ipns-site-generator`, then implement the non-production exporter scaffold
