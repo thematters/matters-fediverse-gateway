@@ -148,6 +148,23 @@ Required next action:
 - Add an allow policy for the three approved email addresses above.
 - Leave `staging-gateway.matters.town` and `staging-hooks.matters.town` outside Cloudflare Access.
 
+## Temporary No-Zero-Trust Mode
+
+Approved temporary path while Zero Trust permissions are pending:
+
+- Keep `staging-gateway.matters.town` public for federation paths.
+- Block `/admin`, `/admin/*`, `/jobs`, and `/jobs/*` on `staging-gateway.matters.town`.
+- Keep `staging-admin.matters.town` closed at the local proxy layer with HTTP 404.
+- Use `http://127.0.0.1:8787/admin/...` on the staging host for admin checks.
+- Keep `staging-hooks.matters.town` public but bearer-token protected.
+
+This mode is meant to unblock staging smoke tests and Misskey / GoToSocial public interop while preventing unauthenticated public admin access. It is not a replacement for Cloudflare Access before broader testing.
+
+Implementation references:
+
+- Caddy: `gateway-core/deploy/Caddyfile.cloudflare-tunnel.example`
+- Node fallback proxy: `gateway-core/scripts/run-staging-local-proxy.mjs`
+
 ## Next Human Decision
 
 Before Access can be applied, a Cloudflare account admin decision is required:

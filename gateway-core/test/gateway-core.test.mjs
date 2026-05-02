@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { execFile as execFileCallback, spawn } from "node:child_process";
@@ -14,6 +14,7 @@ import { normalizeContentDeliveryReviewSnapshot } from "../src/lib/content-deliv
 import { signHttpRequest } from "../src/security/http-signatures.mjs";
 import { FileStateStore } from "../src/store/file-state-store.mjs";
 import { SqliteStateStore } from "../src/store/sqlite-state-store.mjs";
+import { createStagingLocalProxy } from "../scripts/run-staging-local-proxy.mjs";
 
 const execFile = promisify(execFileCallback);
 const nodeBin = process.execPath;
@@ -7035,6 +7036,76 @@ test("webhook receiver captures runtime dispatch payloads and masks tokens", asy
       receiver.kill("SIGTERM");
       await new Promise((resolve) => receiver.once("exit", resolve));
     }
+  }
+});
+
+test("staging local proxy keeps admin local-only before Access is enabled", async () => {
+  const gateway = createServer((req, res) => {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(
+      JSON.stringify({
+        ok: true,
+        host: req.headers.host,
+        path: req.url,
+      }),
+    );
+  });
+  await new Promise((resolve) => gateway.listen(0, "127.0.0.1", resolve));
+  const gatewayAddress = gateway.address();
+
+  const proxy = createStagingLocalProxy({
+    gatewayTarget: `http://127.0.0.1:${gatewayAddress.port}`,
+  });
+  await new Promise((resolve) => proxy.listen(0, "127.0.0.1", resolve));
+  const proxyAddress = proxy.address();
+
+  async function requestProxy(pathname, host) {
+    return await new Promise((resolve, reject) => {
+      const req = httpRequest(
+        {
+          hostname: "127.0.0.1",
+          port: proxyAddress.port,
+          path: pathname,
+          headers: { host },
+        },
+        (res) => {
+          let body = "";
+          res.setEncoding("utf8");
+          res.on("data", (chunk) => {
+            body += chunk;
+          });
+          res.on("end", () => {
+            resolve({
+              status: res.statusCode,
+              json: body ? JSON.parse(body) : null,
+            });
+          });
+        },
+      );
+      req.on("error", reject);
+      req.end();
+    });
+  }
+
+  try {
+    const publicResponse = await requestProxy("/.well-known/nodeinfo", "staging-gateway.matters.town");
+    assert.equal(publicResponse.status, 200);
+    const publicPayload = publicResponse.json;
+    assert.equal(publicPayload.host, "staging-gateway.matters.town");
+    assert.equal(publicPayload.path, "/.well-known/nodeinfo");
+
+    const privatePublicResponse = await requestProxy("/admin/dashboard", "staging-gateway.matters.town");
+    assert.equal(privatePublicResponse.status, 404);
+
+    const adminResponse = await requestProxy("/.well-known/nodeinfo", "staging-admin.matters.town");
+    assert.equal(adminResponse.status, 404);
+    assert.equal(adminResponse.json.error, "admin_local_only");
+
+    const unknownHostResponse = await requestProxy("/.well-known/nodeinfo", "unknown.matters.town");
+    assert.equal(unknownHostResponse.status, 421);
+  } finally {
+    await new Promise((resolve, reject) => proxy.close((error) => (error ? reject(error) : resolve())));
+    await new Promise((resolve, reject) => gateway.close((error) => (error ? reject(error) : resolve())));
   }
 });
 

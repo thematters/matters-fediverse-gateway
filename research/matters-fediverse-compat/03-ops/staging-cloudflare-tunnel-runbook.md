@@ -9,9 +9,9 @@
 - `staging-gateway.matters.town`
   公開 federation staging 入口，給 WebFinger、NodeInfo、Actor、Outbox、Inbox 測試使用。不要放在 Cloudflare Access 後面，否則 Mastodon、Misskey、GoToSocial 等遠端 server 無法自動存取。
 - `staging-hooks.matters.town`
-  webhook receiver 入口，接 alerts / metrics / logs dispatch。建議放在 Cloudflare Access 後面；receiver 本身也要開 bearer token。
+  webhook receiver 入口，接 alerts / metrics / logs dispatch。若外部 callback 需要打進來，先保持 public，但 receiver 本身必須開 bearer token。
 - `staging-admin.matters.town`
-  管理介面入口。若要公開到網路，必須放在 Cloudflare Access 後面；沒有 Access 前先只綁 localhost 或 VPN。
+  管理介面入口。若要公開到網路，必須放在 Cloudflare Access 後面；沒有 Access 前 public hostname 一律回 404，admin 只走本機 `127.0.0.1`。
 
 ## Preflight Checklist
 
@@ -19,7 +19,8 @@
 - staging host 已準備 Node/npm、`cloudflared`、Caddy、SQLite runtime 目錄與 system service 或 container runtime。第一輪可用本機 Mac；若需要長時間開放，再換小型 VM/container。
 - hostname 已定案：`staging-gateway.matters.town`、`staging-admin.matters.town`、`staging-hooks.matters.town`。
 - public federation hostname `staging-gateway.matters.town` 沒有套 Cloudflare Access。
-- `staging-admin.matters.town` 與 `staging-hooks.matters.town` 的 Cloudflare Access policy 已由帳號持有人核准。
+- `staging-admin.matters.town` 的 Cloudflare Access policy 已由帳號持有人核准；若 Zero Trust 尚未開通，必須使用 temporary no-Zero-Trust mode。
+- `staging-hooks.matters.town` 先保持 public + bearer token，避免外部 webhook callback 被互動式登入擋住。
 - actor key files、receiver bearer token、alerts/metrics/logs dispatch token 已由 staging owner 放在 staging host；不要寫進 git。
 - webhook payload 留存策略：保留 14 天；內部報告預設只記錄檔名、時間、狀態與 SHA-256 hash；14 天後刪除或封存 `runtime/webhooks/` 與 `runtime/drills/`。
 - production route 與 production credential 不在本次 staging drill 範圍內。
@@ -62,13 +63,32 @@ Security model and limitations:
 - Token-like headers are masked before files are written, but `bodyText` is retained in full. Drill payloads must not include secrets.
 - Each captured payload includes `bodySha256` so the report can cite payload hashes without copying payload bodies.
 
-Recommended local proxy for a shared staging host:
+Recommended local proxy for a shared staging host when Caddy is available:
 
 ```bash
 caddy run --config gateway-core/deploy/Caddyfile.cloudflare-tunnel.example
 ```
 
-The public staging hostname blocks `/admin` and `/jobs`. Use the separate admin hostname only after Cloudflare Access is enabled.
+The public staging hostname blocks `/admin` and `/jobs`. In temporary no-Zero-Trust mode, `staging-admin.matters.town` also returns 404. Use local admin URLs such as `http://127.0.0.1:8787/admin/dashboard` from the staging host.
+
+If Caddy is not available, use the standard-library Node proxy:
+
+```bash
+cd gateway-core
+npm run proxy:staging-local -- \
+  --listen-host 127.0.0.1 \
+  --port 8080 \
+  --gateway-target http://127.0.0.1:8787
+```
+
+Default behavior:
+
+- `staging-gateway.matters.town` proxies public paths to `127.0.0.1:8787`.
+- `staging-gateway.matters.town/admin/*` and `/jobs/*` return 404.
+- `staging-admin.matters.town` returns 404 until Access is enabled.
+- Unknown hostnames return 421.
+
+After Cloudflare Access or equivalent operator auth is active, the temporary proxy can be run with `--admin-mode proxy` or replaced with an authenticated reverse proxy.
 
 ## Cloudflare Tunnel
 
@@ -102,8 +122,15 @@ Run `cloudflared` as a service on the staging host after the tunnel and public h
 Cloudflare Access policy:
 
 - Enable Access for `staging-admin.matters.town`.
-- Enable Access for `staging-hooks.matters.town` unless the drill needs to receive unauthenticated external callbacks.
+- Keep `staging-hooks.matters.town` public + bearer-token protected unless the receiver is only for internal drills.
 - Do not enable Access for `staging-gateway.matters.town` federation paths.
+
+Temporary no-Zero-Trust mode:
+
+- Keep the Cloudflare Tunnel routes as-is.
+- Keep `staging-admin.matters.town` closed at the local proxy layer with HTTP 404.
+- Use local admin URLs on the staging host only.
+- Proceed with public federation and webhook smoke tests, but do not publish or invite broader testers to the admin hostname.
 
 References:
 
@@ -178,7 +205,9 @@ Troubleshooting:
 - Compare `bodySha256` in the receiver response with the captured file when checking payload integrity.
 - If `cloudflared tunnel ingress rule` does not match the expected hostname, fix the tunnel ingress config before running the drill.
 - If Cloudflare Access blocks `staging-gateway.matters.town`, remove Access from the public federation hostname and keep Access only on admin/hooks hostnames.
-- If Caddy returns 404 for `/admin` on `staging-gateway.matters.town`, that is expected; use `staging-admin.matters.town` through Access for admin checks.
+- If Caddy or the local proxy returns 404 for `/admin` on `staging-gateway.matters.town`, that is expected.
+- If temporary no-Zero-Trust mode is active, 404 from `staging-admin.matters.town` is expected. Use `127.0.0.1:8787/admin/...` on the staging host for admin checks.
+- After Cloudflare Access is enabled, switch `staging-admin.matters.town` from 404 to authenticated proxying.
 
 ## Disable and Roll Back
 

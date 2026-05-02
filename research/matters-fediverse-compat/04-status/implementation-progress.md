@@ -7,7 +7,7 @@
 - current engineering focus  
   `gateway-core`
 - current next step  
-  `Stage 03` production gap 已補 webhook alert sink、Slack incoming webhook alert routing、queue durability baseline、external metrics sink、structured logs、observability staging drill runner、deployment topology baseline artifact、secret layout check、reverse proxy baseline，以及 rollout artifact baseline；本機 staging-style generic webhook drill 與 Cloudflare Tunnel public transport smoke 已通；建議 staging 先用既有 Mac + Cloudflare Tunnel 長駐，不新增費用；`staging-admin` Access allowlist 已確認，但目前 Cloudflare Zero Trust onboarding 需要 Billing edit permission，需 account admin 處理
+  `Stage 03` production gap 已補 webhook alert sink、Slack incoming webhook alert routing、queue durability baseline、external metrics sink、structured logs、observability staging drill runner、deployment topology baseline artifact、secret layout check、reverse proxy baseline，以及 rollout artifact baseline；本機 staging-style generic webhook drill 與 Cloudflare Tunnel public transport smoke 已通；Zero Trust 權限尚未開通前採 temporary no-Zero-Trust mode：`staging-admin` public hostname 回 404，admin 只走本機，`staging-hooks` 維持 bearer-token public
 
 ## Stage Progress
 
@@ -31,7 +31,7 @@
   secret layout check 與 reverse proxy baseline 已補 `check:secret-layout`、staging secrets layout 範本與 `Caddyfile.example`  
   rollout artifact baseline 已補 systemd unit、rollout env example 與 `check:rollout-artifact`  
   restore / replay drill runbook 已補齊  
-  本機 staging-style generic webhook drill 已通；Cloudflare Tunnel public transport smoke 已用 `staging-gateway.matters.town`、`staging-admin.matters.town`、`staging-hooks.matters.town` 跑通；no-new-cost hosting review 建議先採既有 Mac + Cloudflare Tunnel，`staging-admin` Access allowlist 已確認為三個 Matters emails，但 Cloudflare dashboard 要求 Billing edit permission 才能完成 Zero Trust onboarding；`staging-hooks` 先維持 public bearer-token
+  本機 staging-style generic webhook drill 已通；Cloudflare Tunnel public transport smoke 已用 `staging-gateway.matters.town`、`staging-admin.matters.town`、`staging-hooks.matters.town` 跑通；no-new-cost hosting review 建議先採既有 Mac + Cloudflare Tunnel，`staging-admin` Access allowlist 已確認為三個 Matters emails，但 Cloudflare dashboard 要求 Billing edit permission 才能完成 Zero Trust onboarding；臨時策略改為 local proxy 擋 public admin，`staging-hooks` 先維持 public bearer-token
 - `Stage 04 Social Interop`  
   進行中  
   inbound public `Create` / `Reply` 已可驗章並持久化  
@@ -183,6 +183,7 @@
   2026-05-02 Cloudflare staging transport smoke 已用 local Mac + Cloudflare Tunnel 跑通；`staging-gateway.matters.town`、`staging-admin.matters.town`、`staging-hooks.matters.town` 在 connector propagation 後皆回 200；alerts / metrics / logs 三組 bundle 送到 generic webhook receiver 皆回 202；封存報告見 `research/matters-fediverse-compat/03-ops/staging-observability-drill-20260502-cloudflare.md`
   2026-05-02 `better-sqlite3` 已確認安裝且可由 primary runtime Node 載入；測試子程序已改用 `process.execPath`，避免 Codex app Node 造成 macOS native module code-signature mismatch；`node --test` 107/107 passing
   2026-05-02 staging hosting / Access review 已封存於 `research/matters-fediverse-compat/03-ops/staging-hosting-access-plan-20260502.md`；Access setup blocked by Cloudflare dashboard because current login lacks required Billing edit permission
+  2026-05-02 temporary no-Zero-Trust mode 已落地：新增 `scripts/run-staging-local-proxy.mjs`，Caddy tunnel 範例預設讓 `staging-admin` 回 404；測試覆蓋 public gateway pass-through、public admin/jobs blocking、admin hostname 404 與 unknown host 421
   `cd gateway-core && npm run check:secret-layout` 已可驗證 dev config 內的 key file 參考
   `cd gateway-core && npm run check:rollout-artifact` 已可驗證 rollout env example
   outbound queue processing lease、stale lease recovery、restart recovery 與 delivery job pre-dispatch recovery 已覆蓋

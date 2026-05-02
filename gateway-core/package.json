@@ -16,6 +16,7 @@
     "dispatch:alerts": "node scripts/dispatch-runtime-alerts.mjs --config ./config/dev.instance.json",
     "drill:observability": "node scripts/run-staging-observability-drill.mjs --config ./config/dev.instance.json --require-sinks",
     "receive:webhooks": "node scripts/run-webhook-receiver.mjs",
+    "proxy:staging-local": "node scripts/run-staging-local-proxy.mjs",
     "check:secret-layout": "node scripts/check-secret-layout.mjs --config ./config/dev.instance.json",
     "check:rollout-artifact": "node scripts/check-rollout-artifact.mjs --env-file ./deploy/matters-gateway-core.env.example",
     "check:local-sandbox": "node scripts/run-local-sandbox-interop.mjs",

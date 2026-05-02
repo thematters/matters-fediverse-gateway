@@ -1,8 +1,11 @@
 # Example only. Do not commit a real tunnel UUID, credentials file, or token.
 #
 # This exposes the public federation surface and the staging webhook receiver
-# through one locally managed Cloudflare Tunnel. Keep admin-only hostnames behind
-# Cloudflare Access in the dashboard.
+# through one locally managed Cloudflare Tunnel.
+#
+# Temporary no-Zero-Trust mode: route staging-admin to the local proxy, but make
+# the local proxy return 404 for that hostname until Cloudflare Access or an
+# equivalent operator auth layer is active.
 tunnel: STAGING_TUNNEL_UUID
 credentials-file: /etc/cloudflared/STAGING_TUNNEL_UUID.json
 

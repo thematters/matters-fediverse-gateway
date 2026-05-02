@@ -18,7 +18,12 @@ http://staging-gateway.matters.town:8080 {
 
 http://staging-admin.matters.town:8080 {
   encode zstd gzip
-  reverse_proxy 127.0.0.1:8787
+
+  # Temporary no-Zero-Trust mode: keep the public admin hostname closed.
+  # Use http://127.0.0.1:8787/admin/... on the staging host for local checks.
+  # After Cloudflare Access or equivalent operator auth is active, replace this
+  # with `reverse_proxy 127.0.0.1:8787`.
+  respond 404
 
   log {
     output file /var/log/caddy/matters-gateway-core.staging-admin.access.log
