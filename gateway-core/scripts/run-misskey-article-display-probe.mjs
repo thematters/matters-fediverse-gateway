@@ -9,6 +9,7 @@ function parseArgs(argv) {
     slug: null,
     now: null,
     tokenFile: null,
+    fixture: "text",
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -23,11 +24,16 @@ function parseArgs(argv) {
       options.now = argv[++index] ?? null;
     } else if (arg === "--token-file") {
       options.tokenFile = argv[++index] ?? null;
+    } else if (arg === "--fixture") {
+      options.fixture = argv[++index] ?? null;
     } else {
       throw new Error(`Unknown argument: ${arg}`);
     }
   }
 
+  if (!["text", "media"].includes(options.fixture)) {
+    throw new Error("--fixture must be text or media");
+  }
   if (options.send && !options.confirmPublicCreate) {
     throw new Error("--send requires --confirm-public-create because this publishes a public ActivityPub Create");
   }
@@ -201,17 +207,51 @@ async function readMisskeyNotes({ misskeyBaseUrl, token, tokenMode, userId, limi
   return Array.isArray(result) ? result : [];
 }
 
-function buildProbePayload({ gatewayPublicBaseUrl, handle, slug, now }) {
+function normalizePlannedAttachmentUrl(value) {
+  if (value.startsWith("ipfs://")) {
+    return `https://ipfs.io/ipfs/${value.slice("ipfs://".length).replace(/^\/+/, "")}`;
+  }
+  return value;
+}
+
+function buildProbePayload({ gatewayPublicBaseUrl, handle, slug, now, fixture }) {
   const publicBaseUrl = normalizeBaseUrl(gatewayPublicBaseUrl);
   const objectId = `${publicBaseUrl}/articles/${slug}`;
-  const title = `[STAGING] Matters Gateway W4a Misskey Article display probe ${slug}`;
-  const content = [
-    "<p>這是一則 staging-only 公開 ActivityPub Article，用來驗證 Misskey 是否會顯示 Matters Gateway 發出的長文 Article。</p>",
-    "<p>測試範圍包含標題、摘要、HTML 段落、清單，以及原始連結保留；內容不含 token、私人資料或正式公告。</p>",
-    "<h2>Display checklist</h2>",
-    "<ul><li>Article object can be delivered after follow state exists.</li><li>Misskey users/notes can surface the delivered object.</li><li>Rendered text remains clearly marked as staging.</li></ul>",
-    `<p>Canonical staging URL: <a href="${objectId}">${objectId}</a></p>`,
-  ].join("");
+  const mediaFixture = fixture === "media";
+  const title = mediaFixture
+    ? `[STAGING] Matters Gateway W4a Misskey media attachment probe ${slug}`
+    : `[STAGING] Matters Gateway W4a Misskey Article display probe ${slug}`;
+  const content = mediaFixture
+    ? [
+        "<p>這是一則 staging-only 公開 ActivityPub Article，用來驗證 Misskey 是否保留 Matters Gateway 發出的圖片附件。</p>",
+        "<p>測試範圍包含一張外部 PNG 圖片與一張 IPFS-normalized JPEG 圖片；內容不含 token、私人資料或正式公告。</p>",
+        "<h2>Media checklist</h2>",
+        "<ul><li>External image attachment remains visible to Misskey.</li><li>IPFS attachment is normalized to an HTTPS gateway URL.</li><li>Rendered text remains clearly marked as staging.</li></ul>",
+        `<p>Canonical staging URL: <a href="${objectId}">${objectId}</a></p>`,
+      ].join("")
+    : [
+        "<p>這是一則 staging-only 公開 ActivityPub Article，用來驗證 Misskey 是否會顯示 Matters Gateway 發出的長文 Article。</p>",
+        "<p>測試範圍包含標題、摘要、HTML 段落、清單，以及原始連結保留；內容不含 token、私人資料或正式公告。</p>",
+        "<h2>Display checklist</h2>",
+        "<ul><li>Article object can be delivered after follow state exists.</li><li>Misskey users/notes can surface the delivered object.</li><li>Rendered text remains clearly marked as staging.</li></ul>",
+        `<p>Canonical staging URL: <a href="${objectId}">${objectId}</a></p>`,
+      ].join("");
+  const attachment = mediaFixture
+    ? [
+        {
+          type: "Image",
+          mediaType: "image/png",
+          url: "https://www.w3.org/assets/logos/w3c-2025-transitional/w3c-72x48.png",
+          name: "External PNG staging fixture",
+        },
+        {
+          type: "Image",
+          mediaType: "image/jpeg",
+          url: "ipfs://bafkreie7ohywtosou76tasm7j63yigtzxe7d5zqus4zu3j6oltvgtibeom",
+          name: "IPFS JPEG staging fixture",
+        },
+      ]
+    : null;
 
   return {
     includeFollowers: true,
@@ -225,6 +265,7 @@ function buildProbePayload({ gatewayPublicBaseUrl, handle, slug, now }) {
       url: objectId,
       to: [PUBLIC_AUDIENCE],
       cc: [`${publicBaseUrl}/users/${handle}/followers`],
+      ...(attachment ? { attachment } : {}),
     },
   };
 }
@@ -262,7 +303,22 @@ function summarizeNotes(notes) {
     text: note.text ?? null,
     cw: note.cw ?? null,
     createdAt: note.createdAt ?? null,
+    files: Array.isArray(note.files)
+      ? note.files.map((file) => ({
+          id: file.id ?? null,
+          type: file.type ?? null,
+          name: file.name ?? null,
+          url: file.url ?? null,
+          thumbnailUrl: file.thumbnailUrl ?? null,
+          sensitive: file.isSensitive ?? file.sensitive ?? null,
+        }))
+      : [],
   }));
+}
+
+function expectedAttachmentUrls(payload) {
+  const attachments = Array.isArray(payload.object.attachment) ? payload.object.attachment : [];
+  return attachments.map((entry) => normalizePlannedAttachmentUrl(entry.url)).filter(Boolean);
 }
 
 export async function run(options) {
@@ -316,7 +372,9 @@ export async function run(options) {
     handle: gatewayHandle,
     slug,
     now,
+    fixture: options.fixture,
   });
+  const expectedMediaUrls = expectedAttachmentUrls(payload);
 
   const failures = [];
   if ((followers.totalItems ?? 0) < 1 || !Array.isArray(followers.orderedItems) || followers.orderedItems.length < 1) {
@@ -342,6 +400,12 @@ export async function run(options) {
     });
     if (!pollResult.matched) {
       failures.push("Misskey users/notes did not surface the probe Article within the poll window");
+    }
+    if (expectedMediaUrls.length) {
+      const files = Array.isArray(pollResult.note?.files) ? pollResult.note.files : [];
+      if (files.length < expectedMediaUrls.length) {
+        failures.push(`Misskey matched note exposed ${files.length} file(s), expected at least ${expectedMediaUrls.length}`);
+      }
     }
   }
 
@@ -385,6 +449,8 @@ export async function run(options) {
         title: payload.object.name,
         summary: payload.object.summary,
         recipientMode: "include accepted followers",
+        fixture: options.fixture,
+        expectedAttachmentUrls: expectedMediaUrls,
         payload,
       },
     },

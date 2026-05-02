@@ -125,6 +125,17 @@ async function createMisskeyDisplayServer({ token, gatewayHost, getCreatePayload
 
     if (request.url === "/api/users/notes") {
       const createPayload = getCreatePayload();
+      const files = (Array.isArray(createPayload?.object?.attachment) ? createPayload.object.attachment : []).map((attachment, index) => ({
+        id: `file-${index + 1}`,
+        type: attachment.mediaType,
+        name: attachment.name,
+        url: attachment.url?.startsWith("ipfs://")
+          ? `https://ipfs.io/ipfs/${attachment.url.slice("ipfs://".length)}`
+          : attachment.url,
+        thumbnailUrl: attachment.url?.startsWith("ipfs://")
+          ? `https://ipfs.io/ipfs/${attachment.url.slice("ipfs://".length)}`
+          : attachment.url,
+      }));
       const notes = createPayload
         ? [
             {
@@ -133,6 +144,7 @@ async function createMisskeyDisplayServer({ token, gatewayHost, getCreatePayload
               url: createPayload.object.url,
               text: createPayload.object.name,
               createdAt: "2026-05-02T00:00:01.000Z",
+              files,
             },
           ]
         : [];
@@ -194,6 +206,48 @@ test("misskey article display probe defaults to dry-run without publishing", asy
   }
 });
 
+test("misskey article display probe prepares media fixture without publishing by default", async () => {
+  const gatewayServer = await createGatewayProbeServer();
+  const gatewayHost = new URL(gatewayServer.baseUrl).host;
+  const misskeyServer = await createMisskeyDisplayServer({
+    token: "misskey-display-secret",
+    gatewayHost,
+    getCreatePayload: () => gatewayServer.createPayload,
+  });
+
+  try {
+    const { stdout } = await execFile(
+      nodeBin,
+      ["scripts/run-misskey-article-display-probe.mjs", "--fixture", "media", "--slug", "w4a-media-test"],
+      {
+        cwd: path.resolve(process.cwd()),
+        env: {
+          ...process.env,
+          MISSKEY_BASE_URL: misskeyServer.baseUrl,
+          MISSKEY_ACCESS_TOKEN: "misskey-display-secret",
+          GATEWAY_PUBLIC_BASE_URL: gatewayServer.baseUrl,
+          GATEWAY_HANDLE: "alice",
+        },
+      },
+    );
+
+    const payload = JSON.parse(stdout);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.mode, "dry-run");
+    assert.equal(payload.report.plannedCreate.fixture, "media");
+    assert.equal(payload.report.plannedCreate.payload.object.attachment.length, 2);
+    assert.deepEqual(payload.report.plannedCreate.expectedAttachmentUrls, [
+      "https://www.w3.org/assets/logos/w3c-2025-transitional/w3c-72x48.png",
+      "https://ipfs.io/ipfs/bafkreie7ohywtosou76tasm7j63yigtzxe7d5zqus4zu3j6oltvgtibeom",
+    ]);
+    assert.equal(gatewayServer.createPayload, null);
+    assert.equal(stdout.includes("misskey-display-secret"), false);
+  } finally {
+    await gatewayServer.close();
+    await misskeyServer.close();
+  }
+});
+
 test("misskey article display probe sends only with explicit public-create confirmation", async () => {
   const gatewayServer = await createGatewayProbeServer();
   const gatewayHost = new URL(gatewayServer.baseUrl).host;
@@ -243,6 +297,62 @@ test("misskey article display probe sends only with explicit public-create confi
   }
 });
 
+test("misskey article display probe checks media fixture files after send", async () => {
+  const gatewayServer = await createGatewayProbeServer();
+  const gatewayHost = new URL(gatewayServer.baseUrl).host;
+  const misskeyServer = await createMisskeyDisplayServer({
+    token: "misskey-display-secret",
+    gatewayHost,
+    getCreatePayload: () => gatewayServer.createPayload,
+  });
+
+  try {
+    const { stdout } = await execFile(
+      nodeBin,
+      [
+        "scripts/run-misskey-article-display-probe.mjs",
+        "--fixture",
+        "media",
+        "--send",
+        "--confirm-public-create",
+        "--slug",
+        "w4a-media-test",
+        "--now",
+        "2026-05-02T00:00:00.000Z",
+      ],
+      {
+        cwd: path.resolve(process.cwd()),
+        env: {
+          ...process.env,
+          MISSKEY_BASE_URL: misskeyServer.baseUrl,
+          MISSKEY_ACCESS_TOKEN: "misskey-display-secret",
+          GATEWAY_PUBLIC_BASE_URL: gatewayServer.baseUrl,
+          GATEWAY_HANDLE: "alice",
+          MISSKEY_DISPLAY_POLL_ATTEMPTS: "1",
+          MISSKEY_DISPLAY_POLL_INTERVAL_MS: "1",
+        },
+      },
+    );
+
+    const payload = JSON.parse(stdout);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.mode, "send");
+    assert.equal(payload.report.misskey.matchedNote.files.length, 2);
+    assert.deepEqual(
+      payload.report.misskey.matchedNote.files.map((file) => file.url),
+      [
+        "https://www.w3.org/assets/logos/w3c-2025-transitional/w3c-72x48.png",
+        "https://ipfs.io/ipfs/bafkreie7ohywtosou76tasm7j63yigtzxe7d5zqus4zu3j6oltvgtibeom",
+      ],
+    );
+    assert.equal(gatewayServer.createPayload.object.attachment.length, 2);
+    assert.equal(stdout.includes("misskey-display-secret"), false);
+  } finally {
+    await gatewayServer.close();
+    await misskeyServer.close();
+  }
+});
+
 test("misskey article display probe rejects send without public-create confirmation", async () => {
   await assert.rejects(
     execFile(nodeBin, ["scripts/run-misskey-article-display-probe.mjs", "--send"], {
@@ -255,5 +365,14 @@ test("misskey article display probe rejects send without public-create confirmat
       },
     }),
     /--send requires --confirm-public-create/,
+  );
+});
+
+test("misskey article display probe rejects unknown fixture", async () => {
+  await assert.rejects(
+    execFile(nodeBin, ["scripts/run-misskey-article-display-probe.mjs", "--fixture", "unknown"], {
+      cwd: path.resolve(process.cwd()),
+    }),
+    /--fixture must be text or media/,
   );
 });
