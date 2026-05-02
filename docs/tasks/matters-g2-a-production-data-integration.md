@@ -7,7 +7,7 @@ executor: codex-local
 host: any
 branch: codex/add-fediverse-execution-plan
 latest_commit: local
-last_updated: 2026-05-02T19:25:00-04:00
+last_updated: 2026-05-02T19:45:00-04:00
 tmux_session: none
 host_affinity: none
 outputs_scope: matters-server, ipns-site-generator, gateway-core
@@ -29,7 +29,7 @@ local_paths:
 start_command: none
 stop_command: none
 verify_command: matters-server npm ci, npm run build, targeted federationExportService Jest, targeted ESLint, git diff --check
-next_step: Wire the generated public-API bundle into a gateway-core staging config or local server run; npm registry migration remains deferred until @matters publish permission is available.
+next_step: Decide whether to expose this bundle through the existing local Cloudflare Tunnel staging hostname, or keep it local until Zero Trust and staging deployment permissions are available.
 blockers: npm @matters scope publish permission for registry migration; production author allowlist, opt-in semantics, canonical acct:user@matters.town cutover timing, and production credentials remain human/product gates.
 ---
 
@@ -64,6 +64,8 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - 2026-05-02 `matters-server` commit `4761f78` added `npm run federation:export`, supports fixture mode and read-only DB article ID mode, fixes the generated manifest contract to `version: 1` and `visibility.federatedPublicOnly: true`, and masks connection-string-like secrets in CLI errors
 - 2026-05-02 public API candidate article selected without private credentials: `mashbean` article ID `1111146`, short hash `oq72hz05fwnl`, state `active`, access `public`
 - 2026-05-02 generated bundle stored outside git at `triad-ops/team/artifacts/O-0020/mashbean-public-api-bundle/site`; gateway-core static bundle bridge read the manifest and normalized one `Article` item
+- 2026-05-02 local `better-sqlite3` native module rebuilt for gateway-core; SQLite runtime server started locally with the generated bundle config
+- 2026-05-02 local endpoint probe passed: WebFinger returned `acct:mashbean@staging-gateway.matters.town`, actor endpoint returned `Person`, and outbox returned one `Article`
 
 ## Current Repo-Backed Findings
 
@@ -116,6 +118,6 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - Branch: `codex/add-fediverse-execution-plan`
 - Changed files: this task note plus the G2-A runtime slice
 - Verification: repo-backed source inspection; `ipns-site-generator` tests/lint pass; `matters-server npm ci`, build, targeted Jest, targeted ESLint, `git diff --check`, and commit hook checks pass under Node 18
-- Result: G2-A has a non-production exporter scaffold in `matters-server` commit `50e2219`, a local bundle writer in commit `bac7511`, and a CLI in commit `4761f78`; it produced a public API snapshot bundle for `articleId=1111146` and gateway-core normalized it as one `Article`
-- Remaining risks: product gates above, npm `@matters` scope publish permission, registry migration from the temporary vendored tarball, and later staging manifest ingestion through `gateway-core`
+- Result: G2-A has a non-production exporter scaffold in `matters-server` commit `50e2219`, a local bundle writer in commit `bac7511`, and a CLI in commit `4761f78`; it produced a public API snapshot bundle for `articleId=1111146`, and gateway-core served it locally through WebFinger, actor, and outbox endpoints
+- Remaining risks: product gates above, npm `@matters` scope publish permission, registry migration from the temporary vendored tarball, and the human decision on whether to expose this local bundle through the existing staging tunnel before Zero Trust is available
 - Follow-up task: after npm permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from vendored tarball to registry dependency, then wire a staging actor to a generated manifest
