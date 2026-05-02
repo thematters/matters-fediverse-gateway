@@ -169,7 +169,7 @@
 ## Verification Snapshot
 
 - `cd gateway-core && npm test`  
-  108 tests passing
+  109 tests passing
   local conversation projection 與 social reconcile `dryRun` 已覆蓋
   remote acct mention resolution 已覆蓋
   remote mention retryable / permanent failure policy、failure cache、admin mention query 已覆蓋
@@ -186,6 +186,7 @@
   2026-05-02 temporary no-Zero-Trust mode 已落地：新增 `scripts/run-staging-local-proxy.mjs`，Caddy tunnel 範例預設讓 `staging-admin` 回 404；測試覆蓋 public gateway pass-through、public admin/jobs blocking、admin hostname 404 與 unknown host 421
   2026-05-02 W2 consistency scan 已確認可跑：`scan-consistency.mjs` 比對 followers、inbound objects、engagements，dry-run 預設輸出 JSON + markdown，`--repair --repair-target file|sqlite` 需顯式指定；本機 scan 顯示 0 diffs，targeted tests 2/2 passing
   2026-05-02 W8 launch / incident / rollback runbooks 已完成；tabletop record template 已完成；實際 2+ participant tabletop 尚未執行，仍是下一個真人 gate
+  2026-05-02 W3 interop report writer 已補上：`npm run report:interop` 可把 Misskey / GoToSocial probe raw JSON 轉成 repo-safe markdown，並遮罩 token-like fields；Misskey token form 已以最小 scope 準備，等待 action-time confirmation 後才能建立 token 並跑 public probe
   `cd gateway-core && npm run check:secret-layout` 已可驗證 dev config 內的 key file 參考
   `cd gateway-core && npm run check:rollout-artifact` 已可驗證 rollout env example
   outbound queue processing lease、stale lease recovery、restart recovery 與 delivery job pre-dispatch recovery 已覆蓋

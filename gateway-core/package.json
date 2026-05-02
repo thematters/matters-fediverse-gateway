@@ -23,7 +23,8 @@
     "check:mastodon-sandbox": "node scripts/run-mastodon-sandbox-interop.mjs",
     "check:misskey-sandbox": "node scripts/run-misskey-sandbox-interop.mjs",
     "check:gotosocial-contract": "node scripts/run-gotosocial-sandbox-interop.mjs --dry-run-contract",
-    "check:gotosocial-sandbox": "node scripts/run-gotosocial-sandbox-interop.mjs"
+    "check:gotosocial-sandbox": "node scripts/run-gotosocial-sandbox-interop.mjs",
+    "report:interop": "node scripts/write-interop-run-report.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

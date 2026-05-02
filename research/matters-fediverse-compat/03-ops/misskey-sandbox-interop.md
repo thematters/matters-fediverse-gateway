@@ -32,6 +32,21 @@ GATEWAY_PUBLIC_BASE_URL="https://gateway.example" \
 npm run check:misskey-sandbox
 ```
 
+To convert a raw probe JSON file into a sanitized repo-safe report:
+
+```bash
+cd gateway-core
+npm run report:interop -- \
+  --input-json ./runtime/interop/misskey-raw.json \
+  --output ../research/matters-fediverse-compat/03-ops/misskey-public-run-YYYYMMDD.md \
+  --implementation Misskey \
+  --instance https://gyutte.site \
+  --operator-profile https://gyutte.site/@mashbean \
+  --gateway-url https://staging-gateway.matters.town \
+  --gateway-actor alice \
+  --gateway-commit <commit>
+```
+
 ## What The Script Checks
 
 - `/.well-known/webfinger`
@@ -46,6 +61,7 @@ npm run check:misskey-sandbox
 
 - Token 只從環境變數讀取，不寫進 repo。
 - Script output 不包含 token。
+- Repo-safe run report 由 `npm run report:interop` 產生；原始 probe JSON 應留在 `gateway-core/runtime/`，不納入 git。
 - 若 UI 產生 token 後剪貼簿不可靠，可先由使用者放入備忘錄 app，之後再由 staging operator 放進本機 shell env 或 secret file。
 - 建立 Misskey access token 是 persistent access creation，需要真人在 action-time 核准。
 
@@ -60,6 +76,7 @@ npm run check:misskey-sandbox
 
 - 腳本已落在 `gateway-core/scripts/run-misskey-sandbox-interop.mjs`
 - package script 已新增 `npm run check:misskey-sandbox`
+- report script 已新增 `npm run report:interop`，可把 raw JSON 轉成遮罩後的 public run report
 - 使用者已提供公開 Misskey 帳號：`https://gyutte.site/@mashbean`
 - 尚未建立或讀取 access token；尚未對 gyutte.site 執行外部 follow probe
 - 外部 run report 請從 `research/matters-fediverse-compat/03-ops/interop-run-template.md` 複製後填寫

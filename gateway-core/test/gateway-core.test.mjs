@@ -6484,6 +6484,80 @@ test("gotosocial sandbox interop script dry-run contract emits endpoint plan wit
   assert.equal(stdout.includes("dry-run-gotosocial-secret"), false);
 });
 
+test("interop report writer redacts secrets and writes public markdown", async () => {
+  const tmpDir = path.join(os.tmpdir(), `matters-gateway-interop-report-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(tmpDir, { recursive: true });
+  const inputJson = path.join(tmpDir, "misskey-output.json");
+  const output = path.join(tmpDir, "misskey-run.md");
+  await writeFile(
+    inputJson,
+    JSON.stringify(
+      {
+        ok: true,
+        failures: [],
+        report: {
+          discovery: {
+            subject: "acct:alice@staging-gateway.matters.town",
+            actorId: "https://staging-gateway.matters.town/users/alice",
+            outboxId: "https://staging-gateway.matters.town/users/alice/outbox",
+            outboxTotalItems: 1,
+          },
+          misskey: {
+            baseUrl: "https://gyutte.site",
+            operatorProfileUrl: "https://gyutte.site/@mashbean",
+            resolvedUserId: "remote-user-id",
+            resolvedUrl: "https://gyutte.site/@alice@staging-gateway.matters.town",
+            relation: {
+              isFollowing: true,
+              authorization: "Bearer should-not-appear",
+            },
+          },
+          accessToken: "should-not-appear",
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  const { stdout } = await execFile(nodeBin,
+    [
+      "scripts/write-interop-run-report.mjs",
+      "--input-json",
+      inputJson,
+      "--output",
+      output,
+      "--implementation",
+      "Misskey",
+      "--instance",
+      "https://gyutte.site",
+      "--operator-profile",
+      "https://gyutte.site/@mashbean",
+      "--gateway-url",
+      "https://staging-gateway.matters.town",
+      "--gateway-actor",
+      "alice",
+      "--started-at",
+      "2026-05-02T15:00:00.000Z",
+      "--completed-at",
+      "2026-05-02T15:01:00.000Z",
+      "--gateway-commit",
+      "test-commit",
+    ],
+    {
+      cwd: path.resolve(process.cwd()),
+    },
+  );
+  const payload = JSON.parse(stdout);
+  const markdown = await readFile(payload.output, "utf8");
+
+  assert.equal(markdown.includes("should-not-appear"), false);
+  assert.equal(markdown.includes("Bearer <redacted>"), false);
+  assert.equal(markdown.includes("<redacted>"), true);
+  assert.equal(markdown.includes("Misskey Interop Run 20260502"), true);
+  assert.equal(markdown.includes("remote-user-id"), true);
+});
+
 test("alert dispatch script writes structured payload with metrics and alerts", async () => {
   const { store, sqliteFile } = await createSqliteStoreHarness();
   const webhookServer = await createWebhookCaptureServer();

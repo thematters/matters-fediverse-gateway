@@ -118,6 +118,7 @@ Default to hashes and public URLs. Do not paste tokens, private account settings
 
 - Raw probe output file:
 - Raw probe output SHA-256:
+- Sanitized report command: `cd gateway-core && npm run report:interop -- --input-json <raw.json> --output ../research/matters-fediverse-compat/03-ops/<run-report>.md --implementation <Misskey|GoToSocial> --instance <url> --gateway-url https://staging-gateway.matters.town --gateway-actor alice --gateway-commit <commit>`
 - Public profile URL:
 - Public article URL:
 - Screenshot path, if any:
