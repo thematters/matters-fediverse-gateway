@@ -32,8 +32,8 @@ The existing production path stops at single article IPFS publication. The Activ
 | `matters-server` | `src/connectors/article/ipfsPublicationService.ts` imports `makeArticlePage` | single article page publishing exists |
 | `matters-server` | `src/handlers/ipfsPublication.ts` handles `{ articleId, articleVersionId }` SQS messages | publication worker exists |
 | `matters-server` | `src/queries/user/ipnsKey.ts` resolves `user_ipns_keys` | author IPNS identity exists |
-| `matters-server` | no `makeHomepageBundles` / `makeActivityPubBundles` call site found | ActivityPub seed export missing |
-| `matters-server` | `package-lock.json` resolves `@matters/ipns-site-generator@0.1.8` from npm | server cannot safely import the local ActivityPub bundle contract until that contract is published or linked |
+| `matters-server` | `src/connectors/article/federationExportService.ts` imports `makeHomepageBundles` / `makeActivityPubBundles` | non-production ActivityPub export scaffold exists in commit `50e2219` |
+| `matters-server` | `package-lock.json` resolves `@matters/ipns-site-generator@0.1.9` from `vendor/matters-ipns-site-generator-0.1.9.tgz` | temporary bridge until npm `@matters` scope publish permission is available |
 | `ipns-site-generator` | `src/makeHomepage/index.ts` exports `makeActivityPubBundles` | seed generation exists |
 | `ipns-site-generator` | `src/types.ts` requires `HomepageContext.byline.author.webfDomain` | canonical host must be provided by caller |
 | `ipns-site-generator` | `isFederationPublicArticle` filters explicit paid/private/encrypted/draft/message-like content | static public-only boundary exists |
@@ -90,21 +90,22 @@ Required `HomepageContext` mapping:
 
 ## Minimal Implementation Plan
 
-1. Publish, link, or otherwise wire the ActivityPub bundle-capable `ipns-site-generator` into `matters-server`.
-2. Add a `matters-server` mapper for `HomepageContext` from selected public article rows.
-3. Add unit tests using existing seed/test article data.
+1. Keep the committed temporary vendored tarball dependency only while npm `@matters` scope publish permission is unavailable.
+2. Publish `@matters/ipns-site-generator@0.1.9` when permission arrives, then migrate `matters-server` to `^0.1.9` and remove the vendored tarball.
+3. Use the committed `matters-server` mapper/service for `HomepageContext` from explicitly selected public article rows.
 4. Add a local CLI or worker mode that writes the generated bundle to a local output directory.
 5. Add a gateway staging fixture or config example pointing `staticBundleManifestFile` at that directory.
 6. Run `ipns-site-generator` tests and `gateway-core` tests against the generated manifest.
 
 ## Local Verification Notes
 
-- `matters-server` is currently clean on `develop` before G2-A code begins.
-- `npm ci` was attempted with local tooling and failed before install because `package-lock.json` is not in sync (`fsevents` / `msgpackr-extract` optional package entries missing) and the visible local npm runtime is Node 24 while `matters-server` requires Node `>=18.18.0 <19.0.0`.
-- No `matters-server` code scaffold is committed in this pass because importing unpublished `ipns-site-generator` ActivityPub exports would be unsafe.
-- `ipns-site-generator` release-readiness verification passed locally with the repository's existing `node_modules`: `npm test -- --runInBand` passed 9/9 and `npm run lint` passed. The repo remained clean and ahead by the existing ActivityPub manifest commit only.
+- `matters-server` work is on branch `codex/g2a-federation-export-preflight`, not on `main`/`develop`.
+- Local Node 18.20.8 was installed under the shared tooling directory and `npm ci` passed without rewriting the lockfile.
+- `ipns-site-generator` release-readiness verification passed locally: `npm test -- --runInBand` passed 9/9 and `npm run lint` passed.
 - `ipns-site-generator` package metadata is prepared as `0.1.9` on branch `codex/release-ipns-activitypub-bundle` commit `0cd6e88`; local tarball `/tmp/matters-ipns-site-generator-0.1.9.tgz` was generated for preflight.
-- `matters-server` branch `codex/g2a-federation-export-preflight` is clean and ready, but local Node 18 is not available. Do not use Node 24 to update its lockfile or run its CI-equivalent checks.
+- Direct npm publish is blocked by missing `@matters` scope permission. A temporary granular npm token was created and saved outside git, but it still cannot publish the scoped package.
+- `matters-server` commit `50e2219` added the non-production federation export scaffold, tests, and temporary vendored `@matters/ipns-site-generator@0.1.9` tarball dependency.
+- `matters-server` verification passed: `npm run build`, targeted `federationExportService` Jest 5/5, targeted ESLint, `git diff --check`, and commit hook build/gen/lint/prettier checks.
 
 ## Blocked Human Decisions
 
@@ -117,4 +118,4 @@ Required `HomepageContext` mapping:
 
 ## Next Engineering Action
 
-First install/configure Node 18 for `matters-server`, then make the local ActivityPub bundle-capable `ipns-site-generator` contract consumable without breaking CI. After that, implement the non-production exporter scaffold with tests. It should produce a local bundle and fail closed if the author or article set is not explicitly selected.
+Use the committed non-production exporter scaffold to produce a local selected-author bundle when staging input is available. After npm `@matters` scope permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from the vendored tarball to `^0.1.9`, and rerun the same Node 18 checks before any staging deployment.

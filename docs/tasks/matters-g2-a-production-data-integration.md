@@ -7,7 +7,7 @@ executor: codex-local
 host: any
 branch: codex/add-fediverse-execution-plan
 latest_commit: local
-last_updated: 2026-05-02T17:05:00-04:00
+last_updated: 2026-05-02T18:25:00-04:00
 tmux_session: none
 host_affinity: none
 outputs_scope: matters-server, ipns-site-generator, gateway-core
@@ -28,9 +28,9 @@ local_paths:
   - none
 start_command: none
 stop_command: none
-verify_command: repo-specific targeted tests after code begins; current slice is repo-backed contract scan
-next_step: Add a non-production exporter path in matters-server that builds HomepageContext for selected public articles and calls makeHomepageBundles plus makeActivityPubBundles.
-blockers: publish or otherwise consume the local ipns-site-generator ActivityPub bundle contract from matters-server; production author allowlist, opt-in semantics, canonical acct:user@matters.town cutover timing, and production credentials remain human/product gates.
+verify_command: matters-server npm ci, npm run build, targeted federationExportService Jest, targeted ESLint, git diff --check
+next_step: After @matters npm publish permission is available, publish @matters/ipns-site-generator@0.1.9 and replace the temporary matters-server vendored tarball dependency with ^0.1.9.
+blockers: npm @matters scope publish permission for registry migration; production author allowlist, opt-in semantics, canonical acct:user@matters.town cutover timing, and production credentials remain human/product gates.
 ---
 
 # Task Handoff
@@ -57,6 +57,9 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - 2026-05-02 `ipns-site-generator` release-readiness checked locally: `npm test -- --runInBand` passed 9/9 and `npm run lint` passed; no dirty diff after verification
 - 2026-05-02 `ipns-site-generator` branch `codex/release-ipns-activitypub-bundle` bumped package metadata to `0.1.9` in commit `0cd6e88`; local tarball generated at `/tmp/matters-ipns-site-generator-0.1.9.tgz`
 - 2026-05-02 `matters-server` branch `codex/g2a-federation-export-preflight` created; no code changes made because local Node 18 is unavailable and Node 24 should not be used to rewrite its lockfile
+- 2026-05-02 local Node 18.20.8 installed under the shared tooling directory and `matters-server npm ci` passed without rewriting the lockfile
+- 2026-05-02 `matters-server` commit `50e2219` added a non-production federation export scaffold, tests, and a temporary vendored `@matters/ipns-site-generator@0.1.9` tarball dependency because npm publish permission for the `@matters` scope is not yet available
+- 2026-05-02 `matters-server` verification passed: `npm run build`, targeted `federationExportService` Jest 5/5, targeted ESLint, `git diff --check`, and the repository commit hook build/gen/lint/prettier checks
 
 ## Current Repo-Backed Findings
 
@@ -66,9 +69,9 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - SQS handler: `src/handlers/ipfsPublication.ts`
 - Publication trigger: `PublicationService.publishArticle` calls `IPFSPublicationService.triggerPublication`
 - Existing generator usage: `makeArticlePage`
-- Missing G2-A piece: no local call site for `makeHomepageBundles` or `makeActivityPubBundles`
+- G2-A non-production export scaffold: `src/connectors/article/federationExportService.ts`
 - Existing user IPNS resolver: `src/queries/user/ipnsKey.ts`
-- Dependency gate: `matters-server` currently locks `@matters/ipns-site-generator@0.1.8` from npm; the local ActivityPub bundle contract must be published, linked, or otherwise made consumable before server code imports `makeActivityPubBundles`.
+- Dependency bridge: `matters-server` currently consumes `vendor/matters-ipns-site-generator-0.1.9.tgz` as a temporary local dependency. This keeps preflight moving without npm scope permission, but should be migrated to `@matters/ipns-site-generator@^0.1.9` after publication.
 
 ### ipns-site-generator
 
@@ -87,10 +90,10 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 
 ## Minimal Engineering Slice
 
-1. Publish or locally wire the `ipns-site-generator` ActivityPub bundle contract so `matters-server` can safely import it without breaking CI.
-2. Add a non-production export service or script in `matters-server` that maps selected author/public article rows into `HomepageContext`.
-3. Reuse `makeHomepageBundles` and `makeActivityPubBundles`; do not reimplement ActivityPub shape in `matters-server`.
-4. Write bundle files to an explicit local or object-storage staging path with a generated `activitypub-manifest.json`.
+1. Keep the temporary `matters-server` vendored tarball only until npm publish permission is available.
+2. Publish `@matters/ipns-site-generator@0.1.9` once the `@matters` scope permission is granted.
+3. Replace the `matters-server` file dependency with `@matters/ipns-site-generator@^0.1.9` and remove `vendor/matters-ipns-site-generator-0.1.9.tgz`.
+4. Use the committed non-production export scaffold to write selected-author bundles to an explicit local or object-storage staging path with a generated `activitypub-manifest.json`.
 5. Point a `gateway-core` staging actor at that manifest through `staticBundleManifestFile`.
 6. Run gateway bridge tests against the generated manifest.
 
@@ -107,7 +110,7 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - Task: G2-A production data integration preflight
 - Branch: `codex/add-fediverse-execution-plan`
 - Changed files: this task note plus the G2-A runtime slice
-- Verification: repo-backed source inspection; `ipns-site-generator` tests/lint pass; attempted `npm ci` in `matters-server` was blocked by existing lockfile drift and Node 24 vs required Node 18, so full server tests are deferred until the repo has a Node 18 install path and lockfile sync
-- Result: G2-A can start with a non-production exporter/manifest slice
-- Remaining risks: product gates above, `ipns-site-generator` package publication/linking, plus `matters-server` Node 18 build/test environment once code begins
-- Follow-up task: install/configure Node 18 for `matters-server`, publish or locally wire the ActivityPub bundle-capable `ipns-site-generator`, then implement the non-production exporter scaffold
+- Verification: repo-backed source inspection; `ipns-site-generator` tests/lint pass; `matters-server npm ci`, build, targeted Jest, targeted ESLint, `git diff --check`, and commit hook checks pass under Node 18
+- Result: G2-A has a non-production exporter scaffold committed in `matters-server` commit `50e2219`; it can produce selected public Article bundle data through the generator contract without production deployment or data mutation
+- Remaining risks: product gates above, npm `@matters` scope publish permission, registry migration from the temporary vendored tarball, and later staging manifest ingestion through `gateway-core`
+- Follow-up task: after npm permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from vendored tarball to registry dependency, then wire a staging actor to a generated manifest
