@@ -112,6 +112,7 @@ Status:
 - 2026-05-02: local gateway-core SQLite runtime served that generated bundle successfully: WebFinger, actor, and outbox probes passed for `acct:mashbean@staging-gateway.matters.town`.
 - 2026-05-02: test author switched to `@charlesmungerai`; a public API snapshot generated a local bundle with three public Articles (`1182465`, `1181808`, `1181797`), and local gateway-core WebFinger/actor/outbox probes passed for `acct:charlesmungerai@staging-gateway.matters.town`.
 - 2026-05-02: the generated `charlesmungerai` bundle was exposed through the existing local Cloudflare Tunnel staging hostname. Public WebFinger, actor, and outbox probes passed; Misskey resolved/followed the actor, and a fresh gateway `outbox/create` delivered public Matters Article `1182465` to gyutte.site, where `users/notes` matched the Article.
+- 2026-05-02: G2-B contract scaffolding started in `matters-server` commit `f8d410b`; `resolveFederationExportGate` requires explicit author opt-in, supports per-article `inherit` / `enabled` / `disabled`, and keeps non-public content blocked regardless of settings.
 
 Dependencies:
 
@@ -258,7 +259,7 @@ Stop/go gate:
 - Owned areas: article export, manifest path, gateway ingestion config.
 - Verification: targeted backend tests plus `gateway-core npm test`.
 - Acceptance: selected public articles from real authors appear as gateway-served Article objects.
-- Handoff output: `matters-server` commits `50e2219`, `bac7511`, and `4761f78` provide the non-production exporter scaffold, local writer, CLI, and targeted tests; current public API sample author is `charlesmungerai` with articles `1182465`, `1181808`, and `1181797`; local and public staging gateway probes passed; Misskey received one real public Matters Article through fresh `outbox/create`.
+- Handoff output: `matters-server` commits `50e2219`, `bac7511`, `4761f78`, and `f8d410b` provide the non-production exporter scaffold, local writer, CLI, eligibility gate, docs, and targeted tests; current public API sample author is `charlesmungerai` with articles `1182465`, `1181808`, and `1181797`; local and public staging gateway probes passed; Misskey received one real public Matters Article through fresh `outbox/create`.
 
 ### G2-A2: Add Federation Settings Backend Contract
 

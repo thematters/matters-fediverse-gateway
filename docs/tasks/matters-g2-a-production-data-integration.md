@@ -71,6 +71,7 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - 2026-05-02 exposed the generated `charlesmungerai` bundle through the existing local Cloudflare Tunnel staging hostname; public WebFinger, actor, and outbox probes passed for `acct:charlesmungerai@staging-gateway.matters.town`, while `staging-admin` remained local-only
 - 2026-05-02 Misskey public run on gyutte.site resolved/followed `charlesmungerai@staging-gateway.matters.town`; existing outbox Articles were not backfilled into `users/notes`
 - 2026-05-02 gateway sent the first generated public Matters Article (`1182465`) through `POST /users/charlesmungerai/outbox/create`; delivery to the gyutte.site follower returned `delivered`, and Misskey `users/notes` matched the Article
+- 2026-05-02 `matters-server` commit `f8d410b` added the first G2-B contract scaffold: `resolveFederationExportGate` requires explicit author opt-in, supports per-article `inherit` / `enabled` / `disabled`, and prevents any setting from overriding the public-only boundary
 
 ## Current Repo-Backed Findings
 
@@ -82,6 +83,7 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - Existing generator usage: `makeArticlePage`
 - G2-A non-production export scaffold and local writer: `src/connectors/article/federationExportService.ts`
 - Local export CLI: `src/connectors/article/federationExportCli.ts`, exposed as `npm run federation:export`
+- Federation eligibility gate: `src/connectors/article/federationExportService.ts` exports `resolveFederationExportGate`; docs live in `docs/Federation-Export.md`
 - Existing user IPNS resolver: `src/queries/user/ipnsKey.ts`
 - Dependency bridge: `matters-server` currently consumes `vendor/matters-ipns-site-generator-0.1.9.tgz` as a temporary local dependency. This keeps preflight moving without npm scope permission, but should be migrated to `@matters/ipns-site-generator@^0.1.9` after publication.
 
@@ -123,6 +125,6 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - Branch: `codex/add-fediverse-execution-plan`
 - Changed files: this task note plus the G2-A runtime slice
 - Verification: repo-backed source inspection; `ipns-site-generator` tests/lint pass; `matters-server npm ci`, build, targeted Jest, targeted ESLint, `git diff --check`, and commit hook checks pass under Node 18
-- Result: G2-A has a non-production exporter scaffold in `matters-server` commit `50e2219`, a local bundle writer in commit `bac7511`, and a CLI in commit `4761f78`; it produced public API snapshot bundles for `mashbean` and `charlesmungerai`, served `charlesmungerai` through public staging WebFinger/actor/outbox, and delivered one real public Matters Article to Misskey
+- Result: G2-A has a non-production exporter scaffold in `matters-server` commit `50e2219`, a local bundle writer in commit `bac7511`, a CLI in commit `4761f78`, and a G2-B eligibility gate scaffold in commit `f8d410b`; it produced public API snapshot bundles for `mashbean` and `charlesmungerai`, served `charlesmungerai` through public staging WebFinger/actor/outbox, and delivered one real public Matters Article to Misskey
 - Remaining risks: product gates above, npm `@matters` scope publish permission, registry migration from the temporary vendored tarball, production credential/storage choices, and canonical `acct:user@matters.town` cutover
 - Follow-up task: continue G2-B contract scaffolding locally; after npm permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from vendored tarball to registry dependency, and rerun the Node 18 checks
