@@ -7,7 +7,7 @@ executor: codex-local
 host: any
 branch: codex/add-fediverse-execution-plan
 latest_commit: local
-last_updated: 2026-05-02T18:25:00-04:00
+last_updated: 2026-05-02T18:55:00-04:00
 tmux_session: none
 host_affinity: none
 outputs_scope: matters-server, ipns-site-generator, gateway-core
@@ -29,7 +29,7 @@ local_paths:
 start_command: none
 stop_command: none
 verify_command: matters-server npm ci, npm run build, targeted federationExportService Jest, targeted ESLint, git diff --check
-next_step: After @matters npm publish permission is available, publish @matters/ipns-site-generator@0.1.9 and replace the temporary matters-server vendored tarball dependency with ^0.1.9.
+next_step: Use the committed local federation export writer to generate a selected-author staging bundle when staging-safe article IDs are available; after @matters npm publish permission is available, publish @matters/ipns-site-generator@0.1.9 and replace the temporary matters-server vendored tarball dependency with ^0.1.9.
 blockers: npm @matters scope publish permission for registry migration; production author allowlist, opt-in semantics, canonical acct:user@matters.town cutover timing, and production credentials remain human/product gates.
 ---
 
@@ -60,6 +60,7 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - 2026-05-02 local Node 18.20.8 installed under the shared tooling directory and `matters-server npm ci` passed without rewriting the lockfile
 - 2026-05-02 `matters-server` commit `50e2219` added a non-production federation export scaffold, tests, and a temporary vendored `@matters/ipns-site-generator@0.1.9` tarball dependency because npm publish permission for the `@matters` scope is not yet available
 - 2026-05-02 `matters-server` verification passed: `npm run build`, targeted `federationExportService` Jest 5/5, targeted ESLint, `git diff --check`, and the repository commit hook build/gen/lint/prettier checks
+- 2026-05-02 `matters-server` commit `bac7511` added a local bundle writer for generated homepage/ActivityPub files, including path traversal protection and temp-dir tests; targeted Jest now passes 7/7
 
 ## Current Repo-Backed Findings
 
@@ -69,7 +70,7 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - SQS handler: `src/handlers/ipfsPublication.ts`
 - Publication trigger: `PublicationService.publishArticle` calls `IPFSPublicationService.triggerPublication`
 - Existing generator usage: `makeArticlePage`
-- G2-A non-production export scaffold: `src/connectors/article/federationExportService.ts`
+- G2-A non-production export scaffold and local writer: `src/connectors/article/federationExportService.ts`
 - Existing user IPNS resolver: `src/queries/user/ipnsKey.ts`
 - Dependency bridge: `matters-server` currently consumes `vendor/matters-ipns-site-generator-0.1.9.tgz` as a temporary local dependency. This keeps preflight moving without npm scope permission, but should be migrated to `@matters/ipns-site-generator@^0.1.9` after publication.
 
@@ -93,7 +94,7 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 1. Keep the temporary `matters-server` vendored tarball only until npm publish permission is available.
 2. Publish `@matters/ipns-site-generator@0.1.9` once the `@matters` scope permission is granted.
 3. Replace the `matters-server` file dependency with `@matters/ipns-site-generator@^0.1.9` and remove `vendor/matters-ipns-site-generator-0.1.9.tgz`.
-4. Use the committed non-production export scaffold to write selected-author bundles to an explicit local or object-storage staging path with a generated `activitypub-manifest.json`.
+4. Use the committed non-production export scaffold and local writer to write selected-author bundles to an explicit local or object-storage staging path with a generated `activitypub-manifest.json`.
 5. Point a `gateway-core` staging actor at that manifest through `staticBundleManifestFile`.
 6. Run gateway bridge tests against the generated manifest.
 
@@ -111,6 +112,6 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - Branch: `codex/add-fediverse-execution-plan`
 - Changed files: this task note plus the G2-A runtime slice
 - Verification: repo-backed source inspection; `ipns-site-generator` tests/lint pass; `matters-server npm ci`, build, targeted Jest, targeted ESLint, `git diff --check`, and commit hook checks pass under Node 18
-- Result: G2-A has a non-production exporter scaffold committed in `matters-server` commit `50e2219`; it can produce selected public Article bundle data through the generator contract without production deployment or data mutation
+- Result: G2-A has a non-production exporter scaffold in `matters-server` commit `50e2219` and a local bundle writer in commit `bac7511`; it can produce selected public Article bundle data through the generator contract without production deployment or data mutation
 - Remaining risks: product gates above, npm `@matters` scope publish permission, registry migration from the temporary vendored tarball, and later staging manifest ingestion through `gateway-core`
 - Follow-up task: after npm permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from vendored tarball to registry dependency, then wire a staging actor to a generated manifest

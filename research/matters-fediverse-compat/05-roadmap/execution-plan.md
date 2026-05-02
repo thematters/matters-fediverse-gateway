@@ -107,6 +107,7 @@ Status:
 
 - 2026-05-02: active preflight started. Repo-backed gap scan and non-production contract slice are documented in `research/matters-fediverse-compat/02-runtime-slices/g2a-production-data-integration-slice.md` and `docs/tasks/matters-g2-a-production-data-integration.md`.
 - 2026-05-02: `matters-server` commit `50e2219` added the non-production federation export scaffold on branch `codex/g2a-federation-export-preflight`. It uses a temporary vendored `@matters/ipns-site-generator@0.1.9` tarball because npm `@matters` scope publish permission is not yet available; registry migration is the next dependency gate.
+- 2026-05-02: `matters-server` commit `bac7511` added a local federation export writer and path traversal guard, so the next non-production slice can wrap it in a CLI/worker once staging-safe article IDs and runtime credentials are available.
 
 Dependencies:
 
@@ -253,7 +254,7 @@ Stop/go gate:
 - Owned areas: article export, manifest path, gateway ingestion config.
 - Verification: targeted backend tests plus `gateway-core npm test`.
 - Acceptance: selected public articles from real authors appear as gateway-served Article objects.
-- Handoff output: `matters-server` commit `50e2219` provides the non-production exporter scaffold and targeted tests; next handoff should add test author IDs, sample generated bundle URLs, gateway staging manifest path, and rollback notes.
+- Handoff output: `matters-server` commits `50e2219` and `bac7511` provide the non-production exporter scaffold, local writer, and targeted tests; next handoff should add test author IDs, sample generated bundle URLs, gateway staging manifest path, and rollback notes.
 
 ### G2-A2: Add Federation Settings Backend Contract
 

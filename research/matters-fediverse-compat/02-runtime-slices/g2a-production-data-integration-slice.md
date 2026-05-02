@@ -32,7 +32,7 @@ The existing production path stops at single article IPFS publication. The Activ
 | `matters-server` | `src/connectors/article/ipfsPublicationService.ts` imports `makeArticlePage` | single article page publishing exists |
 | `matters-server` | `src/handlers/ipfsPublication.ts` handles `{ articleId, articleVersionId }` SQS messages | publication worker exists |
 | `matters-server` | `src/queries/user/ipnsKey.ts` resolves `user_ipns_keys` | author IPNS identity exists |
-| `matters-server` | `src/connectors/article/federationExportService.ts` imports `makeHomepageBundles` / `makeActivityPubBundles` | non-production ActivityPub export scaffold exists in commit `50e2219` |
+| `matters-server` | `src/connectors/article/federationExportService.ts` imports `makeHomepageBundles` / `makeActivityPubBundles` and writes bundle files to a caller-provided output directory | non-production ActivityPub export scaffold exists in commit `50e2219`; local writer exists in commit `bac7511` |
 | `matters-server` | `package-lock.json` resolves `@matters/ipns-site-generator@0.1.9` from `vendor/matters-ipns-site-generator-0.1.9.tgz` | temporary bridge until npm `@matters` scope publish permission is available |
 | `ipns-site-generator` | `src/makeHomepage/index.ts` exports `makeActivityPubBundles` | seed generation exists |
 | `ipns-site-generator` | `src/types.ts` requires `HomepageContext.byline.author.webfDomain` | canonical host must be provided by caller |
@@ -93,7 +93,7 @@ Required `HomepageContext` mapping:
 1. Keep the committed temporary vendored tarball dependency only while npm `@matters` scope publish permission is unavailable.
 2. Publish `@matters/ipns-site-generator@0.1.9` when permission arrives, then migrate `matters-server` to `^0.1.9` and remove the vendored tarball.
 3. Use the committed `matters-server` mapper/service for `HomepageContext` from explicitly selected public article rows.
-4. Add a local CLI or worker mode that writes the generated bundle to a local output directory.
+4. Wrap the committed local writer in a CLI or worker mode once staging-safe article IDs and runtime credentials are available.
 5. Add a gateway staging fixture or config example pointing `staticBundleManifestFile` at that directory.
 6. Run `ipns-site-generator` tests and `gateway-core` tests against the generated manifest.
 
@@ -105,7 +105,8 @@ Required `HomepageContext` mapping:
 - `ipns-site-generator` package metadata is prepared as `0.1.9` on branch `codex/release-ipns-activitypub-bundle` commit `0cd6e88`; local tarball `/tmp/matters-ipns-site-generator-0.1.9.tgz` was generated for preflight.
 - Direct npm publish is blocked by missing `@matters` scope permission. A temporary granular npm token was created and saved outside git, but it still cannot publish the scoped package.
 - `matters-server` commit `50e2219` added the non-production federation export scaffold, tests, and temporary vendored `@matters/ipns-site-generator@0.1.9` tarball dependency.
-- `matters-server` verification passed: `npm run build`, targeted `federationExportService` Jest 5/5, targeted ESLint, `git diff --check`, and commit hook build/gen/lint/prettier checks.
+- `matters-server` commit `bac7511` added a local bundle writer and path traversal guard for generated output files.
+- `matters-server` verification passed: `npm run build`, targeted `federationExportService` Jest 7/7, targeted ESLint, `git diff --check`, and commit hook build/gen/lint/prettier checks.
 
 ## Blocked Human Decisions
 
@@ -118,4 +119,4 @@ Required `HomepageContext` mapping:
 
 ## Next Engineering Action
 
-Use the committed non-production exporter scaffold to produce a local selected-author bundle when staging input is available. After npm `@matters` scope permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from the vendored tarball to `^0.1.9`, and rerun the same Node 18 checks before any staging deployment.
+Use the committed non-production exporter scaffold and local writer to produce a selected-author staging bundle when staging-safe article IDs and runtime credentials are available. After npm `@matters` scope permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from the vendored tarball to `^0.1.9`, and rerun the same Node 18 checks before any staging deployment.
