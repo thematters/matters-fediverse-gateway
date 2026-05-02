@@ -102,6 +102,7 @@ Required `HomepageContext` mapping:
 - `matters-server` is currently clean on `develop` before G2-A code begins.
 - `npm ci` was attempted with local tooling and failed before install because `package-lock.json` is not in sync (`fsevents` / `msgpackr-extract` optional package entries missing) and the visible local npm runtime is Node 24 while `matters-server` requires Node `>=18.18.0 <19.0.0`.
 - No `matters-server` code scaffold is committed in this pass because importing unpublished `ipns-site-generator` ActivityPub exports would be unsafe.
+- `ipns-site-generator` release-readiness verification passed locally with the repository's existing `node_modules`: `npm test -- --runInBand` passed 9/9 and `npm run lint` passed. The repo remained clean and ahead by the existing ActivityPub manifest commit only.
 
 ## Blocked Human Decisions
 
