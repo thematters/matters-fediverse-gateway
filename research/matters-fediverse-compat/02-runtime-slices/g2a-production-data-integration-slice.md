@@ -112,6 +112,9 @@ Required `HomepageContext` mapping:
 - `gateway-core` static bundle bridge successfully read that generated `activitypub-manifest.json` and normalized one `Article` item for `https://staging-gateway.matters.town/users/mashbean`.
 - `gateway-core` local SQLite runtime started with `triad-ops/team/artifacts/O-0020/mashbean-public-api-bundle/gateway-local.instance.json` after rebuilding `better-sqlite3`.
 - Local HTTP probes passed: WebFinger resolved `acct:mashbean@staging-gateway.matters.town`, `/users/mashbean` returned `Person`, and `/users/mashbean/outbox` returned one `Article`.
+- Public API read selected `charlesmungerai` articles `1182465` (`wdzgj6wllhrf`), `1181808` (`mgbaikfdg7a9`), and `1181797` (`drxqcpmy0obk`) with `state=active` and `access=public`; no private credential was required.
+- The generated `charlesmungerai` bundle is stored outside git at `triad-ops/team/artifacts/O-0020/charlesmungerai-public-api-bundle/site`.
+- Local HTTP probes passed: WebFinger resolved `acct:charlesmungerai@staging-gateway.matters.town`, `/users/charlesmungerai` returned `Person`, and `/users/charlesmungerai/outbox` returned three `Article` items.
 - `matters-server` verification passed: `npm run build`, targeted `federationExportService` Jest 7/7, targeted ESLint, `git diff --check`, CLI fixture export, and commit hook build/gen/lint/prettier checks.
 
 ## Blocked Human Decisions
@@ -125,4 +128,4 @@ Required `HomepageContext` mapping:
 
 ## Next Engineering Action
 
-Decide whether this generated public-API bundle should be exposed through the existing local Cloudflare Tunnel staging hostname before Zero Trust is available. Keep npm registry migration deferred: after npm `@matters` scope permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from the vendored tarball to `^0.1.9`, and rerun the same Node 18 checks before any staging deployment.
+Decide whether the generated `charlesmungerai` public-API bundle should be exposed through the existing local Cloudflare Tunnel staging hostname before Zero Trust is available. Keep npm registry migration deferred: after npm `@matters` scope permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from the vendored tarball to `^0.1.9`, and rerun the same Node 18 checks before any staging deployment.

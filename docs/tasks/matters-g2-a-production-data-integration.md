@@ -7,7 +7,7 @@ executor: codex-local
 host: any
 branch: codex/add-fediverse-execution-plan
 latest_commit: local
-last_updated: 2026-05-02T19:45:00-04:00
+last_updated: 2026-05-02T20:05:00-04:00
 tmux_session: none
 host_affinity: none
 outputs_scope: matters-server, ipns-site-generator, gateway-core
@@ -66,6 +66,8 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - 2026-05-02 generated bundle stored outside git at `triad-ops/team/artifacts/O-0020/mashbean-public-api-bundle/site`; gateway-core static bundle bridge read the manifest and normalized one `Article` item
 - 2026-05-02 local `better-sqlite3` native module rebuilt for gateway-core; SQLite runtime server started locally with the generated bundle config
 - 2026-05-02 local endpoint probe passed: WebFinger returned `acct:mashbean@staging-gateway.matters.town`, actor endpoint returned `Person`, and outbox returned one `Article`
+- 2026-05-02 updated test author to `@charlesmungerai`; public API returned three `active` / `public` articles: `1182465` (`wdzgj6wllhrf`), `1181808` (`mgbaikfdg7a9`), and `1181797` (`drxqcpmy0obk`)
+- 2026-05-02 generated `charlesmungerai` bundle stored outside git at `triad-ops/team/artifacts/O-0020/charlesmungerai-public-api-bundle/site`; local gateway-core SQLite runtime served WebFinger, actor, and outbox successfully with three `Article` items
 
 ## Current Repo-Backed Findings
 
@@ -118,6 +120,6 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - Branch: `codex/add-fediverse-execution-plan`
 - Changed files: this task note plus the G2-A runtime slice
 - Verification: repo-backed source inspection; `ipns-site-generator` tests/lint pass; `matters-server npm ci`, build, targeted Jest, targeted ESLint, `git diff --check`, and commit hook checks pass under Node 18
-- Result: G2-A has a non-production exporter scaffold in `matters-server` commit `50e2219`, a local bundle writer in commit `bac7511`, and a CLI in commit `4761f78`; it produced a public API snapshot bundle for `articleId=1111146`, and gateway-core served it locally through WebFinger, actor, and outbox endpoints
+- Result: G2-A has a non-production exporter scaffold in `matters-server` commit `50e2219`, a local bundle writer in commit `bac7511`, and a CLI in commit `4761f78`; it produced public API snapshot bundles for `mashbean` and `charlesmungerai`, and gateway-core served both locally through WebFinger, actor, and outbox endpoints
 - Remaining risks: product gates above, npm `@matters` scope publish permission, registry migration from the temporary vendored tarball, and the human decision on whether to expose this local bundle through the existing staging tunnel before Zero Trust is available
 - Follow-up task: after npm permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from vendored tarball to registry dependency, then wire a staging actor to a generated manifest

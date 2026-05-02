@@ -110,6 +110,7 @@ Status:
 - 2026-05-02: `matters-server` commit `bac7511` added a local federation export writer and path traversal guard, so the next non-production slice can wrap it in a CLI/worker once staging-safe article IDs and runtime credentials are available.
 - 2026-05-02: `matters-server` commit `4761f78` added `npm run federation:export`; a public API snapshot for `mashbean` article `1111146` generated a local bundle under triad O-0020 artifacts, and gateway-core normalized it as one `Article` through `staticBundleManifestFile`.
 - 2026-05-02: local gateway-core SQLite runtime served that generated bundle successfully: WebFinger, actor, and outbox probes passed for `acct:mashbean@staging-gateway.matters.town`.
+- 2026-05-02: test author switched to `@charlesmungerai`; a public API snapshot generated a local bundle with three public Articles (`1182465`, `1181808`, `1181797`), and local gateway-core WebFinger/actor/outbox probes passed for `acct:charlesmungerai@staging-gateway.matters.town`.
 
 Dependencies:
 
@@ -256,7 +257,7 @@ Stop/go gate:
 - Owned areas: article export, manifest path, gateway ingestion config.
 - Verification: targeted backend tests plus `gateway-core npm test`.
 - Acceptance: selected public articles from real authors appear as gateway-served Article objects.
-- Handoff output: `matters-server` commits `50e2219`, `bac7511`, and `4761f78` provide the non-production exporter scaffold, local writer, CLI, and targeted tests; current public API sample is article `1111146` / `oq72hz05fwnl`; local gateway-core probes passed; next handoff should add externally reachable staging URLs and rollback notes if the existing tunnel is used.
+- Handoff output: `matters-server` commits `50e2219`, `bac7511`, and `4761f78` provide the non-production exporter scaffold, local writer, CLI, and targeted tests; current public API sample author is `charlesmungerai` with articles `1182465`, `1181808`, and `1181797`; local gateway-core probes passed; next handoff should add externally reachable staging URLs and rollback notes if the existing tunnel is used.
 
 ### G2-A2: Add Federation Settings Backend Contract
 
