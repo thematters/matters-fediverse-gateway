@@ -17,7 +17,12 @@ related_repos:
   - .
 related_paths:
   - gateway-core/scripts/run-mastodon-sandbox-interop.mjs
+  - gateway-core/scripts/run-misskey-sandbox-interop.mjs
+  - gateway-core/scripts/run-gotosocial-sandbox-interop.mjs
   - research/matters-fediverse-compat/03-ops/mastodon-sandbox-interop.md
+  - research/matters-fediverse-compat/03-ops/misskey-sandbox-interop.md
+  - research/matters-fediverse-compat/03-ops/gotosocial-sandbox-interop.md
+  - research/matters-fediverse-compat/03-ops/interop-run-template.md
   - research/matters-fediverse-compat/03-ops/mastodon-sandbox-run-20260321.md
   - research/matters-fediverse-compat/01-specs/social-interoperability-spec.md
 local_paths:

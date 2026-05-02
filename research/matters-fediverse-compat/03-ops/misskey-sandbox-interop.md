@@ -62,3 +62,4 @@ npm run check:misskey-sandbox
 - package script 已新增 `npm run check:misskey-sandbox`
 - 使用者已提供公開 Misskey 帳號：`https://gyutte.site/@mashbean`
 - 尚未建立或讀取 access token；尚未對 gyutte.site 執行外部 follow probe
+- 外部 run report 請從 `research/matters-fediverse-compat/03-ops/interop-run-template.md` 複製後填寫

@@ -57,3 +57,4 @@ npm run check:gotosocial-sandbox
 - 腳本已落在 `gateway-core/scripts/run-gotosocial-sandbox-interop.mjs`
 - package script 已新增 `npm run check:gotosocial-sandbox`
 - 尚未選定 GoToSocial public instance 或建立 access token；尚未對外執行 probe
+- 外部 run report 請從 `research/matters-fediverse-compat/03-ops/interop-run-template.md` 複製後填寫
