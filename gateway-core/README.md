@@ -335,3 +335,16 @@ npm run check:misskey-sandbox
 ```
 
 This checks the gateway discovery surface against a real Misskey instance, resolves the remote actor with Misskey APIs, creates a follow, and polls the relationship state. The token is read from the environment and is not written to reports.
+
+## GoToSocial Sandbox Interop
+
+```bash
+cd gateway-core
+GOTOSOCIAL_BASE_URL="https://gts.example" \
+GOTOSOCIAL_ACCESS_TOKEN="<token>" \
+GOTOSOCIAL_OPERATOR_PROFILE_URL="https://gts.example/@mashbean" \
+GATEWAY_PUBLIC_BASE_URL="https://gateway.example" \
+npm run check:gotosocial-sandbox
+```
+
+This checks the gateway discovery surface against a real GoToSocial instance using its Mastodon-compatible client API surface: remote account search, follow, and relationship polling. The token is read from the environment and is not written to reports.

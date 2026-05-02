@@ -351,6 +351,103 @@ async function createMisskeyInteropServer({ token, gatewayHost, handle = "alice"
   };
 }
 
+async function createMastodonApiInteropServer({ token, gatewayHost, handle = "alice" }) {
+  const requests = [];
+  const server = createServer(async (request, response) => {
+    let body = "";
+    for await (const chunk of request) {
+      body += chunk;
+    }
+
+    const requestUrl = new URL(request.url ?? "/", "http://127.0.0.1");
+    requests.push({
+      method: request.method,
+      url: request.url,
+      headers: request.headers,
+      body,
+    });
+
+    if (request.headers.authorization !== `Bearer ${token}`) {
+      response.writeHead(401, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: "unauthorized" }));
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/v2/search") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          accounts: [
+            {
+              id: "gotosocial-remote-account-1",
+              acct: `${handle}@${gatewayHost}`,
+              username: handle,
+              url: `http://${gatewayHost}/@${handle}`,
+            },
+          ],
+          statuses: [],
+          hashtags: [],
+        }),
+      );
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/v1/accounts/gotosocial-remote-account-1/follow") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          id: "gotosocial-remote-account-1",
+          following: false,
+          requested: true,
+          showing_reblogs: false,
+          notifying: false,
+        }),
+      );
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/v1/accounts/relationships") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify([
+          {
+            id: "gotosocial-remote-account-1",
+            following: false,
+            requested: true,
+            showing_reblogs: false,
+            notifying: false,
+          },
+        ]),
+      );
+      return;
+    }
+
+    response.writeHead(404, { "content-type": "application/json" });
+    response.end(JSON.stringify({ error: "not_found" }));
+  });
+
+  await new Promise((resolve) => {
+    server.listen(0, "127.0.0.1", resolve);
+  });
+
+  const address = server.address();
+  return {
+    requests,
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    async close() {
+      await new Promise((resolve, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
+    },
+  };
+}
+
 function signedRequest({ method, url, body, keyId, privateKeyPem }) {
   const signatureHeaders = signHttpRequest({
     method,
@@ -6299,6 +6396,54 @@ test("misskey sandbox interop script resolves and follows remote gateway actor",
   } finally {
     await gatewayServer.close();
     await misskeyServer.close();
+  }
+});
+
+test("gotosocial sandbox interop script resolves and follows remote gateway actor", async () => {
+  const gatewayServer = await createActivityPubSurfaceServer({ handle: "alice" });
+  const gatewayHost = new URL(gatewayServer.baseUrl).host;
+  const gotosocialServer = await createMastodonApiInteropServer({
+    token: "gotosocial-script-secret",
+    gatewayHost,
+    handle: "alice",
+  });
+
+  try {
+    const { stdout } = await execFile(
+      "node",
+      ["scripts/run-gotosocial-sandbox-interop.mjs"],
+      {
+        cwd: path.resolve(process.cwd()),
+        env: {
+          ...process.env,
+          GOTOSOCIAL_BASE_URL: gotosocialServer.baseUrl,
+          GOTOSOCIAL_ACCESS_TOKEN: "gotosocial-script-secret",
+          GOTOSOCIAL_OPERATOR_PROFILE_URL: "https://gts.example/@mashbean",
+          GATEWAY_PUBLIC_BASE_URL: gatewayServer.baseUrl,
+          GATEWAY_HANDLE: "alice",
+          GOTOSOCIAL_RELATIONSHIP_POLL_ATTEMPTS: "1",
+          GOTOSOCIAL_RELATIONSHIP_POLL_INTERVAL_MS: "1",
+        },
+      },
+    );
+
+    const payload = JSON.parse(stdout);
+    assert.equal(payload.ok, true);
+    assert.deepEqual(payload.failures, []);
+    assert.equal(payload.report.gotosocial.baseUrl, gotosocialServer.baseUrl);
+    assert.equal(payload.report.gotosocial.operatorProfileUrl, "https://gts.example/@mashbean");
+    assert.equal(payload.report.gotosocial.resolvedAccountId, "gotosocial-remote-account-1");
+    assert.equal(payload.report.gotosocial.resolvedAcct, `alice@${gatewayHost}`);
+    assert.equal(payload.report.gotosocial.relationship.requested, true);
+    assert.equal(stdout.includes("gotosocial-script-secret"), false);
+    assert.deepEqual(
+      gotosocialServer.requests.map((entry) => new URL(entry.url, "http://127.0.0.1").pathname),
+      ["/api/v2/search", "/api/v1/accounts/gotosocial-remote-account-1/follow", "/api/v1/accounts/relationships"],
+    );
+    assert.equal(gotosocialServer.requests.every((entry) => entry.headers.authorization === "Bearer gotosocial-script-secret"), true);
+  } finally {
+    await gatewayServer.close();
+    await gotosocialServer.close();
   }
 });
 
