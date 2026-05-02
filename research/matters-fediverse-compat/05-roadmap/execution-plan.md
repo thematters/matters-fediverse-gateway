@@ -114,6 +114,7 @@ Status:
 - 2026-05-02: the generated `charlesmungerai` bundle was exposed through the existing local Cloudflare Tunnel staging hostname. Public WebFinger, actor, and outbox probes passed; Misskey resolved/followed the actor, and a fresh gateway `outbox/create` delivered public Matters Article `1182465` to gyutte.site, where `users/notes` matched the Article.
 - 2026-05-02: G2-B contract scaffolding started in `matters-server` commit `f8d410b`; `resolveFederationExportGate` requires explicit author opt-in, supports per-article `inherit` / `enabled` / `disabled`, and keeps non-public content blocked regardless of settings.
 - 2026-05-02: `matters-server` commit `af4dffb` added migration scaffolding for `user_federation_setting` and `article_federation_setting`; no production migration was run.
+- 2026-05-02: `matters-server` commit `3497556` wired strict gate enforcement into the exporter behind `--enforce-federation-gate` / `MATTERS_FEDERATION_REQUIRE_OPT_IN=true`, preserving default preflight behavior.
 
 Dependencies:
 
@@ -260,7 +261,7 @@ Stop/go gate:
 - Owned areas: article export, manifest path, gateway ingestion config.
 - Verification: targeted backend tests plus `gateway-core npm test`.
 - Acceptance: selected public articles from real authors appear as gateway-served Article objects.
-- Handoff output: `matters-server` commits `50e2219`, `bac7511`, `4761f78`, `f8d410b`, and `af4dffb` provide the non-production exporter scaffold, local writer, CLI, eligibility gate, schema scaffold, docs, and targeted tests; current public API sample author is `charlesmungerai` with articles `1182465`, `1181808`, and `1181797`; local and public staging gateway probes passed; Misskey received one real public Matters Article through fresh `outbox/create`.
+- Handoff output: `matters-server` commits `50e2219`, `bac7511`, `4761f78`, `f8d410b`, `af4dffb`, and `3497556` provide the non-production exporter scaffold, local writer, CLI, eligibility gate, schema scaffold, optional strict enforcement, docs, and targeted tests; current public API sample author is `charlesmungerai` with articles `1182465`, `1181808`, and `1181797`; local and public staging gateway probes passed; Misskey received one real public Matters Article through fresh `outbox/create`.
 
 ### G2-A2: Add Federation Settings Backend Contract
 
