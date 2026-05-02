@@ -34,6 +34,7 @@ The existing production path stops at single article IPFS publication. The Activ
 | `matters-server` | `src/queries/user/ipnsKey.ts` resolves `user_ipns_keys` | author IPNS identity exists |
 | `matters-server` | `src/connectors/article/federationExportService.ts` imports `makeHomepageBundles` / `makeActivityPubBundles` and writes bundle files to a caller-provided output directory | non-production ActivityPub export scaffold exists in commit `50e2219`; local writer exists in commit `bac7511`; CLI exists in commit `4761f78` |
 | `matters-server` | `resolveFederationExportGate` in `src/connectors/article/federationExportService.ts` | G2-B contract scaffold exists in commit `f8d410b`; explicit author opt-in is required, per-article settings are `inherit` / `enabled` / `disabled`, and non-public content cannot be overridden |
+| `matters-server` | `db/migrations/20260503000000_create_federation_setting_tables.js` | durable settings schema scaffold exists in commit `af4dffb`; it creates `user_federation_setting` and `article_federation_setting`, but was not run against production |
 | `matters-server` | `package-lock.json` resolves `@matters/ipns-site-generator@0.1.9` from `vendor/matters-ipns-site-generator-0.1.9.tgz` | temporary bridge until npm `@matters` scope publish permission is available |
 | `ipns-site-generator` | `src/makeHomepage/index.ts` exports `makeActivityPubBundles` | seed generation exists |
 | `ipns-site-generator` | `src/types.ts` requires `HomepageContext.byline.author.webfDomain` | canonical host must be provided by caller |
@@ -120,6 +121,7 @@ Required `HomepageContext` mapping:
 - Misskey public interop on gyutte.site resolved and followed `charlesmungerai@staging-gateway.matters.town`. Existing generated outbox Articles were not backfilled into `users/notes`.
 - A fresh gateway `outbox/create` delivery for public Matters article `1182465` reached the gyutte.site follower with status `delivered`, and Misskey `users/notes` matched the Article object.
 - `matters-server` commit `f8d410b` added a local G2-B eligibility gate scaffold and `docs/Federation-Export.md`; verification passed with Node 18 build, targeted federationExportService Jest 9/9, targeted ESLint, `git diff --check`, and the repository pre-commit hook.
+- `matters-server` commit `af4dffb` added the durable federation settings migration scaffold and row-level contract fields; verification passed with Node 18 build, targeted federationExportService Jest 10/10, targeted ESLint, `git diff --check`, and the repository pre-commit hook.
 - `matters-server` verification passed: `npm run build`, targeted `federationExportService` Jest 7/7, targeted ESLint, `git diff --check`, CLI fixture export, and commit hook build/gen/lint/prettier checks.
 
 ## Blocked Human Decisions
