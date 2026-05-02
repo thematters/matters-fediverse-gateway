@@ -123,12 +123,34 @@ Do not grant yet:
 
 The token guidance has also been copied into Apple Notes under `Matters Gateway Misskey staging token 建議`.
 
+## Confirmed Access Allowlist
+
+The human-approved `staging-admin.matters.town` Access allowlist is:
+
+- `mashbean@matters.town`
+- `zeck@matters.town`
+- `tech@matters.town`
+
+`staging-hooks.matters.town` remains public and bearer-token protected.
+
+## Current Blocker
+
+Cloudflare Access could not be created on 2026-05-02. The dashboard opened Zero Trust onboarding and blocked the current login with:
+
+> You need the following edit permissions on this account: Billing
+
+No Access application or policy was created.
+
+Required next action:
+
+- A Cloudflare account admin must either enable Zero Trust for the account or grant the operator Billing edit permission long enough to complete onboarding.
+- After onboarding, create an Access self-hosted application for `staging-admin.matters.town` only.
+- Add an allow policy for the three approved email addresses above.
+- Leave `staging-gateway.matters.town` and `staging-hooks.matters.town` outside Cloudflare Access.
+
 ## Next Human Decision
 
-Before I can apply Cloudflare Access in the dashboard, I need action-time confirmation for the cloud access-control change and the exact allowed identity boundary:
+Before Access can be applied, a Cloudflare account admin decision is required:
 
-- Allow specific emails only, or allow an entire Google Workspace domain.
-- If domain-based: confirm the domain string.
-- If email-based: confirm the operator email list.
-
-My default recommendation is email-based allowlist for `staging-admin.matters.town` only, with `staging-hooks.matters.town` left public and bearer-token protected.
+- Grant the current operator Billing edit permission, or
+- Have an existing Cloudflare account admin perform Zero Trust onboarding and create the `staging-admin` Access app.
