@@ -123,6 +123,12 @@ Do not grant yet:
 
 The token guidance has also been copied into Apple Notes under `Matters Gateway Misskey staging token 建議`.
 
+2026-05-02 update:
+
+- A minimal-scope token resolved the account but lacked permission for `following/create` on gyutte.site.
+- A dedicated full-scope staging token named `matters-gateway-w3-interop-full` was created only to complete the public interop probe and was stored in Apple Notes plus the ignored local secret file.
+- Rotate or delete this full-scope staging token after the W3 evidence is no longer needed, then retry a narrower token when Misskey scope behavior is clearer.
+
 ## Confirmed Access Allowlist
 
 The human-approved `staging-admin.matters.town` Access allowlist is:

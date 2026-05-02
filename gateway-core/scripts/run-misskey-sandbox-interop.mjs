@@ -123,20 +123,25 @@ function extractMisskeyUser(payload) {
 }
 
 async function resolveRemoteAccount({ misskeyBaseUrl, token, tokenMode, acctUri, username, host }) {
-  const apShow = await postMisskey({
-    misskeyBaseUrl,
-    endpoint: "ap/show",
-    token,
-    tokenMode,
-    body: { uri: acctUri },
-  });
-  const apUser = extractMisskeyUser(apShow);
-  if (apUser?.id) {
-    return {
-      method: "ap/show",
-      rawType: apShow?.type ?? null,
-      user: apUser,
-    };
+  let apShowError = null;
+  try {
+    const apShow = await postMisskey({
+      misskeyBaseUrl,
+      endpoint: "ap/show",
+      token,
+      tokenMode,
+      body: { uri: acctUri },
+    });
+    const apUser = extractMisskeyUser(apShow);
+    if (apUser?.id) {
+      return {
+        method: "ap/show",
+        rawType: apShow?.type ?? null,
+        user: apUser,
+      };
+    }
+  } catch (error) {
+    apShowError = error;
   }
 
   const shownUser = await postMisskey({
@@ -152,20 +157,31 @@ async function resolveRemoteAccount({ misskeyBaseUrl, token, tokenMode, acctUri,
   }
 
   return {
-    method: "users/show",
+    method: apShowError ? "users/show-after-ap-show-error" : "users/show",
+    apShowError: apShowError?.message ?? null,
     rawType: null,
     user,
   };
 }
 
 async function followRemoteAccount({ misskeyBaseUrl, token, tokenMode, userId }) {
-  return postMisskey({
-    misskeyBaseUrl,
-    endpoint: "following/create",
-    token,
-    tokenMode,
-    body: { userId },
-  });
+  try {
+    return await postMisskey({
+      misskeyBaseUrl,
+      endpoint: "following/create",
+      token,
+      tokenMode,
+      body: { userId },
+    });
+  } catch (error) {
+    if (error.message.includes("ALREADY_FOLLOWING")) {
+      return {
+        id: userId,
+        alreadyFollowing: true,
+      };
+    }
+    throw error;
+  }
 }
 
 function relationIsConverged(relation) {
@@ -284,12 +300,14 @@ async function main() {
       baseUrl: misskeyBaseUrl,
       operatorProfileUrl: misskeyOperatorProfileUrl,
       resolveMethod: resolvedAccount.method,
+      apShowError: resolvedAccount.apShowError ?? null,
       resolvedUserId: resolvedAccount.user.id,
       resolvedUsername: resolvedAccount.user.username,
       resolvedHost: resolvedAccount.user.host,
       resolvedUrl: resolvedAccount.user.url ?? resolvedAccount.user.uri ?? null,
       followResponse: {
         id: followResponse?.id ?? null,
+        alreadyFollowing: followResponse?.alreadyFollowing ?? false,
         username: followResponse?.username ?? null,
         host: followResponse?.host ?? null,
       },

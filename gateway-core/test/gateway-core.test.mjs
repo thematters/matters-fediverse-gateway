@@ -264,7 +264,13 @@ async function createActivityPubSurfaceServer({ handle = "alice" } = {}) {
   };
 }
 
-async function createMisskeyInteropServer({ token, gatewayHost, handle = "alice" }) {
+async function createMisskeyInteropServer({
+  token,
+  gatewayHost,
+  handle = "alice",
+  apShowStatus = 200,
+  alreadyFollowing = false,
+}) {
   const requests = [];
   const server = createServer(async (request, response) => {
     let body = "";
@@ -287,6 +293,11 @@ async function createMisskeyInteropServer({ token, gatewayHost, handle = "alice"
     }
 
     if (request.url === "/api/ap/show") {
+      if (apShowStatus !== 200) {
+        response.writeHead(apShowStatus, { "content-type": "application/json" });
+        response.end(JSON.stringify({ error: "request_failed" }));
+        return;
+      }
       response.writeHead(200, { "content-type": "application/json" });
       response.end(
         JSON.stringify({
@@ -303,7 +314,26 @@ async function createMisskeyInteropServer({ token, gatewayHost, handle = "alice"
       return;
     }
 
+    if (request.url === "/api/users/show") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          id: "misskey-remote-user-1",
+          username: payload.username,
+          host: payload.host,
+          uri: `http://${payload.host}/users/${payload.username}`,
+          url: `http://${payload.host}/@${payload.username}`,
+        }),
+      );
+      return;
+    }
+
     if (request.url === "/api/following/create") {
+      if (alreadyFollowing) {
+        response.writeHead(400, { "content-type": "application/json" });
+        response.end(JSON.stringify({ code: "ALREADY_FOLLOWING", message: "You are already following that user." }));
+        return;
+      }
       response.writeHead(200, { "content-type": "application/json" });
       response.end(
         JSON.stringify({
@@ -6391,6 +6421,87 @@ test("misskey sandbox interop script resolves and follows remote gateway actor",
       ["/api/ap/show", "/api/following/create", "/api/users/relation"],
     );
     assert.equal(misskeyServer.requests.every((entry) => entry.headers.authorization === "Bearer misskey-script-secret"), true);
+  } finally {
+    await gatewayServer.close();
+    await misskeyServer.close();
+  }
+});
+
+test("misskey sandbox interop script falls back to users/show when ap/show rejects the actor", async () => {
+  const gatewayServer = await createActivityPubSurfaceServer({ handle: "alice" });
+  const gatewayHost = new URL(gatewayServer.baseUrl).host;
+  const misskeyServer = await createMisskeyInteropServer({
+    token: "misskey-script-secret",
+    gatewayHost,
+    handle: "alice",
+    apShowStatus: 400,
+  });
+
+  try {
+    const { stdout } = await execFile(nodeBin,
+      ["scripts/run-misskey-sandbox-interop.mjs"],
+      {
+        cwd: path.resolve(process.cwd()),
+        env: {
+          ...process.env,
+          MISSKEY_BASE_URL: misskeyServer.baseUrl,
+          MISSKEY_ACCESS_TOKEN: "misskey-script-secret",
+          MISSKEY_OPERATOR_PROFILE_URL: "https://gyutte.site/@mashbean",
+          GATEWAY_PUBLIC_BASE_URL: gatewayServer.baseUrl,
+          GATEWAY_HANDLE: "alice",
+          MISSKEY_RELATION_POLL_ATTEMPTS: "1",
+          MISSKEY_RELATION_POLL_INTERVAL_MS: "1",
+        },
+      },
+    );
+
+    const payload = JSON.parse(stdout);
+    assert.equal(payload.ok, true);
+    assert.deepEqual(payload.failures, []);
+    assert.equal(payload.report.misskey.resolveMethod, "users/show-after-ap-show-error");
+    assert.match(payload.report.misskey.apShowError, /POST .*\/api\/ap\/show failed with 400/);
+    assert.equal(payload.report.misskey.resolvedUserId, "misskey-remote-user-1");
+    assert.deepEqual(
+      misskeyServer.requests.map((entry) => entry.url),
+      ["/api/ap/show", "/api/users/show", "/api/following/create", "/api/users/relation"],
+    );
+  } finally {
+    await gatewayServer.close();
+    await misskeyServer.close();
+  }
+});
+
+test("misskey sandbox interop script treats already-following as converged", async () => {
+  const gatewayServer = await createActivityPubSurfaceServer({ handle: "alice" });
+  const gatewayHost = new URL(gatewayServer.baseUrl).host;
+  const misskeyServer = await createMisskeyInteropServer({
+    token: "misskey-script-secret",
+    gatewayHost,
+    handle: "alice",
+    alreadyFollowing: true,
+  });
+
+  try {
+    const { stdout } = await execFile(nodeBin,
+      ["scripts/run-misskey-sandbox-interop.mjs"],
+      {
+        cwd: path.resolve(process.cwd()),
+        env: {
+          ...process.env,
+          MISSKEY_BASE_URL: misskeyServer.baseUrl,
+          MISSKEY_ACCESS_TOKEN: "misskey-script-secret",
+          GATEWAY_PUBLIC_BASE_URL: gatewayServer.baseUrl,
+          GATEWAY_HANDLE: "alice",
+          MISSKEY_RELATION_POLL_ATTEMPTS: "1",
+          MISSKEY_RELATION_POLL_INTERVAL_MS: "1",
+        },
+      },
+    );
+
+    const payload = JSON.parse(stdout);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.report.misskey.followResponse.alreadyFollowing, true);
+    assert.equal(payload.report.misskey.relation.hasPendingFollowRequestFromYou, true);
   } finally {
     await gatewayServer.close();
     await misskeyServer.close();

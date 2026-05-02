@@ -168,25 +168,25 @@
 
 ## Verification Snapshot
 
-- `cd gateway-core && npm test`  
-  109 tests passing
+- `cd gateway-core && runtime/tools/node-local --test`
+  111 tests passing
   local conversation projection 與 social reconcile `dryRun` 已覆蓋
   remote acct mention resolution 已覆蓋
   remote mention retryable / permanent failure policy、failure cache、admin mention query 已覆蓋
   notification projection、read state、grouped feed、delivery-aware content action matrix、activity-level delivery collapse、content delivery drilldown、review queue / dashboard summary、unique activity summary、activity-level replay 與 local notification query 已覆蓋
-  Misskey / GoToSocial sandbox probes 已有本地 fake-server 驗證，外部 run 等待 public instance token 與 staging gateway URL
+  Misskey sandbox probe 已對 gyutte.site public instance 跑通；GoToSocial 依目前決策暫不執行
   local content projection、outbound-authored content projection、stable partial content key、richer action matrix、review queue store-backed snapshot、cross-content activity index 與 activity index persistence 已覆蓋
   review queue item ops read model 的 replayableItems、replayCount、lastReplayAt、staleSince 已覆蓋
   review queue / dashboard 的 replayedOnly、replayableOnly filter、review queue `filteredSummary`、`appliedFilters`、activity index replay filter 與 activity drilldown 的 activityId filter 已覆蓋
   runtime alert webhook dispatch、config-driven webhook sink、admin dispatch sink audit、CLI webhook dispatch、Slack provider payload shaping、CLI Slack dispatch、observability drill runner、drill report、secret layout checker script 已覆蓋
   2026-05-01 本機 staging-style observability drill 已用 ignored secret files、SQLite runtime state 與 generic webhook receiver 跑通；alerts / metrics / logs 三組 sink 皆回 202
-  2026-05-02 Cloudflare staging transport smoke 已用 local Mac + Cloudflare Tunnel 跑通；`staging-gateway.matters.town`、`staging-admin.matters.town`、`staging-hooks.matters.town` 在 connector propagation 後皆回 200；alerts / metrics / logs 三組 bundle 送到 generic webhook receiver 皆回 202；封存報告見 `research/matters-fediverse-compat/03-ops/staging-observability-drill-20260502-cloudflare.md`
-  2026-05-02 `better-sqlite3` 已確認安裝且可由 primary runtime Node 載入；測試子程序已改用 `process.execPath`，避免 Codex app Node 造成 macOS native module code-signature mismatch；`node --test` 107/107 passing
+  2026-05-02 Cloudflare staging transport smoke 已用 local Mac + Cloudflare Tunnel 跑通；`staging-gateway.matters.town` 與 `staging-hooks.matters.town` 回 200，`staging-admin.matters.town` 在 no-Zero-Trust mode 下維持 404；alerts / metrics / logs 三組 bundle 送到 generic webhook receiver 皆回 202；封存報告見 `research/matters-fediverse-compat/03-ops/staging-observability-drill-20260502-cloudflare.md`
+  2026-05-02 `better-sqlite3` 已確認安裝；Codex app Node 載入 native module 會遇到 macOS code-signature mismatch，因此 staging 服務用 ignored `runtime/tools/node-local` ad-hoc signed copy 啟動；測試子程序已改用 `process.execPath`
   2026-05-02 staging hosting / Access review 已封存於 `research/matters-fediverse-compat/03-ops/staging-hosting-access-plan-20260502.md`；Access setup blocked by Cloudflare dashboard because current login lacks required Billing edit permission
   2026-05-02 temporary no-Zero-Trust mode 已落地：新增 `scripts/run-staging-local-proxy.mjs`，Caddy tunnel 範例預設讓 `staging-admin` 回 404；測試覆蓋 public gateway pass-through、public admin/jobs blocking、admin hostname 404 與 unknown host 421
   2026-05-02 W2 consistency scan 已確認可跑：`scan-consistency.mjs` 比對 followers、inbound objects、engagements，dry-run 預設輸出 JSON + markdown，`--repair --repair-target file|sqlite` 需顯式指定；本機 scan 顯示 0 diffs，targeted tests 2/2 passing
   2026-05-02 W8 launch / incident / rollback runbooks 已完成；tabletop record template 已完成；實際 2+ participant tabletop 尚未執行，仍是下一個真人 gate
-  2026-05-02 W3 interop report writer 已補上：`npm run report:interop` 可把 Misskey / GoToSocial probe raw JSON 轉成 repo-safe markdown，並遮罩 token-like fields；Misskey token form 已以最小 scope 準備，等待 action-time confirmation 後才能建立 token 並跑 public probe
+  2026-05-02 W3 Misskey public interop 已跑通：gyutte.site 成功 resolve `alice@staging-gateway.matters.town`、follow remote actor，relationship 顯示 `isFollowing: true`；報告見 `research/matters-fediverse-compat/03-ops/misskey-public-run-20260502T152117Z.md`。`ap/show` 對此 actor 回 400，probe 已補 `users/show` fallback；重跑時 `ALREADY_FOLLOWING` 會視為已收斂。GoToSocial 依目前決策暫跳過。
   `cd gateway-core && npm run check:secret-layout` 已可驗證 dev config 內的 key file 參考
   `cd gateway-core && npm run check:rollout-artifact` 已可驗證 rollout env example
   outbound queue processing lease、stale lease recovery、restart recovery 與 delivery job pre-dispatch recovery 已覆蓋

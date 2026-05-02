@@ -20,7 +20,7 @@ This plan deliberately excludes DID / shared DID work, ZK anonymity, and Billboa
 |---|---|---|---|
 | G1-A Static Article Contract | done | `ipns-site-generator`, `gateway-core` | Public Article seed bundle passes bridge and generator tests |
 | G1-B Gateway Hardening | queued | `gateway-core` | Gateway runtime passes hardening tests and staging drill |
-| G1-C Interop Validation | queued | `gateway-core`, ops reports | Mastodon, Misskey, and GoToSocial reports are archived |
+| G1-C Interop Validation | active | `gateway-core`, ops reports | Mastodon and Misskey reports are archived; GoToSocial is skipped until a later decision |
 | G2-A Matters Production Data Integration | queued | `matters-server`, `ipns-site-generator`, `gateway-core` | Selected real Matters authors resolve and publish public Article objects |
 | G2-B Matters Web/App Integration | queued | `matters-web`, `matters-server`, `gateway-core` | Pilot authors can control federation and see inbound interactions |
 | G2-C Production Rollout | queued | product, ops, docs | Beta rollout has legal, comms, rollback, and monitoring readiness |
@@ -234,7 +234,7 @@ Stop/go gate:
 - Repo scope: `gateway-core`, ops reports.
 - Owned areas: black-box probes and archived reports.
 - Verification: probe scripts and manual report review.
-- Acceptance: Mastodon baseline remains valid; Misskey and GoToSocial discovery, follow, Article display, reply, like, and boost flows are documented.
+- Acceptance: Mastodon baseline remains valid; Misskey discovery and follow are documented; GoToSocial remains optional until a later product/testing decision.
 - Handoff output: one report per implementation under `03-ops/`.
 
 ### G2-A1: Connect Real Matters Article Output

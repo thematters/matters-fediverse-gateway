@@ -27,8 +27,9 @@
 cd gateway-core
 MISSKEY_BASE_URL="https://gyutte.site" \
 MISSKEY_ACCESS_TOKEN="<token>" \
+MISSKEY_TOKEN_MODE="body" \
 MISSKEY_OPERATOR_PROFILE_URL="https://gyutte.site/@mashbean" \
-GATEWAY_PUBLIC_BASE_URL="https://gateway.example" \
+GATEWAY_PUBLIC_BASE_URL="https://staging-gateway.matters.town" \
 npm run check:misskey-sandbox
 ```
 
@@ -53,8 +54,9 @@ npm run report:interop -- \
 - actor document
 - bridged outbox
 - Misskey `ap/show` 是否能 resolve remote Matters actor
-- 若 `ap/show` 沒有回 user object，fallback 到 `users/show`
+- 若 `ap/show` 回 4xx 或沒有回 user object，fallback 到 `users/show`
 - Misskey `following/create` 是否能對 remote actor 建立 follow
+- 若已經 follow，`ALREADY_FOLLOWING` 視為已收斂
 - Misskey `users/relation` 是否顯示 following 或 pending follow request
 
 ## Token Handling
@@ -78,5 +80,6 @@ npm run report:interop -- \
 - package script 已新增 `npm run check:misskey-sandbox`
 - report script 已新增 `npm run report:interop`，可把 raw JSON 轉成遮罩後的 public run report
 - 使用者已提供公開 Misskey 帳號：`https://gyutte.site/@mashbean`
-- 尚未建立或讀取 access token；尚未對 gyutte.site 執行外部 follow probe
-- 外部 run report 請從 `research/matters-fediverse-compat/03-ops/interop-run-template.md` 複製後填寫
+- 2026-05-02 已對 gyutte.site 執行外部 follow probe，結果 `passed`
+- 公開 report 已封存：`research/matters-fediverse-compat/03-ops/misskey-public-run-20260502T152117Z.md`
+- gyutte.site 對 `ap/show` 回 400；script 已 fallback 到 `users/show`，並成功 follow `alice@staging-gateway.matters.town`

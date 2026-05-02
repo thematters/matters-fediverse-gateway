@@ -2,15 +2,15 @@
 
 在 Matters 站前架一座「大使館」（代號 `gateway-core`），讓長文能以 ActivityPub `Article` 型別雙向對接 Fediverse（Mastodon / Misskey / GoToSocial），同時保護付費/加密/私訊內容不外流。
 
-最後更新：2026-05-01
+最後更新：2026-05-02
 
 ---
 
 ## 現況一眼看
 
-- **完成度**：單實例 gateway 原型可跑，107 tests passing，已與 `mastodon.social` 完成第一輪黑箱互通；canonical `acct:matters@matters.town` 已透過 `g0v.social` 完成 exact discovery 與 inbound follow delivery 驗證，Misskey / GoToSocial probes 已有本地驗證
+- **完成度**：單實例 gateway 原型可跑，107 tests passing，已與 `mastodon.social`、`g0v.social`、gyutte.site Misskey 完成黑箱互通；GoToSocial probe 已有本地驗證但 public run 依目前決策暫跳過
 - **目前階段**：G1 · 官方聯邦化基礎版（3 個月，2026-05 ~ 2026-07）
-- **下一步**：真環境值班演習 + 長文 Article 系統化 + Misskey/GoToSocial 互通驗證
+- **下一步**：長文 Article 系統化 + GoToSocial 是否補跑的產品/測試決策
 - **程式碼**：[`gateway-core/`](../../gateway-core)（sibling repo root）
 
 ---
