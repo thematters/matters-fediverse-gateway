@@ -205,6 +205,10 @@ Archive the human-readable drill result as:
 
 `research/matters-fediverse-compat/03-ops/staging-observability-drill-YYYYMMDD.md`
 
+Start from:
+
+`research/matters-fediverse-compat/03-ops/staging-observability-drill-template.md`
+
 Include:
 
 - staging hostname names, without tokens

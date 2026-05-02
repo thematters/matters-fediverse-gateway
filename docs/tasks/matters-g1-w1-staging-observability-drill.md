@@ -18,6 +18,7 @@ related_repos:
 related_paths:
   - gateway-core/
   - gateway-core/scripts/run-staging-observability-drill.mjs
+  - research/matters-fediverse-compat/03-ops/staging-observability-drill-template.md
   - research/matters-fediverse-compat/02-runtime-slices/staging-observability-drill-runtime-slice.md
   - research/matters-fediverse-compat/03-ops/restore-replay-drill-runbook.md
   - research/matters-fediverse-compat/05-roadmap/development-plan.md
