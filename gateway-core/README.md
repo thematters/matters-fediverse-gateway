@@ -247,14 +247,32 @@ node scripts/run-staging-observability-drill.mjs \
 
 The output directory contains `alerts.json`, `metrics.json`, `logs.json`, and `report.json`.
 
+Local webhook receiver for the no-cost staging path:
+
+```bash
+cd gateway-core
+npm run receive:webhooks -- \
+  --host 127.0.0.1 \
+  --port 8788 \
+  --output-dir ./runtime/webhooks \
+  --bearer-token-file ./config/staging.secrets/webhook-receiver.token
+```
+
+This accepts the generic `runtime-alerts`, `runtime-metrics`, and `runtime-logs` webhook payloads and writes captured payloads to disk with token-like headers masked.
+
+The receiver uses a bearer-token-only model. It is intended for staging drills behind Cloudflare Access or another private boundary; it is not an HMAC signature verifier. Request bodies are retained in full, so drill payloads must not contain secrets.
+
 ## Deployment Baseline
 
 - Staging config template: `config/staging.instance.example.json`
 - Staging secret layout template: `config/staging.secrets.example/README.md`
+- Cloudflare Tunnel template: `deploy/cloudflared-staging.example.yml`
+- Cloudflare Tunnel Caddy template: `deploy/Caddyfile.cloudflare-tunnel.example`
 - Reverse proxy template: `deploy/Caddyfile.example`
 - Rollout environment template: `deploy/matters-gateway-core.env.example`
 - System service template: `deploy/matters-gateway-core.service.example`
 - Deployment topology baseline: `../research/matters-fediverse-compat/03-ops/deployment-topology-baseline.md`
+- Cloudflare Tunnel staging runbook: `../research/matters-fediverse-compat/03-ops/staging-cloudflare-tunnel-runbook.md`
 
 The G1 baseline runs `gateway-core` behind a public reverse proxy with SQLite persistence. External observability sinks are configured under `runtime.alerting.dispatch`, `runtime.metrics.dispatch`, and `runtime.logs.dispatch`.
 

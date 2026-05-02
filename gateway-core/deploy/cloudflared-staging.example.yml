@@ -1,0 +1,16 @@
+# Example only. Do not commit a real tunnel UUID, credentials file, or token.
+#
+# This exposes the public federation surface and the staging webhook receiver
+# through one locally managed Cloudflare Tunnel. Keep admin-only hostnames behind
+# Cloudflare Access in the dashboard.
+tunnel: STAGING_TUNNEL_UUID
+credentials-file: /etc/cloudflared/STAGING_TUNNEL_UUID.json
+
+ingress:
+  - hostname: staging-gateway.example
+    service: http://127.0.0.1:8080
+  - hostname: staging-admin.example
+    service: http://127.0.0.1:8080
+  - hostname: staging-hooks.example
+    service: http://127.0.0.1:8788
+  - service: http_status:404

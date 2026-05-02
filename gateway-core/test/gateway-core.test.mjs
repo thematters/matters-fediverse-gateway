@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
-import { execFile as execFileCallback } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { execFile as execFileCallback, spawn } from "node:child_process";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { generateKeyPairSync } from "node:crypto";
 import { promisify } from "node:util";
 import { createGatewayApp } from "../src/app.mjs";
@@ -6534,6 +6534,106 @@ test("observability drill script writes bundles, dispatches sinks, and emits a r
     await slackServer.close();
     await metricsServer.close();
     await logsServer.close();
+  }
+});
+
+test("webhook receiver captures runtime dispatch payloads and masks tokens", async () => {
+  const tmpDir = path.join(os.tmpdir(), `matters-gateway-webhook-receiver-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(tmpDir, { recursive: true });
+  const outputDir = path.join(tmpDir, "webhooks");
+  const tokenFile = path.join(tmpDir, "webhook.token");
+  await writeFile(tokenFile, "receiver-secret\n");
+
+  const receiver = spawn(
+    "node",
+    [
+      "scripts/run-webhook-receiver.mjs",
+      "--port",
+      "0",
+      "--output-dir",
+      outputDir,
+      "--bearer-token-file",
+      tokenFile,
+    ],
+    {
+      cwd: path.resolve(process.cwd()),
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+
+  let stderr = "";
+  let receiverExited = false;
+  receiver.stderr.on("data", (chunk) => {
+    stderr += chunk.toString("utf8");
+  });
+  receiver.once("exit", () => {
+    receiverExited = true;
+  });
+
+  try {
+    const listening = await new Promise((resolve, reject) => {
+      let stdout = "";
+      const timeout = setTimeout(() => {
+        reject(new Error(`webhook receiver did not start: ${stderr}`));
+      }, 3000);
+
+      receiver.stdout.on("data", (chunk) => {
+        stdout += chunk.toString("utf8");
+        const newlineIndex = stdout.indexOf("\n");
+        if (newlineIndex === -1) {
+          return;
+        }
+        clearTimeout(timeout);
+        resolve(JSON.parse(stdout.slice(0, newlineIndex)));
+      });
+      receiver.once("exit", (code) => {
+        clearTimeout(timeout);
+        reject(new Error(`webhook receiver exited with ${code}: ${stderr}`));
+      });
+    });
+
+    assert.equal(listening.status, "listening");
+    assert.equal(listening.bearerTokenRequired, true);
+
+    const unauthorized = await fetch(`http://127.0.0.1:${listening.port}/runtime-alerts`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ status: "should-not-write" }),
+    });
+    assert.equal(unauthorized.status, 401);
+
+    const accepted = await fetch(`http://127.0.0.1:${listening.port}/runtime-alerts?channel=alerts`, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer receiver-secret",
+        "content-type": "application/json",
+        "x-alert-source": "gateway-test",
+        "x-extra-token": "must-not-be-written",
+      },
+      body: JSON.stringify({ status: "ok", channel: "alerts" }),
+    });
+    assert.equal(accepted.status, 202);
+
+    const responsePayload = await accepted.json();
+    assert.equal(responsePayload.status, "accepted");
+
+    const files = await readdir(outputDir);
+    assert.equal(files.length, 1);
+    const captured = JSON.parse(await readFile(path.join(outputDir, files[0]), "utf8"));
+    assert.equal(captured.path, "/runtime-alerts");
+    assert.deepEqual(captured.query, { channel: "alerts" });
+    assert.equal(captured.headers.authorization, "[masked]");
+    assert.equal(captured.headers["x-extra-token"], "[masked]");
+    assert.equal(captured.headers["x-alert-source"], "gateway-test");
+    assert.deepEqual(captured.json, { status: "ok", channel: "alerts" });
+    assert.equal(captured.bodyText.includes("receiver-secret"), false);
+  } finally {
+    if (!receiverExited) {
+      receiver.kill("SIGTERM");
+      await new Promise((resolve) => receiver.once("exit", resolve));
+    }
   }
 });
 
