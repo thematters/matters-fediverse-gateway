@@ -187,6 +187,7 @@
   2026-05-02 W2 consistency scan 已確認可跑：`scan-consistency.mjs` 比對 followers、inbound objects、engagements，dry-run 預設輸出 JSON + markdown，`--repair --repair-target file|sqlite` 需顯式指定；本機 scan 顯示 0 diffs，targeted tests 2/2 passing
   2026-05-02 W8 launch / incident / rollback runbooks 已完成；tabletop record template 已完成；實際 2+ participant tabletop 尚未執行，仍是下一個真人 gate
   2026-05-02 W3 Misskey public interop 已跑通：gyutte.site 成功 resolve `alice@staging-gateway.matters.town`、follow remote actor，relationship 顯示 `isFollowing: true`；報告見 `research/matters-fediverse-compat/03-ops/misskey-public-run-20260502T152117Z.md`。`ap/show` 對此 actor 回 400，probe 已補 `users/show` fallback；重跑時 `ALREADY_FOLLOWING` 會視為已收斂。GoToSocial 依目前決策暫跳過。
+  2026-05-02 W4a Misskey display follow-up 已封存於 `research/matters-fediverse-compat/03-ops/article-display-compatibility-20260502.md`；gyutte.site `users/notes` 對 remote actor 回 0，代表目前只能宣稱 discover/follow 已通，尚不能宣稱 Misskey timeline Article 顯示已驗證。下一步若要補 display probe，需要真人確認後送出一則 public staging `Create`。
   `cd gateway-core && npm run check:secret-layout` 已可驗證 dev config 內的 key file 參考
   `cd gateway-core && npm run check:rollout-artifact` 已可驗證 rollout env example
   outbound queue processing lease、stale lease recovery、restart recovery 與 delivery job pre-dispatch recovery 已覆蓋

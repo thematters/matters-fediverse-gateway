@@ -10,7 +10,7 @@
 
 - **完成度**：單實例 gateway 原型可跑，107 tests passing，已與 `mastodon.social`、`g0v.social`、gyutte.site Misskey 完成黑箱互通；GoToSocial probe 已有本地驗證但 public run 依目前決策暫跳過
 - **目前階段**：G1 · 官方聯邦化基礎版（3 個月，2026-05 ~ 2026-07）
-- **下一步**：長文 Article 系統化 + GoToSocial 是否補跑的產品/測試決策
+- **下一步**：決定是否送出公開 staging `Create` 來補 Misskey Article timeline 顯示驗證
 - **程式碼**：[`gateway-core/`](../../gateway-core)（sibling repo root）
 
 ---
