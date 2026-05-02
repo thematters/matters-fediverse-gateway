@@ -19,7 +19,8 @@
     "check:secret-layout": "node scripts/check-secret-layout.mjs --config ./config/dev.instance.json",
     "check:rollout-artifact": "node scripts/check-rollout-artifact.mjs --env-file ./deploy/matters-gateway-core.env.example",
     "check:local-sandbox": "node scripts/run-local-sandbox-interop.mjs",
-    "check:mastodon-sandbox": "node scripts/run-mastodon-sandbox-interop.mjs"
+    "check:mastodon-sandbox": "node scripts/run-mastodon-sandbox-interop.mjs",
+    "check:misskey-sandbox": "node scripts/run-misskey-sandbox-interop.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

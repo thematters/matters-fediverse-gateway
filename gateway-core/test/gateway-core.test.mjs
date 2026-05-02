@@ -175,6 +175,182 @@ async function createWebhookCaptureServer({ statusCode = 202, responseBody = { s
   };
 }
 
+async function createActivityPubSurfaceServer({ handle = "alice" } = {}) {
+  const server = createServer(async (request, response) => {
+    const requestUrl = new URL(request.url ?? "/", "http://127.0.0.1");
+    const host = request.headers.host;
+    const baseUrl = `http://${host}`;
+    const actorUrl = `${baseUrl}/users/${handle}`;
+    const acctUri = `acct:${handle}@${host}`;
+
+    if (requestUrl.pathname === "/.well-known/webfinger") {
+      response.writeHead(200, { "content-type": "application/jrd+json" });
+      response.end(
+        JSON.stringify({
+          subject: acctUri,
+          links: [
+            {
+              rel: "self",
+              type: "application/activity+json",
+              href: actorUrl,
+            },
+          ],
+        }),
+      );
+      return;
+    }
+
+    if (requestUrl.pathname === `/users/${handle}`) {
+      response.writeHead(200, { "content-type": "application/activity+json" });
+      response.end(
+        JSON.stringify({
+          "@context": "https://www.w3.org/ns/activitystreams",
+          id: actorUrl,
+          type: "Person",
+          preferredUsername: handle,
+          inbox: `${actorUrl}/inbox`,
+          outbox: `${actorUrl}/outbox`,
+          followers: `${actorUrl}/followers`,
+        }),
+      );
+      return;
+    }
+
+    if (requestUrl.pathname === `/users/${handle}/outbox`) {
+      response.writeHead(200, { "content-type": "application/activity+json" });
+      response.end(
+        JSON.stringify({
+          "@context": "https://www.w3.org/ns/activitystreams",
+          id: `${actorUrl}/outbox`,
+          type: "OrderedCollection",
+          totalItems: 1,
+          orderedItems: [
+            {
+              id: `${actorUrl}/articles/1`,
+              type: "Article",
+              actor: actorUrl,
+              name: "Interop Article",
+            },
+          ],
+        }),
+      );
+      return;
+    }
+
+    response.writeHead(404, { "content-type": "application/json" });
+    response.end(JSON.stringify({ error: "not_found" }));
+  });
+
+  await new Promise((resolve) => {
+    server.listen(0, "127.0.0.1", resolve);
+  });
+
+  const address = server.address();
+  return {
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    async close() {
+      await new Promise((resolve, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
+    },
+  };
+}
+
+async function createMisskeyInteropServer({ token, gatewayHost, handle = "alice" }) {
+  const requests = [];
+  const server = createServer(async (request, response) => {
+    let body = "";
+    for await (const chunk of request) {
+      body += chunk;
+    }
+
+    const payload = body ? JSON.parse(body) : {};
+    requests.push({
+      method: request.method,
+      url: request.url,
+      headers: request.headers,
+      body: payload,
+    });
+
+    if (request.headers.authorization !== `Bearer ${token}`) {
+      response.writeHead(401, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: "unauthorized" }));
+      return;
+    }
+
+    if (request.url === "/api/ap/show") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          type: "User",
+          object: {
+            id: "misskey-remote-user-1",
+            username: handle,
+            host: gatewayHost,
+            uri: `http://${gatewayHost}/users/${handle}`,
+            url: `http://${gatewayHost}/@${handle}`,
+          },
+        }),
+      );
+      return;
+    }
+
+    if (request.url === "/api/following/create") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          id: payload.userId,
+          username: handle,
+          host: gatewayHost,
+        }),
+      );
+      return;
+    }
+
+    if (request.url === "/api/users/relation") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          id: payload.userId,
+          isFollowing: false,
+          hasPendingFollowRequestFromYou: true,
+        }),
+      );
+      return;
+    }
+
+    response.writeHead(404, { "content-type": "application/json" });
+    response.end(JSON.stringify({ error: "not_found" }));
+  });
+
+  await new Promise((resolve) => {
+    server.listen(0, "127.0.0.1", resolve);
+  });
+
+  const address = server.address();
+  return {
+    requests,
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    async close() {
+      await new Promise((resolve, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
+    },
+  };
+}
+
 function signedRequest({ method, url, body, keyId, privateKeyPem }) {
   const signatureHeaders = signHttpRequest({
     method,
@@ -6074,6 +6250,56 @@ test("consistency scan script repairs sqlite from file store when requested", as
   assert.equal(repaired.getFollower("alice", "https://remote.example/users/zoe").status, "accepted");
   assert.equal(repaired.getInboundObject("alice", "https://remote.example/notes/file-only").type, "Create");
   repaired.close();
+});
+
+test("misskey sandbox interop script resolves and follows remote gateway actor", async () => {
+  const gatewayServer = await createActivityPubSurfaceServer({ handle: "alice" });
+  const gatewayHost = new URL(gatewayServer.baseUrl).host;
+  const misskeyServer = await createMisskeyInteropServer({
+    token: "misskey-script-secret",
+    gatewayHost,
+    handle: "alice",
+  });
+
+  try {
+    const { stdout } = await execFile(
+      "node",
+      ["scripts/run-misskey-sandbox-interop.mjs"],
+      {
+        cwd: path.resolve(process.cwd()),
+        env: {
+          ...process.env,
+          MISSKEY_BASE_URL: misskeyServer.baseUrl,
+          MISSKEY_ACCESS_TOKEN: "misskey-script-secret",
+          MISSKEY_OPERATOR_PROFILE_URL: "https://gyutte.site/@mashbean",
+          GATEWAY_PUBLIC_BASE_URL: gatewayServer.baseUrl,
+          GATEWAY_HANDLE: "alice",
+          MISSKEY_RELATION_POLL_ATTEMPTS: "1",
+          MISSKEY_RELATION_POLL_INTERVAL_MS: "1",
+        },
+      },
+    );
+
+    const payload = JSON.parse(stdout);
+    assert.equal(payload.ok, true);
+    assert.deepEqual(payload.failures, []);
+    assert.equal(payload.report.misskey.baseUrl, misskeyServer.baseUrl);
+    assert.equal(payload.report.misskey.operatorProfileUrl, "https://gyutte.site/@mashbean");
+    assert.equal(payload.report.misskey.resolveMethod, "ap/show");
+    assert.equal(payload.report.misskey.resolvedUserId, "misskey-remote-user-1");
+    assert.equal(payload.report.misskey.resolvedUsername, "alice");
+    assert.equal(payload.report.misskey.resolvedHost, gatewayHost);
+    assert.equal(payload.report.misskey.relation.hasPendingFollowRequestFromYou, true);
+    assert.equal(stdout.includes("misskey-script-secret"), false);
+    assert.deepEqual(
+      misskeyServer.requests.map((entry) => entry.url),
+      ["/api/ap/show", "/api/following/create", "/api/users/relation"],
+    );
+    assert.equal(misskeyServer.requests.every((entry) => entry.headers.authorization === "Bearer misskey-script-secret"), true);
+  } finally {
+    await gatewayServer.close();
+    await misskeyServer.close();
+  }
 });
 
 test("alert dispatch script writes structured payload with metrics and alerts", async () => {

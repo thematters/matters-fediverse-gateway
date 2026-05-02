@@ -322,3 +322,16 @@ npm run check:mastodon-sandbox
 ```
 
 This reuses the local sandbox acceptance fields against a real Mastodon instance: remote account resolution, follow, and relationship polling.
+
+## Misskey Sandbox Interop
+
+```bash
+cd gateway-core
+MISSKEY_BASE_URL="https://gyutte.site" \
+MISSKEY_ACCESS_TOKEN="<token>" \
+MISSKEY_OPERATOR_PROFILE_URL="https://gyutte.site/@mashbean" \
+GATEWAY_PUBLIC_BASE_URL="https://gateway.example" \
+npm run check:misskey-sandbox
+```
+
+This checks the gateway discovery surface against a real Misskey instance, resolves the remote actor with Misskey APIs, creates a follow, and polls the relationship state. The token is read from the environment and is not written to reports.
