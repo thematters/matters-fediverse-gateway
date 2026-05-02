@@ -212,6 +212,9 @@ export async function loadGatewayConfig(configPath) {
       staticOutboxFile: actor.staticOutboxFile
         ? path.resolve(configDir, actor.staticOutboxFile)
         : null,
+      staticBundleManifestFile: actor.staticBundleManifestFile
+        ? path.resolve(configDir, actor.staticBundleManifestFile)
+        : null,
       profileUrl: `${instanceBaseUrl}/@${handle}`,
       actorUrl,
       inboxUrl: `${instanceBaseUrl}/users/${handle}/inbox`,

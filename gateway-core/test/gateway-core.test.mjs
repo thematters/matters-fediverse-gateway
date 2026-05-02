@@ -1179,6 +1179,97 @@ test("outbox bridge rewrites static publisher output to canonical actor URLs", a
   );
 });
 
+test("outbox bridge reads static bundle manifest v1", async () => {
+  const harness = await createHarness();
+  const tmpDir = path.join(os.tmpdir(), `static-bundle-manifest-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(tmpDir, { recursive: true });
+  const outboxPath = path.join(tmpDir, "outbox.jsonld");
+  const manifestPath = path.join(tmpDir, "activitypub-manifest.json");
+  await writeFile(
+    outboxPath,
+    JSON.stringify({
+      "@context": "https://www.w3.org/ns/activitystreams",
+      id: "https://example.eth.limo/outbox.jsonld",
+      type: "OrderedCollection",
+      orderedItems: [
+        {
+          id: "https://example.eth.limo/activities/article-1",
+          type: "Create",
+          actor: "https://example.eth.limo/about.jsonld",
+          to: ["https://www.w3.org/ns/activitystreams#Public"],
+          object: {
+            id: "https://example.eth.limo/articles/article-1",
+            type: "Article",
+            name: "Manifest Article",
+            summary: "Manifest summary",
+            content: "<p>Manifest body</p>",
+            url: "https://example.eth.limo/articles/article-1",
+            to: ["https://www.w3.org/ns/activitystreams#Public"],
+          },
+        },
+      ],
+    }),
+  );
+  await writeFile(
+    manifestPath,
+    JSON.stringify({
+      version: 1,
+      generator: "ipns-site-generator",
+      actor: {
+        handle: "alice",
+        sourceActorId: "https://example.eth.limo/about.jsonld",
+        webfingerSubject: "acct:alice@example.eth.limo",
+        profileUrl: "https://example.eth.limo",
+      },
+      files: {
+        actor: "about.jsonld",
+        outbox: "outbox.jsonld",
+        webfinger: ".well-known/webfinger",
+        jsonFeed: "feed.json",
+        rss: "rss.xml",
+      },
+      visibility: {
+        federatedPublicOnly: true,
+        defaultPolicy: "missing-visibility-is-public",
+        excluded: ["paid", "encrypted", "private", "draft", "message"],
+      },
+    }),
+  );
+
+  const outboxApp = createGatewayApp({
+    config: {
+      ...harness.config,
+      actors: {
+        ...harness.config.actors,
+        alice: {
+          ...harness.config.actors.alice,
+          staticOutboxFile: null,
+          staticBundleManifestFile: manifestPath,
+        },
+      },
+    },
+    store: harness.store,
+    deliveryClient: {
+      async deliver() {
+        return { status: 202 };
+      },
+    },
+  });
+
+  const response = await outboxApp.handle(
+    new Request("https://matters.example/users/alice/outbox"),
+  );
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.id, "https://matters.example/users/alice/outbox");
+  assert.equal(payload.totalItems, 1);
+  assert.equal(payload.orderedItems[0].actor, "https://matters.example/users/alice");
+  assert.equal(payload.orderedItems[0].object.type, "Article");
+  assert.equal(payload.orderedItems[0].object.name, "Manifest Article");
+  assert.equal(payload.orderedItems[0].object.attributedTo, "https://matters.example/users/alice");
+});
+
 test("outbox bridge drops non-public static items and records visibility audit", async () => {
   const harness = await createHarness();
   const fixturePath = path.join(os.tmpdir(), `static-outbox-visibility-${Date.now()}-${Math.random().toString(16).slice(2)}.json`);

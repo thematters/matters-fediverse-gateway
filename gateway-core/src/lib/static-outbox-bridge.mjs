@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { normalizeArticleObject } from "./article-normalization.mjs";
 
 const PUBLIC_AUDIENCE = "https://www.w3.org/ns/activitystreams#Public";
@@ -183,15 +184,46 @@ async function normalizeCollection(parsed, actor, { recordAudit } = {}) {
   };
 }
 
+function assertManifestVisibility(manifest, manifestPath) {
+  if (manifest?.version !== 1) {
+    throw new Error(`Static bundle manifest ${manifestPath} must declare version: 1`);
+  }
+  if (manifest?.visibility?.federatedPublicOnly !== true) {
+    throw new Error(`Static bundle manifest ${manifestPath} must declare visibility.federatedPublicOnly: true`);
+  }
+}
+
+async function readOutboxFromActorSource(actor) {
+  if (actor.staticBundleManifestFile) {
+    const manifestRaw = await readFile(actor.staticBundleManifestFile, "utf8");
+    const manifest = JSON.parse(manifestRaw);
+    assertManifestVisibility(manifest, actor.staticBundleManifestFile);
+    const outboxFile = manifest?.files?.outbox;
+    if (typeof outboxFile !== "string" || !outboxFile.trim()) {
+      throw new Error(`Static bundle manifest ${actor.staticBundleManifestFile} must declare files.outbox`);
+    }
+    const resolvedOutboxFile = path.resolve(path.dirname(actor.staticBundleManifestFile), outboxFile);
+    return JSON.parse(await readFile(resolvedOutboxFile, "utf8"));
+  }
+
+  if (actor.staticOutboxFile) {
+    return JSON.parse(await readFile(actor.staticOutboxFile, "utf8"));
+  }
+
+  return null;
+}
+
 export function createStaticOutboxBridge({ recordAudit = null } = {}) {
   return {
     async getOutbox(actor) {
-      if (!actor.staticOutboxFile) {
+      if (!actor.staticOutboxFile && !actor.staticBundleManifestFile) {
         return emptyOutbox(actor);
       }
 
-      const raw = await readFile(actor.staticOutboxFile, "utf8");
-      const parsed = JSON.parse(raw);
+      const parsed = await readOutboxFromActorSource(actor);
+      if (!parsed) {
+        return emptyOutbox(actor);
+      }
       return normalizeCollection(parsed, actor, { recordAudit });
     },
   };
