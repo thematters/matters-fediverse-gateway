@@ -7,7 +7,7 @@
 - current engineering focus  
   `gateway-core`
 - current next step  
-  `Stage 03` production gap 已補 webhook alert sink、Slack incoming webhook alert routing、queue durability baseline、external metrics sink、structured logs、observability staging drill runner、deployment topology baseline artifact、secret layout check、reverse proxy baseline，以及 rollout artifact baseline；本機 staging-style generic webhook drill 與 Cloudflare Tunnel public transport smoke 已通，下一步需決定 staging 長駐服務型態與 admin/hooks access policy
+  `Stage 03` production gap 已補 webhook alert sink、Slack incoming webhook alert routing、queue durability baseline、external metrics sink、structured logs、observability staging drill runner、deployment topology baseline artifact、secret layout check、reverse proxy baseline，以及 rollout artifact baseline；本機 staging-style generic webhook drill 與 Cloudflare Tunnel public transport smoke 已通；建議 staging 先用既有 Mac + Cloudflare Tunnel 長駐，不新增費用，下一步需 action-time confirm 後套用 `staging-admin` Access policy
 
 ## Stage Progress
 
@@ -31,7 +31,7 @@
   secret layout check 與 reverse proxy baseline 已補 `check:secret-layout`、staging secrets layout 範本與 `Caddyfile.example`  
   rollout artifact baseline 已補 systemd unit、rollout env example 與 `check:rollout-artifact`  
   restore / replay drill runbook 已補齊  
-  本機 staging-style generic webhook drill 已通；Cloudflare Tunnel public transport smoke 已用 `staging-gateway.matters.town`、`staging-admin.matters.town`、`staging-hooks.matters.town` 跑通；待決定 staging 長駐服務型態、Access policy，以及其餘 provider-specific routing / exporter
+  本機 staging-style generic webhook drill 已通；Cloudflare Tunnel public transport smoke 已用 `staging-gateway.matters.town`、`staging-admin.matters.town`、`staging-hooks.matters.town` 跑通；no-new-cost hosting review 建議先採既有 Mac + Cloudflare Tunnel，`staging-admin` 需加 Cloudflare Access，`staging-hooks` 先維持 public bearer-token；待確認 Access 身分邊界與長駐服務安裝
 - `Stage 04 Social Interop`  
   進行中  
   inbound public `Create` / `Reply` 已可驗章並持久化  
@@ -181,6 +181,8 @@
   runtime alert webhook dispatch、config-driven webhook sink、admin dispatch sink audit、CLI webhook dispatch、Slack provider payload shaping、CLI Slack dispatch、observability drill runner、drill report、secret layout checker script 已覆蓋
   2026-05-01 本機 staging-style observability drill 已用 ignored secret files、SQLite runtime state 與 generic webhook receiver 跑通；alerts / metrics / logs 三組 sink 皆回 202
   2026-05-02 Cloudflare staging transport smoke 已用 local Mac + Cloudflare Tunnel 跑通；`staging-gateway.matters.town`、`staging-admin.matters.town`、`staging-hooks.matters.town` 在 connector propagation 後皆回 200；alerts / metrics / logs 三組 bundle 送到 generic webhook receiver 皆回 202；封存報告見 `research/matters-fediverse-compat/03-ops/staging-observability-drill-20260502-cloudflare.md`
+  2026-05-02 `better-sqlite3` 已確認安裝且可由 primary runtime Node 載入；測試子程序已改用 `process.execPath`，避免 Codex app Node 造成 macOS native module code-signature mismatch；`node --test` 107/107 passing
+  2026-05-02 staging hosting / Access review 已封存於 `research/matters-fediverse-compat/03-ops/staging-hosting-access-plan-20260502.md`
   `cd gateway-core && npm run check:secret-layout` 已可驗證 dev config 內的 key file 參考
   `cd gateway-core && npm run check:rollout-artifact` 已可驗證 rollout env example
   outbound queue processing lease、stale lease recovery、restart recovery 與 delivery job pre-dispatch recovery 已覆蓋

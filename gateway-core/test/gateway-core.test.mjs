@@ -16,6 +16,7 @@ import { FileStateStore } from "../src/store/file-state-store.mjs";
 import { SqliteStateStore } from "../src/store/sqlite-state-store.mjs";
 
 const execFile = promisify(execFileCallback);
+const nodeBin = process.execPath;
 
 function pemPair() {
   const { publicKey, privateKey } = generateKeyPairSync("rsa", {
@@ -6120,7 +6121,7 @@ test("backup script creates sqlite backup and manifest", async () => {
     ),
   );
 
-  const { stdout } = await execFile("node", ["scripts/backup-sqlite.mjs", "--config", configPath, "--output-dir", backupDir], {
+  const { stdout } = await execFile(nodeBin, ["scripts/backup-sqlite.mjs", "--config", configPath, "--output-dir", backupDir], {
     cwd: path.resolve(process.cwd()),
   });
   const payload = JSON.parse(stdout);
@@ -6172,8 +6173,7 @@ test("restore script restores sqlite backup and stamps runtime metadata", async 
     ),
   );
 
-  const { stdout } = await execFile(
-    "node",
+  const { stdout } = await execFile(nodeBin,
     ["scripts/restore-sqlite.mjs", "--config", configPath, "--input-file", backupFile, "--target-file", restoredFile],
     {
       cwd: path.resolve(process.cwd()),
@@ -6250,8 +6250,7 @@ test("consistency scan script reports follower, inbound object, and engagement d
     ),
   );
 
-  const { stdout } = await execFile(
-    "node",
+  const { stdout } = await execFile(nodeBin,
     [
       "scripts/scan-consistency.mjs",
       "--config",
@@ -6321,8 +6320,7 @@ test("consistency scan script repairs sqlite from file store when requested", as
     ),
   );
 
-  const { stdout } = await execFile(
-    "node",
+  const { stdout } = await execFile(nodeBin,
     [
       "scripts/scan-consistency.mjs",
       "--config",
@@ -6359,8 +6357,7 @@ test("misskey sandbox interop script resolves and follows remote gateway actor",
   });
 
   try {
-    const { stdout } = await execFile(
-      "node",
+    const { stdout } = await execFile(nodeBin,
       ["scripts/run-misskey-sandbox-interop.mjs"],
       {
         cwd: path.resolve(process.cwd()),
@@ -6409,8 +6406,7 @@ test("gotosocial sandbox interop script resolves and follows remote gateway acto
   });
 
   try {
-    const { stdout } = await execFile(
-      "node",
+    const { stdout } = await execFile(nodeBin,
       ["scripts/run-gotosocial-sandbox-interop.mjs"],
       {
         cwd: path.resolve(process.cwd()),
@@ -6448,8 +6444,7 @@ test("gotosocial sandbox interop script resolves and follows remote gateway acto
 });
 
 test("gotosocial sandbox interop script dry-run contract emits endpoint plan without secrets", async () => {
-  const { stdout } = await execFile(
-    "node",
+  const { stdout } = await execFile(nodeBin,
     ["scripts/run-gotosocial-sandbox-interop.mjs", "--dry-run-contract"],
     {
       cwd: path.resolve(process.cwd()),
@@ -6544,8 +6539,7 @@ test("alert dispatch script writes structured payload with metrics and alerts", 
   );
 
   try {
-    const { stdout } = await execFile(
-      "node",
+    const { stdout } = await execFile(nodeBin,
       ["scripts/dispatch-runtime-alerts.mjs", "--config", configPath, "--output-file", outputFile],
       {
         cwd: path.resolve(process.cwd()),
@@ -6620,8 +6614,7 @@ test("alert dispatch script posts Slack webhook payload from config", async () =
   );
 
   try {
-    const { stdout } = await execFile(
-      "node",
+    const { stdout } = await execFile(nodeBin,
       ["scripts/dispatch-runtime-alerts.mjs", "--config", configPath, "--output-file", outputFile],
       {
         cwd: path.resolve(process.cwd()),
@@ -6702,8 +6695,7 @@ test("metrics dispatch script writes structured payload and posts webhook bundle
   );
 
   try {
-    const { stdout } = await execFile(
-      "node",
+    const { stdout } = await execFile(nodeBin,
       ["scripts/dispatch-runtime-metrics.mjs", "--config", configPath, "--output-file", outputFile],
       {
         cwd: path.resolve(process.cwd()),
@@ -6790,8 +6782,7 @@ test("logs dispatch script writes structured payload and posts webhook bundle", 
   );
 
   try {
-    const { stdout } = await execFile(
-      "node",
+    const { stdout } = await execFile(nodeBin,
       ["scripts/dispatch-runtime-logs.mjs", "--config", configPath, "--output-file", outputFile],
       {
         cwd: path.resolve(process.cwd()),
@@ -6896,8 +6887,7 @@ test("observability drill script writes bundles, dispatches sinks, and emits a r
   );
 
   try {
-    const { stdout } = await execFile(
-      "node",
+    const { stdout } = await execFile(nodeBin,
       [
         "scripts/run-staging-observability-drill.mjs",
         "--config",
@@ -6956,8 +6946,7 @@ test("webhook receiver captures runtime dispatch payloads and masks tokens", asy
   const tokenFile = path.join(tmpDir, "webhook.token");
   await writeFile(tokenFile, "receiver-secret\n");
 
-  const receiver = spawn(
-    "node",
+  const receiver = spawn(nodeBin,
     [
       "scripts/run-webhook-receiver.mjs",
       "--port",
@@ -7100,8 +7089,7 @@ test("secret layout check script reports configured file references", async () =
     ),
   );
 
-  const { stdout } = await execFile(
-    "node",
+  const { stdout } = await execFile(nodeBin,
     ["scripts/check-secret-layout.mjs", "--config", configPath],
     {
       cwd: path.resolve(process.cwd()),
@@ -7196,8 +7184,7 @@ test("key rotation script writes overlap config and local actor update artifact"
     ),
   );
 
-  const { stdout } = await execFile(
-    "node",
+  const { stdout } = await execFile(nodeBin,
     [
       "scripts/rotate-key.mjs",
       "--config",
@@ -7265,8 +7252,7 @@ test("key rotation script retires previous key after overlap", async () => {
     ),
   );
 
-  const { stdout } = await execFile(
-    "node",
+  const { stdout } = await execFile(nodeBin,
     [
       "scripts/rotate-key.mjs",
       "--config",
@@ -7324,8 +7310,7 @@ test("rollout artifact check script validates required env keys and paths", asyn
     ].join("\n"),
   );
 
-  const { stdout } = await execFile(
-    "node",
+  const { stdout } = await execFile(nodeBin,
     ["scripts/check-rollout-artifact.mjs", "--env-file", envPath, "--strict-paths"],
     {
       cwd: path.resolve(process.cwd()),
