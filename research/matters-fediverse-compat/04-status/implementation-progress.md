@@ -169,11 +169,12 @@
 ## Verification Snapshot
 
 - `cd gateway-core && npm test`  
-  85 tests passing
+  107 tests passing
   local conversation projection 與 social reconcile `dryRun` 已覆蓋
   remote acct mention resolution 已覆蓋
   remote mention retryable / permanent failure policy、failure cache、admin mention query 已覆蓋
   notification projection、read state、grouped feed、delivery-aware content action matrix、activity-level delivery collapse、content delivery drilldown、review queue / dashboard summary、unique activity summary、activity-level replay 與 local notification query 已覆蓋
+  Misskey / GoToSocial sandbox probes 已有本地 fake-server 驗證，外部 run 等待 public instance token 與 staging gateway URL
   local content projection、outbound-authored content projection、stable partial content key、richer action matrix、review queue store-backed snapshot、cross-content activity index 與 activity index persistence 已覆蓋
   review queue item ops read model 的 replayableItems、replayCount、lastReplayAt、staleSince 已覆蓋
   review queue / dashboard 的 replayedOnly、replayableOnly filter、review queue `filteredSummary`、`appliedFilters`、activity index replay filter 與 activity drilldown 的 activityId filter 已覆蓋

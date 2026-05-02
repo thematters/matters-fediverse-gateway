@@ -53,6 +53,90 @@ function normalizePath(pathname) {
   return normalized.replace(/\/$/, "");
 }
 
+function isDryRunContractMode() {
+  return process.argv.includes("--dry-run-contract") || process.env.GOTOSOCIAL_DRY_RUN_CONTRACT === "1";
+}
+
+function validateUrl(name, value, failures) {
+  try {
+    return new URL(value);
+  } catch {
+    failures.push(`${name} is not a valid URL`);
+    return null;
+  }
+}
+
+function buildDryRunContractReport() {
+  const failures = [];
+  const gotosocialBaseUrl = process.env.GOTOSOCIAL_BASE_URL?.trim() || "https://gotosocial.local.example";
+  const gotosocialOperatorProfileUrl = process.env.GOTOSOCIAL_OPERATOR_PROFILE_URL?.trim() || null;
+  const gatewayPublicBaseUrl = process.env.GATEWAY_PUBLIC_BASE_URL?.trim() || "https://gateway.local.example";
+  const gatewayHandle = process.env.GATEWAY_HANDLE?.trim() || "alice";
+  const gatewayActorPath = normalizePath(process.env.GATEWAY_ACTOR_PATH?.trim() || `/users/${gatewayHandle}`);
+
+  const gotosocialUrl = validateUrl("GOTOSOCIAL_BASE_URL", gotosocialBaseUrl, failures);
+  const gatewayUrl = validateUrl("GATEWAY_PUBLIC_BASE_URL", gatewayPublicBaseUrl, failures);
+  if (!gatewayHandle) {
+    failures.push("GATEWAY_HANDLE fixture is empty");
+  }
+
+  const publicHost = gatewayUrl?.host ?? "gateway.local.example";
+  const acct = `${gatewayHandle || "alice"}@${publicHost}`;
+  const acctUri = `acct:${acct}`;
+  const canonicalActorUrl = `${gatewayPublicBaseUrl.replace(/\/$/, "")}${gatewayActorPath}`;
+
+  const report = {
+    mode: "dry-run-contract",
+    discovery: {
+      expectedSubject: acctUri,
+      expectedActorId: canonicalActorUrl,
+      expectedOutboxId: `${canonicalActorUrl}/outbox`,
+      expectedOutboxFirstActor: canonicalActorUrl,
+    },
+    gotosocial: {
+      baseUrl: gotosocialUrl?.origin ?? gotosocialBaseUrl,
+      operatorProfileUrl: gotosocialOperatorProfileUrl,
+      authorization: "Bearer <redacted>",
+      endpoints: [
+        {
+          name: "remoteAccountSearch",
+          method: "GET",
+          path: "/api/v2/search",
+          query: {
+            q: `@${acct}`,
+            type: "accounts",
+            resolve: "true",
+            limit: "10",
+          },
+          expects: "accounts[] contains an exact acct match",
+        },
+        {
+          name: "followRemoteAccount",
+          method: "POST",
+          path: "/api/v1/accounts/:id/follow",
+          contentType: "application/x-www-form-urlencoded",
+          body: {
+            reblogs: "false",
+            notify: "false",
+          },
+          expects: "following or requested is true",
+        },
+        {
+          name: "relationshipPoll",
+          method: "GET",
+          path: "/api/v1/accounts/relationships",
+          query: {
+            "id[]": [":id"],
+          },
+          expects: "relationship following or requested is true",
+        },
+      ],
+    },
+  };
+
+  return { ok: failures.length === 0, failures, report };
+}
+
 async function readGatewaySurface({ probeBaseUrl, acctUri, actorPath }) {
   const webfinger = await fetchJson(
     buildUrl(probeBaseUrl, "/.well-known/webfinger", { resource: acctUri }),
@@ -167,6 +251,13 @@ async function pollRelationship({ gotosocialBaseUrl, token, accountId, attempts,
 }
 
 async function main() {
+  if (isDryRunContractMode()) {
+    const payload = buildDryRunContractReport();
+    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    process.exitCode = payload.ok ? 0 : 1;
+    return;
+  }
+
   const gotosocialBaseUrl = getRequiredEnv("GOTOSOCIAL_BASE_URL");
   const gotosocialAccessToken = getRequiredEnv("GOTOSOCIAL_ACCESS_TOKEN");
   const gotosocialOperatorProfileUrl = process.env.GOTOSOCIAL_OPERATOR_PROFILE_URL?.trim() || null;

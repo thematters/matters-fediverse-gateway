@@ -129,7 +129,7 @@ cd gateway-core
 npm test
 ```
 
-The latest recorded local verification snapshot had 85 tests passing.
+The latest recorded local verification snapshot had 107 tests passing.
 
 ## SQLite Backup
 
@@ -337,6 +337,15 @@ npm run check:misskey-sandbox
 This checks the gateway discovery surface against a real Misskey instance, resolves the remote actor with Misskey APIs, creates a follow, and polls the relationship state. The token is read from the environment and is not written to reports.
 
 ## GoToSocial Sandbox Interop
+
+Local static contract check, no network listener and no external GoToSocial token:
+
+```bash
+cd gateway-core
+npm run check:gotosocial-contract
+```
+
+This emits the GoToSocial-compatible endpoint plan and gateway discovery expectations with secrets redacted.
 
 ```bash
 cd gateway-core

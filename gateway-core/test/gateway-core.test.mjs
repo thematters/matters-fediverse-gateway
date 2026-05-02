@@ -6447,6 +6447,47 @@ test("gotosocial sandbox interop script resolves and follows remote gateway acto
   }
 });
 
+test("gotosocial sandbox interop script dry-run contract emits endpoint plan without secrets", async () => {
+  const { stdout } = await execFile(
+    "node",
+    ["scripts/run-gotosocial-sandbox-interop.mjs", "--dry-run-contract"],
+    {
+      cwd: path.resolve(process.cwd()),
+      env: {
+        ...process.env,
+        GOTOSOCIAL_BASE_URL: "https://gts.example",
+        GOTOSOCIAL_ACCESS_TOKEN: "dry-run-gotosocial-secret",
+        GOTOSOCIAL_OPERATOR_PROFILE_URL: "https://gts.example/@mashbean",
+        GATEWAY_PUBLIC_BASE_URL: "https://gateway.example",
+        GATEWAY_HANDLE: "alice",
+      },
+    },
+  );
+
+  const payload = JSON.parse(stdout);
+  assert.equal(payload.ok, true);
+  assert.deepEqual(payload.failures, []);
+  assert.equal(payload.report.mode, "dry-run-contract");
+  assert.equal(payload.report.discovery.expectedSubject, "acct:alice@gateway.example");
+  assert.equal(payload.report.discovery.expectedActorId, "https://gateway.example/users/alice");
+  assert.equal(payload.report.gotosocial.baseUrl, "https://gts.example");
+  assert.equal(payload.report.gotosocial.operatorProfileUrl, "https://gts.example/@mashbean");
+  assert.equal(payload.report.gotosocial.authorization, "Bearer <redacted>");
+  assert.deepEqual(
+    payload.report.gotosocial.endpoints.map((endpoint) => `${endpoint.method} ${endpoint.path}`),
+    [
+      "GET /api/v2/search",
+      "POST /api/v1/accounts/:id/follow",
+      "GET /api/v1/accounts/relationships",
+    ],
+  );
+  assert.equal(payload.report.gotosocial.endpoints[0].query.q, "@alice@gateway.example");
+  assert.equal(payload.report.gotosocial.endpoints[1].body.reblogs, "false");
+  assert.equal(payload.report.gotosocial.endpoints[1].body.notify, "false");
+  assert.deepEqual(payload.report.gotosocial.endpoints[2].query["id[]"], [":id"]);
+  assert.equal(stdout.includes("dry-run-gotosocial-secret"), false);
+});
+
 test("alert dispatch script writes structured payload with metrics and alerts", async () => {
   const { store, sqliteFile } = await createSqliteStoreHarness();
   const webhookServer = await createWebhookCaptureServer();

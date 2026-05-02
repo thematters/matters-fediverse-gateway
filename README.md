@@ -71,7 +71,8 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 - Observability: metrics, alerts, logs, webhook dispatch, and Slack incoming webhook support
 - Mastodon sandbox black-box interoperability check completed
 - `g0v.social` exact discovery and inbound follow delivery confirmed for `acct:matters@matters.town`
-- 85 automated tests passing in the latest recorded local verification snapshot
+- Misskey / GoToSocial probes have local contract coverage
+- 107 automated tests passing in the latest recorded local verification snapshot
 - Public static ActivityPub prototype endpoints and seed bundle live under `thematters.github.io`
 - Canonical Matters-domain Cloudflare Worker routes are deployed under `matters.town`
 - Isolated Cloudflare Worker testbed remains deployed under `gateway-demo.matters.town`

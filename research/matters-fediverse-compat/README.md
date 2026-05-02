@@ -8,7 +8,7 @@
 
 ## 現況一眼看
 
-- **完成度**：單實例 gateway 原型可跑，85 tests passing，已與 `mastodon.social` 完成第一輪 sandbox 黑箱互通；canonical `acct:matters@matters.town` 已透過 `g0v.social` 完成 exact discovery 與 inbound follow delivery 驗證
+- **完成度**：單實例 gateway 原型可跑，107 tests passing，已與 `mastodon.social` 完成第一輪黑箱互通；canonical `acct:matters@matters.town` 已透過 `g0v.social` 完成 exact discovery 與 inbound follow delivery 驗證，Misskey / GoToSocial probes 已有本地驗證
 - **目前階段**：G1 · 官方聯邦化基礎版（3 個月，2026-05 ~ 2026-07）
 - **下一步**：真環境值班演習 + 長文 Article 系統化 + Misskey/GoToSocial 互通驗證
 - **程式碼**：[`gateway-core/`](../../gateway-core)（sibling repo root）

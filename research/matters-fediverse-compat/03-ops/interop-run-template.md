@@ -23,6 +23,35 @@ Record action-time confirmations before the run:
 - Public test traffic approved:
 - No posting / reply / like / boost actions unless separately approved:
 
+## Local Preflight
+
+Use this section for the local contract or fixture-based checks that do not require Cloudflare account access, public instance tokens, external follow actions, deployment, or push.
+
+| Check | Command | Result | Evidence | Blocker | Next Step |
+| --- | --- | --- | --- | --- | --- |
+| Working tree snapshot | `git status --short` |  |  |  |  |
+| Tool availability | `node --version && npm --version` |  |  |  |  |
+| GoToSocial dry-run contract | `cd gateway-core && npm run check:gotosocial-contract` |  |  |  |  |
+| GoToSocial no-listener test | `cd gateway-core && node --test --test-name-pattern="gotosocial sandbox interop script dry-run contract emits endpoint plan without secrets"` |  |  |  |  |
+| Patch hygiene | `git diff --check` |  |  |  |  |
+
+Local-only runs must record:
+
+- Environment: OS, Node/npm availability, and sandbox limits such as blocked `127.0.0.1` listeners.
+- Probe mode: `dry-run contract`, `fixture fake server`, or `public instance`.
+- Secret handling: confirm that output contains no token values.
+- Blocker reason: missing dependency, sandbox listener permission, missing public URL, missing token, or human approval required.
+- Next step: one concrete local command or one human gate.
+
+## Human Gates
+
+These actions require action-time human approval and must not be performed as part of a local-only operator run:
+
+- Create or provide GoToSocial, Misskey, Cloudflare, webhook, or actor-key secrets.
+- Create Cloudflare Tunnel, DNS route, or Access policy.
+- Run a public instance resolve/follow/relationship probe.
+- Perform any public post, reply, like, boost, direct message, deployment, or push.
+
 ## Command
 
 Misskey:

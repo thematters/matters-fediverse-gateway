@@ -21,6 +21,17 @@
 
 ## Command
 
+本地 dry-run contract check 不需要 GoToSocial token、不開本機 listener、不觸網：
+
+```bash
+cd gateway-core
+npm run check:gotosocial-contract
+```
+
+這個模式只輸出 GoToSocial-compatible endpoint plan 與 gateway discovery expectation，並確認輸出不包含 token。
+
+真實 public instance probe 才需要以下環境變數：
+
 ```bash
 cd gateway-core
 GOTOSOCIAL_BASE_URL="https://gts.example" \
@@ -56,5 +67,6 @@ npm run check:gotosocial-sandbox
 
 - 腳本已落在 `gateway-core/scripts/run-gotosocial-sandbox-interop.mjs`
 - package script 已新增 `npm run check:gotosocial-sandbox`
+- 本地 contract check 可用 `npm run check:gotosocial-contract` 重跑；不需要 Cloudflare、DNS/Tunnel、Access policy、GoToSocial token，也不會對外 follow
 - 尚未選定 GoToSocial public instance 或建立 access token；尚未對外執行 probe
 - 外部 run report 請從 `research/matters-fediverse-compat/03-ops/interop-run-template.md` 複製後填寫
