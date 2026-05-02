@@ -7,7 +7,7 @@
 - current engineering focus  
   `gateway-core`
 - current next step  
-  `Stage 03` production gap 已補 webhook alert sink、Slack incoming webhook alert routing、queue durability baseline、external metrics sink、structured logs、observability staging drill runner、deployment topology baseline artifact、secret layout check、reverse proxy baseline，以及 rollout artifact baseline；本機 staging-style generic webhook drill 與 Cloudflare Tunnel public transport smoke 已通；Zero Trust 權限尚未開通前採 temporary no-Zero-Trust mode：`staging-admin` public hostname 回 404，admin 只走本機，`staging-hooks` 維持 bearer-token public；W2 consistency scan 已可比較 file state / SQLite 的 followers、inbound objects、engagements 並輸出 JSON + markdown 報表；W8 三份 runbook 已完成，實際 tabletop 停在真人參與 gate
+  `Stage 03` production gap 已補 webhook alert sink、Slack incoming webhook alert routing、queue durability baseline、external metrics sink、structured logs、observability staging drill runner、deployment topology baseline artifact、secret layout check、reverse proxy baseline，以及 rollout artifact baseline；本機 staging-style generic webhook drill 與 Cloudflare Tunnel public transport smoke 已通；Zero Trust 權限尚未開通前採 temporary no-Zero-Trust mode：`staging-admin` public hostname 回 404，admin 只走本機，`staging-hooks` 維持 bearer-token public；W2 consistency scan 已可比較 file state / SQLite 的 followers、inbound objects、engagements 並輸出 JSON + markdown 報表；W8 三份 runbook 已完成，實際 tabletop 停在真人參與 gate；G2-A preflight 已開始，下一個工程 gate 是讓 `matters-server` 安全消化本機 `ipns-site-generator` ActivityPub bundle contract
 
 ## Stage Progress
 
@@ -80,6 +80,9 @@
 - `Stage 07 Launch Readiness`  
   規格完成  
   真實互通驗收、營運演練與 launch checklist 還沒跑
+- `G2-A Production Data Integration`
+  preflight 進行中
+  已完成 `matters-server` / `ipns-site-generator` / `gateway-core` repo-backed gap scan；確認 `matters-server` 目前只用 `makeArticlePage` 發單篇 IPFS bundle，尚未消化 `makeHomepageBundles` / `makeActivityPubBundles`；`ipns-site-generator` 已有 ActivityPub bundle contract，`gateway-core` 已有 `staticBundleManifestFile` ingestion。下一個安全工程步驟是先 publish/link 這份 generator contract，再補 server 端 non-production exporter scaffold。
 
 ## Engineering Milestones
 
@@ -187,7 +190,8 @@
   2026-05-02 W2 consistency scan 已確認可跑：`scan-consistency.mjs` 比對 followers、inbound objects、engagements，dry-run 預設輸出 JSON + markdown，`--repair --repair-target file|sqlite` 需顯式指定；本機 scan 顯示 0 diffs，targeted tests 2/2 passing
   2026-05-02 W8 launch / incident / rollback runbooks 已完成；tabletop record template 已完成；實際 2+ participant tabletop 尚未執行，仍是下一個真人 gate
   2026-05-02 W3 Misskey public interop 已跑通：gyutte.site 成功 resolve `alice@staging-gateway.matters.town`、follow remote actor，relationship 顯示 `isFollowing: true`；報告見 `research/matters-fediverse-compat/03-ops/misskey-public-run-20260502T152117Z.md`。`ap/show` 對此 actor 回 400，probe 已補 `users/show` fallback；重跑時 `ALREADY_FOLLOWING` 會視為已收斂。GoToSocial 依目前決策暫跳過。
-  2026-05-02 W4a Misskey display follow-up 已封存於 `research/matters-fediverse-compat/03-ops/article-display-compatibility-20260502.md`；gyutte.site 不會回填既有 outbox Article，但已透過 `scripts/run-misskey-article-display-probe.mjs --send --confirm-public-create` 送出 public staging `Create`。gateway 投遞到 gyutte.site follower 回 `delivered`，Misskey `users/notes` 出現 matched note；text-only Article display API path 已驗證。後續 media fixture 也已送出：外部 PNG 與 IPFS-normalized JPEG 都出現在 Misskey `files[]`，有 media URL 與 thumbnail；剩餘 launch/readiness gate 是是否需要真人 UI 視覺審查。
+  2026-05-02 W4a Misskey display follow-up 已封存於 `research/matters-fediverse-compat/03-ops/article-display-compatibility-20260502.md`；gyutte.site 不會回填既有 outbox Article，但已透過 `scripts/run-misskey-article-display-probe.mjs --send --confirm-public-create` 送出 public staging `Create`。gateway 投遞到 gyutte.site follower 回 `delivered`，Misskey `users/notes` 出現 matched note；text-only Article display API path 已驗證。後續 media fixture 也已送出：外部 PNG 與 IPFS-normalized JPEG 都出現在 Misskey `files[]`，有 media URL 與 thumbnail；真人 UI 視覺審查已由 mashbean 確認通過。
+  2026-05-02 G2-A production data integration preflight 已封存於 `research/matters-fediverse-compat/02-runtime-slices/g2a-production-data-integration-slice.md` 與 `docs/tasks/matters-g2-a-production-data-integration.md`；`matters-server` dependency 仍鎖 npm `@matters/ipns-site-generator@0.1.8`，且本機 `npm ci` 被 lockfile drift 與 Node 24/required Node 18 擋下，因此本輪不提交 server code scaffold，避免引入未驗證 import。
   `cd gateway-core && npm run check:secret-layout` 已可驗證 dev config 內的 key file 參考
   `cd gateway-core && npm run check:rollout-artifact` 已可驗證 rollout env example
   outbound queue processing lease、stale lease recovery、restart recovery 與 delivery job pre-dispatch recovery 已覆蓋

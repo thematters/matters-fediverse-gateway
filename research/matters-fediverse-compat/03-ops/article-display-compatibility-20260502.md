@@ -176,7 +176,7 @@ Misskey copies remote attachment files into its own media storage, so the final 
 - Misskey compatibility for freshly delivered `Article` is now verified at API level for text, summary, canonical URL, external image attachment, and IPFS-normalized image attachment.
 - Misskey flattens Article HTML into note text and maps `summary` to `cw`; this is acceptable for API-level interop but not equivalent to full long-form layout preservation.
 - Misskey stores remote attachments under gyutte.site media URLs, so evidence should compare file count/type/thumbnail presence rather than expecting original attachment URLs to remain visible.
-- Manual UI presentation quality still needs human visual review before launch, but it no longer blocks W4a engineering acceptance.
+- Manual UI presentation quality was human-reviewed and accepted on 2026-05-02. W4a engineering acceptance is no longer blocked.
 
 ## Text Public Probe Payload
 
@@ -203,6 +203,6 @@ The body is explicitly labeled as staging-only and says it contains no token, pr
 - Guarded text/media display probe: `gateway-core/scripts/run-misskey-article-display-probe.mjs`
 - IPFS sample CID source: `https://docs.ipfs.tech/quickstart/retrieve/`
 
-## Next Decision Point
+## Launch Readiness Note
 
-W4a engineering acceptance can proceed for Misskey API-level compatibility. The remaining decision is launch/readiness policy: whether a human visual review of the Misskey UI is required before claiming public UX parity, or whether API evidence is sufficient for this engineering milestone.
+W4a engineering acceptance can proceed for Misskey API-level compatibility and human-accepted UI presentation. Broader launch readiness still depends on the separate G2/G3 rollout, legal, comms, monitoring, and production credential gates.

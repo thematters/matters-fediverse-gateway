@@ -20,8 +20,8 @@ This plan deliberately excludes DID / shared DID work, ZK anonymity, and Billboa
 |---|---|---|---|
 | G1-A Static Article Contract | done | `ipns-site-generator`, `gateway-core` | Public Article seed bundle passes bridge and generator tests |
 | G1-B Gateway Hardening | queued | `gateway-core` | Gateway runtime passes hardening tests and staging drill |
-| G1-C Interop Validation | active | `gateway-core`, ops reports | Mastodon and Misskey reports are archived; GoToSocial is skipped until a later decision |
-| G2-A Matters Production Data Integration | queued | `matters-server`, `ipns-site-generator`, `gateway-core` | Selected real Matters authors resolve and publish public Article objects |
+| G1-C Interop Validation | done with deferral | `gateway-core`, ops reports | Mastodon and Misskey reports are archived; GoToSocial is skipped until a later decision |
+| G2-A Matters Production Data Integration | active preflight | `matters-server`, `ipns-site-generator`, `gateway-core` | Selected real Matters authors resolve and publish public Article objects |
 | G2-B Matters Web/App Integration | queued | `matters-web`, `matters-server`, `gateway-core` | Pilot authors can control federation and see inbound interactions |
 | G2-C Production Rollout | queued | product, ops, docs | Beta rollout has legal, comms, rollback, and monitoring readiness |
 | G3 Second Instance Validation | queued | `gateway-core`, deployment docs | A second independent instance passes black-box acceptance |
@@ -95,9 +95,17 @@ Stop/go gate:
 - Reports cover discovery, follow/accept, inbound Create/Like/Announce, outbound Article Create, reply threading, and known display differences.
 - Any blocking compatibility issue is linked back to a task note or issue before G1 release.
 
+Status:
+
+- 2026-05-02: Mastodon baseline remains archived; Misskey public discovery, follow, text Article display, media attachment display, and human UI visual review are complete. GoToSocial remains deferred by current decision, so it is not blocking G2-A preflight.
+
 ### G2-A: Matters Production Data Integration
 
 Objective: connect real Matters data and identity to the gateway.
+
+Status:
+
+- 2026-05-02: active preflight started. Repo-backed gap scan and non-production contract slice are documented in `research/matters-fediverse-compat/02-runtime-slices/g2a-production-data-integration-slice.md` and `docs/tasks/matters-g2-a-production-data-integration.md`.
 
 Dependencies:
 
