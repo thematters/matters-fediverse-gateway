@@ -1,3 +1,5 @@
+import { normalizeArticleObject } from "./article-normalization.mjs";
+
 const ACTIVITY_STREAMS = "https://www.w3.org/ns/activitystreams";
 const SECURITY_V1 = "https://w3id.org/security/v1";
 const PUBLIC_AUDIENCE = `${ACTIVITY_STREAMS}#Public`;
@@ -22,7 +24,7 @@ export function buildWebFinger({ instance, actor }) {
 }
 
 export function buildActorDocument({ instance, actor }) {
-  return {
+  const document = {
     "@context": [ACTIVITY_STREAMS, SECURITY_V1],
     id: actor.actorUrl,
     type: "Person",
@@ -45,6 +47,16 @@ export function buildActorDocument({ instance, actor }) {
       publicKeyPem: actor.publicKeyPem,
     },
   };
+
+  if (actor.previousPublicKeyPem && actor.previousKeyId) {
+    document.previousPublicKey = {
+      id: actor.previousKeyId,
+      owner: actor.actorUrl,
+      publicKeyPem: actor.previousPublicKeyPem,
+    };
+  }
+
+  return document;
 }
 
 export function buildOrderedCollection({ id, items }) {
@@ -135,6 +147,8 @@ export function buildDeleteActivity({ actor, objectId, now, instance }) {
 }
 
 export function buildUpdateActivity({ actor, object, now, instance }) {
+  const normalizedObject = normalizeArticleObject({ object, actor });
+
   return {
     "@context": ACTIVITY_STREAMS,
     id: `${instance.baseUrl}/activities/${now.getTime()}-update-${actor.handle}`,
@@ -143,14 +157,15 @@ export function buildUpdateActivity({ actor, object, now, instance }) {
     to: [PUBLIC_AUDIENCE],
     cc: [actor.followersUrl],
     object: {
-      ...object,
-      attributedTo: object.attributedTo ?? actor.actorUrl,
+      ...normalizedObject,
+      attributedTo: normalizedObject.attributedTo ?? actor.actorUrl,
     },
   };
 }
 
 export function buildCreateActivity({ actor, object, now, instance, mentionTags = [], to = null, cc = null }) {
-  const existingTags = Array.isArray(object.tag) ? object.tag : object.tag ? [object.tag] : [];
+  const normalizedObject = normalizeArticleObject({ object, actor });
+  const existingTags = Array.isArray(normalizedObject.tag) ? normalizedObject.tag : normalizedObject.tag ? [normalizedObject.tag] : [];
   const mergedTags = [...existingTags];
   const seenMentionHrefs = new Set(
     existingTags
@@ -180,10 +195,10 @@ export function buildCreateActivity({ actor, object, now, instance, mentionTags 
     to: resolvedTo ?? [PUBLIC_AUDIENCE],
     cc: resolvedCc,
     object: {
-      ...object,
-      attributedTo: object.attributedTo ?? actor.actorUrl,
-      to: Array.isArray(object.to) && object.to.length ? object.to : resolvedTo ?? [PUBLIC_AUDIENCE],
-      cc: Array.isArray(object.cc) && object.cc.length ? [...new Set([...object.cc, ...resolvedCc])] : resolvedCc,
+      ...normalizedObject,
+      attributedTo: normalizedObject.attributedTo ?? actor.actorUrl,
+      to: Array.isArray(normalizedObject.to) && normalizedObject.to.length ? normalizedObject.to : resolvedTo ?? [PUBLIC_AUDIENCE],
+      cc: Array.isArray(normalizedObject.cc) && normalizedObject.cc.length ? [...new Set([...normalizedObject.cc, ...resolvedCc])] : resolvedCc,
       tag: mergedTags,
     },
   };

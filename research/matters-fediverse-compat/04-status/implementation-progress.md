@@ -7,7 +7,7 @@
 - current engineering focus  
   `gateway-core`
 - current next step  
-  `Stage 03` production gap 已補 webhook alert sink、Slack incoming webhook alert routing、queue durability baseline、external metrics sink、structured logs、observability staging drill runner、deployment topology baseline artifact、secret layout check、reverse proxy baseline，以及 rollout artifact baseline，下一步實跑 staging drill，再決定 provider-specific exporter 是否要繼續往下補
+  `Stage 03` production gap 已補 webhook alert sink、Slack incoming webhook alert routing、queue durability baseline、external metrics sink、structured logs、observability staging drill runner、deployment topology baseline artifact、secret layout check、reverse proxy baseline，以及 rollout artifact baseline；本機 staging-style generic webhook drill 與 Cloudflare Tunnel public transport smoke 已通；Zero Trust 權限尚未開通前採 temporary no-Zero-Trust mode：`staging-admin` public hostname 回 404，admin 只走本機，`staging-hooks` 維持 bearer-token public；W2 consistency scan 已可比較 file state / SQLite 的 followers、inbound objects、engagements 並輸出 JSON + markdown 報表；W8 三份 runbook 已完成，實際 tabletop 可在不阻塞開發的情況下延後；G2-A preflight 已推進到 real Matters public Article staging delivery，`matters-server` GitHub Actions build 已通過但 Codecov patch/project 仍失敗，下一個工程 gate 是補 coverage 後再處理 npm `@matters` scope registry migration
 
 ## Stage Progress
 
@@ -31,7 +31,7 @@
   secret layout check 與 reverse proxy baseline 已補 `check:secret-layout`、staging secrets layout 範本與 `Caddyfile.example`  
   rollout artifact baseline 已補 systemd unit、rollout env example 與 `check:rollout-artifact`  
   restore / replay drill runbook 已補齊  
-  待完成真實 staging sink 的 drill 實跑，以及其餘 provider-specific routing / exporter
+  本機 staging-style generic webhook drill 已通；Cloudflare Tunnel public transport smoke 已用 `staging-gateway.matters.town`、`staging-admin.matters.town`、`staging-hooks.matters.town` 跑通；no-new-cost hosting review 建議先採既有 Mac + Cloudflare Tunnel，`staging-admin` Access allowlist 已確認為三個 Matters emails，但 Cloudflare dashboard 要求 Billing edit permission 才能完成 Zero Trust onboarding；臨時策略改為 local proxy 擋 public admin，`staging-hooks` 先維持 public bearer-token
 - `Stage 04 Social Interop`  
   進行中  
   inbound public `Create` / `Reply` 已可驗章並持久化  
@@ -80,6 +80,9 @@
 - `Stage 07 Launch Readiness`  
   規格完成  
   真實互通驗收、營運演練與 launch checklist 還沒跑
+- `G2-A Production Data Integration`
+  preflight 進行中
+  已完成 `matters-server` / `ipns-site-generator` / `gateway-core` repo-backed gap scan；`matters-server` draft PR #4761 已補 non-production exporter scaffold、local bundle writer、CLI、strict gate、settings migration scaffold、decisionReport 與 DB loader tests；`ipns-site-generator` 0.1.9 已完成 release-readiness 但 npm scope publish 權限仍未到位；`gateway-core` 已用 SQLite runtime 消化 real public Matters article bundle，並透過 Cloudflare Tunnel staging 對 gyutte.site Misskey 完成 fresh Article delivery。PR #4761 GitHub Actions build 已通過；Codecov 仍回報 patch coverage 26.20%，下一步是補 coverage，npm 權限到位後再移除 vendored tarball 並重跑 Node 18 驗證。
 
 ## Engineering Milestones
 
@@ -168,16 +171,27 @@
 
 ## Verification Snapshot
 
-- `cd gateway-core && npm test`  
-  85 tests passing
+- `cd gateway-core && runtime/tools/node-local --test`
+  111 tests passing
   local conversation projection 與 social reconcile `dryRun` 已覆蓋
   remote acct mention resolution 已覆蓋
   remote mention retryable / permanent failure policy、failure cache、admin mention query 已覆蓋
   notification projection、read state、grouped feed、delivery-aware content action matrix、activity-level delivery collapse、content delivery drilldown、review queue / dashboard summary、unique activity summary、activity-level replay 與 local notification query 已覆蓋
+  Misskey sandbox probe 已對 gyutte.site public instance 跑通；GoToSocial 依目前決策暫不執行
   local content projection、outbound-authored content projection、stable partial content key、richer action matrix、review queue store-backed snapshot、cross-content activity index 與 activity index persistence 已覆蓋
   review queue item ops read model 的 replayableItems、replayCount、lastReplayAt、staleSince 已覆蓋
   review queue / dashboard 的 replayedOnly、replayableOnly filter、review queue `filteredSummary`、`appliedFilters`、activity index replay filter 與 activity drilldown 的 activityId filter 已覆蓋
   runtime alert webhook dispatch、config-driven webhook sink、admin dispatch sink audit、CLI webhook dispatch、Slack provider payload shaping、CLI Slack dispatch、observability drill runner、drill report、secret layout checker script 已覆蓋
+  2026-05-01 本機 staging-style observability drill 已用 ignored secret files、SQLite runtime state 與 generic webhook receiver 跑通；alerts / metrics / logs 三組 sink 皆回 202
+  2026-05-02 Cloudflare staging transport smoke 已用 local Mac + Cloudflare Tunnel 跑通；`staging-gateway.matters.town` 與 `staging-hooks.matters.town` 回 200，`staging-admin.matters.town` 在 no-Zero-Trust mode 下維持 404；alerts / metrics / logs 三組 bundle 送到 generic webhook receiver 皆回 202；封存報告見 `research/matters-fediverse-compat/03-ops/staging-observability-drill-20260502-cloudflare.md`
+  2026-05-02 `better-sqlite3` 已確認安裝；Codex app Node 載入 native module 會遇到 macOS code-signature mismatch，因此 staging 服務用 ignored `runtime/tools/node-local` ad-hoc signed copy 啟動；測試子程序已改用 `process.execPath`
+  2026-05-02 staging hosting / Access review 已封存於 `research/matters-fediverse-compat/03-ops/staging-hosting-access-plan-20260502.md`；Access setup blocked by Cloudflare dashboard because current login lacks required Billing edit permission
+  2026-05-02 temporary no-Zero-Trust mode 已落地：新增 `scripts/run-staging-local-proxy.mjs`，Caddy tunnel 範例預設讓 `staging-admin` 回 404；測試覆蓋 public gateway pass-through、public admin/jobs blocking、admin hostname 404 與 unknown host 421
+  2026-05-02 W2 consistency scan 已確認可跑：`scan-consistency.mjs` 比對 followers、inbound objects、engagements，dry-run 預設輸出 JSON + markdown，`--repair --repair-target file|sqlite` 需顯式指定；本機 scan 顯示 0 diffs，targeted tests 2/2 passing
+  2026-05-02 W8 launch / incident / rollback runbooks 已完成；tabletop record template 已完成；實際 2+ participant tabletop 尚未執行，仍是下一個真人 gate
+  2026-05-02 W3 Misskey public interop 已跑通：gyutte.site 成功 resolve `alice@staging-gateway.matters.town`、follow remote actor，relationship 顯示 `isFollowing: true`；報告見 `research/matters-fediverse-compat/03-ops/misskey-public-run-20260502T152117Z.md`。`ap/show` 對此 actor 回 400，probe 已補 `users/show` fallback；重跑時 `ALREADY_FOLLOWING` 會視為已收斂。GoToSocial 依目前決策暫跳過。
+  2026-05-02 W4a Misskey display follow-up 已封存於 `research/matters-fediverse-compat/03-ops/article-display-compatibility-20260502.md`；gyutte.site 不會回填既有 outbox Article，但已透過 `scripts/run-misskey-article-display-probe.mjs --send --confirm-public-create` 送出 public staging `Create`。gateway 投遞到 gyutte.site follower 回 `delivered`，Misskey `users/notes` 出現 matched note；text-only Article display API path 已驗證。後續 media fixture 也已送出：外部 PNG 與 IPFS-normalized JPEG 都出現在 Misskey `files[]`，有 media URL 與 thumbnail；真人 UI 視覺審查已由 mashbean 確認通過。
+  2026-05-02 G2-A production data integration preflight 已封存於 `research/matters-fediverse-compat/02-runtime-slices/g2a-production-data-integration-slice.md` 與 `docs/tasks/matters-g2-a-production-data-integration.md`；`ipns-site-generator` release-readiness 已通過 `npm test -- --runInBand` 9/9 與 `npm run lint`，並在 branch `codex/release-ipns-activitypub-bundle` commit `0cd6e88` bump 到 `0.1.9`；npm publish 因 `@matters` scope 權限卡住，因此 `matters-server` draft PR #4761 暫用 vendored tarball。`matters-server` 目前已有 exporter scaffold、local writer、CLI、eligibility gate、settings migration scaffold、strict mode、migration-safe default export、decisionReport 與 DB loader tests；Node 18 local verification passed，targeted Jest 18/18，`federationExportService.ts` line coverage 97.61%。`gateway-core` rebuild `better-sqlite3` 後 `npm test` 117/117 passing。PR #4761 GitHub Actions build 已通過，但 Codecov patch/project 仍失敗；下一步是修 coverage，npm registry migration 排在其後。
   `cd gateway-core && npm run check:secret-layout` 已可驗證 dev config 內的 key file 參考
   `cd gateway-core && npm run check:rollout-artifact` 已可驗證 rollout env example
   outbound queue processing lease、stale lease recovery、restart recovery 與 delivery job pre-dispatch recovery 已覆蓋

@@ -76,10 +76,17 @@ function parseAccount(value) {
   };
 }
 
+function normalizePublicKeyEntry(value) {
+  if (Array.isArray(value)) {
+    return value.find((entry) => entry?.publicKeyPem?.trim()) ?? null;
+  }
+
+  return value?.publicKeyPem?.trim() ? value : null;
+}
+
 function normalizeRemoteActor({ actorId, actorDocument, source, discoveredAt }) {
-  const publicKey = Array.isArray(actorDocument.publicKey)
-    ? actorDocument.publicKey[0]
-    : actorDocument.publicKey;
+  const publicKey = normalizePublicKeyEntry(actorDocument.publicKey);
+  const previousPublicKey = normalizePublicKeyEntry(actorDocument.previousPublicKey);
 
   const normalized = {
     actorId: actorDocument.id ?? actorId,
@@ -87,6 +94,8 @@ function normalizeRemoteActor({ actorId, actorDocument, source, discoveredAt }) 
     inbox: actorDocument.inbox ?? "",
     sharedInbox: actorDocument.endpoints?.sharedInbox ?? null,
     publicKeyPem: publicKey?.publicKeyPem ?? "",
+    previousKeyId: previousPublicKey?.id ?? null,
+    previousPublicKeyPem: previousPublicKey?.publicKeyPem ?? null,
     source,
     discoveredAt,
   };
@@ -250,6 +259,8 @@ export function createRemoteActorDirectory({
       inbox: seed.inbox ?? "",
       sharedInbox: seed.sharedInbox ?? null,
       publicKeyPem: seed.publicKeyPem ?? "",
+      previousKeyId: seed.previousKeyId ?? null,
+      previousPublicKeyPem: seed.previousPublicKeyPem ?? null,
       source: "seed",
       discoveredAt: seed.discoveredAt ?? null,
     };

@@ -1,13 +1,13 @@
 ---
 task_slug: matters-g1-w5-paid-private-boundary-enforcement
-status: queued
+status: done
 goal: 在程式碼層級嚴格執行付費 / 加密 / 私訊內容不外流，並提供 admin 可視化驗收
 dispatcher: human-fallback
 executor: codex-local
 host: any
 branch: task/matters-g1-w5-paid-private-boundary-enforcement
-latest_commit: UNSET
-last_updated: 2026-04-25T00:00:00+08:00
+latest_commit: 627f8ff
+last_updated: 2026-05-01T18:12:00-04:00
 tmux_session: none
 host_affinity: none
 outputs_scope: gateway-core
@@ -25,8 +25,8 @@ local_paths:
 start_command: none
 stop_command: none
 verify_command: cd gateway-core && npm test
-next_step: 在 outbox bridge 入口加 visibility gate，補單元測試覆蓋全部 visibility 狀態，加 `/admin/visibility-audit` 端點
-blockers: 需先確認決策題 03（付費文 preview 策略）
+next_step: 若要延伸到 dynamic outbound create / update / delete routes，先確認 payload contract 與 non-public 錯誤語意
+blockers: none
 ---
 
 # Task Handoff
@@ -46,7 +46,10 @@ G1 工作項目 W5。目前付費/加密/私訊邊界靠原則與規格文件，
 ## Change Log
 
 - 2026-04-25 created from G1 roadmap; not yet started
+- 2026-05-01 completed by codex-local in `627f8ff`; added static outbox public-only visibility gate, visibility audit endpoint, and visibility matrix tests
 
 ## Validation
 
-- TBD
+- 2026-05-01 `node --test --test-name-pattern "visibility audit|outbox bridge" test/gateway-core.test.mjs`：2 pass / 0 fail
+- 2026-05-01 `node --test`：96 pass / 0 fail
+- 2026-05-01 `git diff --check`：pass

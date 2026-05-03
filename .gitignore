@@ -1,5 +1,9 @@
 node_modules/
 runtime/
+gateway-core/config/staging.instance.json
+gateway-core/config/staging.local.instance.json
+gateway-core/config/staging.secrets/
+gateway-core/runtime/
 *.log
 .DS_Store
 .env

@@ -1,19 +1,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import os from "node:os";
 import path from "node:path";
-import { execFile as execFileCallback } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { execFile as execFileCallback, spawn } from "node:child_process";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { generateKeyPairSync } from "node:crypto";
 import { promisify } from "node:util";
 import { createGatewayApp } from "../src/app.mjs";
+import { loadGatewayConfig } from "../src/config.mjs";
+import { normalizeArticleObject } from "../src/lib/article-normalization.mjs";
 import { normalizeContentDeliveryReviewSnapshot } from "../src/lib/content-delivery-ops.mjs";
 import { signHttpRequest } from "../src/security/http-signatures.mjs";
 import { FileStateStore } from "../src/store/file-state-store.mjs";
 import { SqliteStateStore } from "../src/store/sqlite-state-store.mjs";
+import { createStagingLocalProxy } from "../scripts/run-staging-local-proxy.mjs";
 
 const execFile = promisify(execFileCallback);
+const nodeBin = process.execPath;
 
 function pemPair() {
   const { publicKey, privateKey } = generateKeyPairSync("rsa", {
@@ -173,6 +177,309 @@ async function createWebhookCaptureServer({ statusCode = 202, responseBody = { s
   };
 }
 
+async function createActivityPubSurfaceServer({ handle = "alice" } = {}) {
+  const server = createServer(async (request, response) => {
+    const requestUrl = new URL(request.url ?? "/", "http://127.0.0.1");
+    const host = request.headers.host;
+    const baseUrl = `http://${host}`;
+    const actorUrl = `${baseUrl}/users/${handle}`;
+    const acctUri = `acct:${handle}@${host}`;
+
+    if (requestUrl.pathname === "/.well-known/webfinger") {
+      response.writeHead(200, { "content-type": "application/jrd+json" });
+      response.end(
+        JSON.stringify({
+          subject: acctUri,
+          links: [
+            {
+              rel: "self",
+              type: "application/activity+json",
+              href: actorUrl,
+            },
+          ],
+        }),
+      );
+      return;
+    }
+
+    if (requestUrl.pathname === `/users/${handle}`) {
+      response.writeHead(200, { "content-type": "application/activity+json" });
+      response.end(
+        JSON.stringify({
+          "@context": "https://www.w3.org/ns/activitystreams",
+          id: actorUrl,
+          type: "Person",
+          preferredUsername: handle,
+          inbox: `${actorUrl}/inbox`,
+          outbox: `${actorUrl}/outbox`,
+          followers: `${actorUrl}/followers`,
+        }),
+      );
+      return;
+    }
+
+    if (requestUrl.pathname === `/users/${handle}/outbox`) {
+      response.writeHead(200, { "content-type": "application/activity+json" });
+      response.end(
+        JSON.stringify({
+          "@context": "https://www.w3.org/ns/activitystreams",
+          id: `${actorUrl}/outbox`,
+          type: "OrderedCollection",
+          totalItems: 1,
+          orderedItems: [
+            {
+              id: `${actorUrl}/articles/1`,
+              type: "Article",
+              actor: actorUrl,
+              name: "Interop Article",
+            },
+          ],
+        }),
+      );
+      return;
+    }
+
+    response.writeHead(404, { "content-type": "application/json" });
+    response.end(JSON.stringify({ error: "not_found" }));
+  });
+
+  await new Promise((resolve) => {
+    server.listen(0, "127.0.0.1", resolve);
+  });
+
+  const address = server.address();
+  return {
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    async close() {
+      await new Promise((resolve, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
+    },
+  };
+}
+
+async function createMisskeyInteropServer({
+  token,
+  gatewayHost,
+  handle = "alice",
+  apShowStatus = 200,
+  alreadyFollowing = false,
+}) {
+  const requests = [];
+  const server = createServer(async (request, response) => {
+    let body = "";
+    for await (const chunk of request) {
+      body += chunk;
+    }
+
+    const payload = body ? JSON.parse(body) : {};
+    requests.push({
+      method: request.method,
+      url: request.url,
+      headers: request.headers,
+      body: payload,
+    });
+
+    if (request.headers.authorization !== `Bearer ${token}`) {
+      response.writeHead(401, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: "unauthorized" }));
+      return;
+    }
+
+    if (request.url === "/api/ap/show") {
+      if (apShowStatus !== 200) {
+        response.writeHead(apShowStatus, { "content-type": "application/json" });
+        response.end(JSON.stringify({ error: "request_failed" }));
+        return;
+      }
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          type: "User",
+          object: {
+            id: "misskey-remote-user-1",
+            username: handle,
+            host: gatewayHost,
+            uri: `http://${gatewayHost}/users/${handle}`,
+            url: `http://${gatewayHost}/@${handle}`,
+          },
+        }),
+      );
+      return;
+    }
+
+    if (request.url === "/api/users/show") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          id: "misskey-remote-user-1",
+          username: payload.username,
+          host: payload.host,
+          uri: `http://${payload.host}/users/${payload.username}`,
+          url: `http://${payload.host}/@${payload.username}`,
+        }),
+      );
+      return;
+    }
+
+    if (request.url === "/api/following/create") {
+      if (alreadyFollowing) {
+        response.writeHead(400, { "content-type": "application/json" });
+        response.end(JSON.stringify({ code: "ALREADY_FOLLOWING", message: "You are already following that user." }));
+        return;
+      }
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          id: payload.userId,
+          username: handle,
+          host: gatewayHost,
+        }),
+      );
+      return;
+    }
+
+    if (request.url === "/api/users/relation") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          id: payload.userId,
+          isFollowing: false,
+          hasPendingFollowRequestFromYou: true,
+        }),
+      );
+      return;
+    }
+
+    response.writeHead(404, { "content-type": "application/json" });
+    response.end(JSON.stringify({ error: "not_found" }));
+  });
+
+  await new Promise((resolve) => {
+    server.listen(0, "127.0.0.1", resolve);
+  });
+
+  const address = server.address();
+  return {
+    requests,
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    async close() {
+      await new Promise((resolve, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
+    },
+  };
+}
+
+async function createMastodonApiInteropServer({ token, gatewayHost, handle = "alice" }) {
+  const requests = [];
+  const server = createServer(async (request, response) => {
+    let body = "";
+    for await (const chunk of request) {
+      body += chunk;
+    }
+
+    const requestUrl = new URL(request.url ?? "/", "http://127.0.0.1");
+    requests.push({
+      method: request.method,
+      url: request.url,
+      headers: request.headers,
+      body,
+    });
+
+    if (request.headers.authorization !== `Bearer ${token}`) {
+      response.writeHead(401, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: "unauthorized" }));
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/v2/search") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          accounts: [
+            {
+              id: "gotosocial-remote-account-1",
+              acct: `${handle}@${gatewayHost}`,
+              username: handle,
+              url: `http://${gatewayHost}/@${handle}`,
+            },
+          ],
+          statuses: [],
+          hashtags: [],
+        }),
+      );
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/v1/accounts/gotosocial-remote-account-1/follow") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          id: "gotosocial-remote-account-1",
+          following: false,
+          requested: true,
+          showing_reblogs: false,
+          notifying: false,
+        }),
+      );
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/v1/accounts/relationships") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify([
+          {
+            id: "gotosocial-remote-account-1",
+            following: false,
+            requested: true,
+            showing_reblogs: false,
+            notifying: false,
+          },
+        ]),
+      );
+      return;
+    }
+
+    response.writeHead(404, { "content-type": "application/json" });
+    response.end(JSON.stringify({ error: "not_found" }));
+  });
+
+  await new Promise((resolve) => {
+    server.listen(0, "127.0.0.1", resolve);
+  });
+
+  const address = server.address();
+  return {
+    requests,
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    async close() {
+      await new Promise((resolve, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
+    },
+  };
+}
+
 function signedRequest({ method, url, body, keyId, privateKeyPem }) {
   const signatureHeaders = signHttpRequest({
     method,
@@ -296,6 +603,37 @@ test("webfinger resolves a single canonical actor", async () => {
   const payload = await response.json();
   assert.equal(payload.subject, "acct:alice@matters.example");
   assert.equal(payload.links[0].href, "https://matters.example/users/alice");
+});
+
+test("actor document exposes previous public key during rotation overlap", async () => {
+  const { app, config } = await createHarness();
+  const previousKeys = pemPair();
+  config.actors.alice.keyId = "https://matters.example/users/alice#key-20260501";
+  config.actors.alice.previousKeyId = "https://matters.example/users/alice#main-key";
+  config.actors.alice.previousPublicKeyPem = previousKeys.publicKeyPem;
+
+  const response = await app.handle(new Request("https://matters.example/users/alice"));
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.publicKey.id, "https://matters.example/users/alice#key-20260501");
+  assert.equal(payload.previousPublicKey.id, "https://matters.example/users/alice#main-key");
+  assert.equal(payload.previousPublicKey.owner, "https://matters.example/users/alice");
+  assert.equal(payload.previousPublicKey.publicKeyPem, previousKeys.publicKeyPem);
+});
+
+test("actor document omits previous public key after rotation overlap retires", async () => {
+  const { app, config } = await createHarness();
+  config.actors.alice.keyId = "https://matters.example/users/alice#key-20260501";
+  config.actors.alice.previousKeyId = null;
+  config.actors.alice.previousPublicKeyPem = null;
+
+  const response = await app.handle(new Request("https://matters.example/users/alice"));
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.publicKey.id, "https://matters.example/users/alice#key-20260501");
+  assert.equal(payload.previousPublicKey, undefined);
 });
 
 test("content delivery review snapshot normalizer backfills canonical contract fields", () => {
@@ -1138,10 +1476,302 @@ test("outbox bridge rewrites static publisher output to canonical actor URLs", a
     payload.orderedItems[0].object.attributedTo,
     "https://matters.example/users/alice",
   );
+  assert.equal(payload.orderedItems[0].object.type, "Article");
+  assert.match(payload.orderedItems[0].object.content, /Original Matters link:/);
   assert.equal(
     payload.orderedItems[0].cc[0],
     "https://matters.example/users/alice/followers",
   );
+});
+
+test("outbox bridge reads static bundle manifest v1", async () => {
+  const harness = await createHarness();
+  const tmpDir = path.join(os.tmpdir(), `static-bundle-manifest-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(tmpDir, { recursive: true });
+  const outboxPath = path.join(tmpDir, "outbox.jsonld");
+  const manifestPath = path.join(tmpDir, "activitypub-manifest.json");
+  await writeFile(
+    outboxPath,
+    JSON.stringify({
+      "@context": "https://www.w3.org/ns/activitystreams",
+      id: "https://example.eth.limo/outbox.jsonld",
+      type: "OrderedCollection",
+      orderedItems: [
+        {
+          id: "https://example.eth.limo/activities/article-1",
+          type: "Create",
+          actor: "https://example.eth.limo/about.jsonld",
+          to: ["https://www.w3.org/ns/activitystreams#Public"],
+          object: {
+            id: "https://example.eth.limo/articles/article-1",
+            type: "Article",
+            name: "Manifest Article",
+            summary: "Manifest summary",
+            content: "<p>Manifest body</p>",
+            url: "https://example.eth.limo/articles/article-1",
+            to: ["https://www.w3.org/ns/activitystreams#Public"],
+          },
+        },
+      ],
+    }),
+  );
+  await writeFile(
+    manifestPath,
+    JSON.stringify({
+      version: 1,
+      generator: "ipns-site-generator",
+      actor: {
+        handle: "alice",
+        sourceActorId: "https://example.eth.limo/about.jsonld",
+        webfingerSubject: "acct:alice@example.eth.limo",
+        profileUrl: "https://example.eth.limo",
+      },
+      files: {
+        actor: "about.jsonld",
+        outbox: "outbox.jsonld",
+        webfinger: ".well-known/webfinger",
+        jsonFeed: "feed.json",
+        rss: "rss.xml",
+      },
+      visibility: {
+        federatedPublicOnly: true,
+        defaultPolicy: "missing-visibility-is-public",
+        excluded: ["paid", "encrypted", "private", "draft", "message"],
+      },
+    }),
+  );
+
+  const outboxApp = createGatewayApp({
+    config: {
+      ...harness.config,
+      actors: {
+        ...harness.config.actors,
+        alice: {
+          ...harness.config.actors.alice,
+          staticOutboxFile: null,
+          staticBundleManifestFile: manifestPath,
+        },
+      },
+    },
+    store: harness.store,
+    deliveryClient: {
+      async deliver() {
+        return { status: 202 };
+      },
+    },
+  });
+
+  const response = await outboxApp.handle(
+    new Request("https://matters.example/users/alice/outbox"),
+  );
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.id, "https://matters.example/users/alice/outbox");
+  assert.equal(payload.totalItems, 1);
+  assert.equal(payload.orderedItems[0].actor, "https://matters.example/users/alice");
+  assert.equal(payload.orderedItems[0].object.type, "Article");
+  assert.equal(payload.orderedItems[0].object.name, "Manifest Article");
+  assert.equal(payload.orderedItems[0].object.attributedTo, "https://matters.example/users/alice");
+});
+
+test("outbox bridge drops non-public static items and records visibility audit", async () => {
+  const harness = await createHarness();
+  const fixturePath = path.join(os.tmpdir(), `static-outbox-visibility-${Date.now()}-${Math.random().toString(16).slice(2)}.json`);
+  const publicAudience = "https://www.w3.org/ns/activitystreams#Public";
+  const createItem = (suffix, objectOverrides = {}, itemOverrides = {}) => ({
+    id: `https://example.eth.limo/activities/${suffix}`,
+    type: "Create",
+    actor: "https://example.eth.limo/about.jsonld",
+    to: [publicAudience],
+    object: {
+      id: `https://example.eth.limo/articles/${suffix}`,
+      type: "Note",
+      name: `${suffix} headline`,
+      content: `${suffix} body`,
+      url: `https://example.eth.limo/articles/${suffix}`,
+      to: [publicAudience],
+      ...objectOverrides,
+    },
+    ...itemOverrides,
+  });
+  await writeFile(
+    fixturePath,
+    JSON.stringify({
+      "@context": "https://www.w3.org/ns/activitystreams",
+      id: "https://example.eth.limo/outbox.jsonld",
+      type: "OrderedCollection",
+      orderedItems: [
+        createItem("public"),
+        createItem("paid", { visibility: "paid", name: "Paid headline should not leak", content: "Paid premium body should not leak" }),
+        createItem("encrypted", { encrypted: true, content: "Encrypted body should not leak" }),
+        createItem("private", { visibility: "private", content: "Private body should not leak" }),
+        createItem("draft", { status: "draft", content: "Draft body should not leak" }),
+        createItem("message", { type: "ChatMessage", content: "Message body should not leak" }),
+        createItem("mixed-thread", { threadVisibility: "private", content: "Mixed thread body should not leak" }),
+      ],
+    }),
+  );
+  const outboxApp = createGatewayApp({
+    config: {
+      ...harness.config,
+      actors: {
+        ...harness.config.actors,
+        alice: {
+          ...harness.config.actors.alice,
+          staticOutboxFile: fixturePath,
+        },
+      },
+    },
+    store: harness.store,
+    deliveryClient: {
+      async deliver() {
+        return { status: 202 };
+      },
+    },
+    clock: () => new Date("2026-05-01T12:00:00.000Z"),
+  });
+
+  const response = await outboxApp.handle(
+    new Request("https://matters.example/users/alice/outbox"),
+  );
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.totalItems, 1);
+  assert.equal(payload.orderedItems[0].object.id, "https://example.eth.limo/articles/public");
+  assert.equal(payload.orderedItems[0].object.attributedTo, "https://matters.example/users/alice");
+  assert.doesNotMatch(JSON.stringify(payload), /Paid premium body|Encrypted body|Private body|Draft body|Message body|Mixed thread body/);
+
+  const auditResponse = await outboxApp.handle(
+    new Request("https://matters.example/admin/visibility-audit?actorHandle=alice&limit=20"),
+  );
+  assert.equal(auditResponse.status, 200);
+  const auditPayload = await auditResponse.json();
+  assert.equal(auditPayload.items.length, 7);
+  assert.equal(auditPayload.items.filter((entry) => entry.decision === "included").length, 1);
+  assert.equal(auditPayload.items.filter((entry) => entry.decision === "excluded").length, 6);
+  assert.deepEqual(
+    auditPayload.items.filter((entry) => entry.decision === "excluded").map((entry) => entry.reason).sort(),
+    [
+      "encrypted-content",
+      "message-like-content",
+      "status-not-public",
+      "thread-not-public",
+      "visibility-not-public",
+      "visibility-not-public",
+    ],
+  );
+  assert.doesNotMatch(JSON.stringify(auditPayload), /Paid headline should not leak|Paid premium body|Encrypted body|Private body|Draft body|Message body|Mixed thread body/);
+});
+
+test("article normalization keeps safe longform HTML and moves IPFS images to attachments", () => {
+  const article = normalizeArticleObject({
+    actor: { actorUrl: "https://matters.example/users/alice" },
+    object: {
+      id: "https://matters.example/articles/ipfs-image",
+      type: "Article",
+      name: "IPFS image article",
+      summary: "A safe summary",
+      url: "https://matters.town/@alice/ipfs-image",
+      content: [
+        "<h2>Heading</h2>",
+        "<p>Hello <strong>fediverse</strong> <a href=\"https://example.com\" target=\"_blank\">link</a></p>",
+        "<iframe src=\"https://video.example/embed\"></iframe>",
+        "<img src=\"ipfs://bafycover/cover.png\" alt=\"Cover image\">",
+      ].join(""),
+    },
+  });
+
+  assert.equal(article.type, "Article");
+  assert.match(article.content, /<h2>Heading<\/h2>/);
+  assert.match(article.content, /<strong>fediverse<\/strong>/);
+  assert.match(article.content, /rel="noopener noreferrer ugc"/);
+  assert.doesNotMatch(article.content, /iframe|<img/i);
+  assert.match(article.content, /Original Matters link:/);
+  assert.equal(article.attachment[0].type, "Document");
+  assert.equal(article.attachment[0].url, "https://ipfs.io/ipfs/bafycover/cover.png");
+  assert.equal(article.attachment[0]["ipfs:hash"], "bafycover");
+});
+
+test("article normalization maps existing external image attachments to Document", () => {
+  const article = normalizeArticleObject({
+    object: {
+      id: "https://matters.example/articles/external-image",
+      type: "Article",
+      url: "https://matters.town/@alice/external-image",
+      content: "<p>External image</p>",
+      attachment: {
+        type: "Image",
+        mediaType: "image/webp",
+        url: "https://cdn.example/image.webp",
+        name: "External cover",
+      },
+    },
+  });
+
+  assert.equal(article.attachment.length, 1);
+  assert.equal(article.attachment[0].type, "Document");
+  assert.equal(article.attachment[0].mediaType, "image/webp");
+  assert.equal(article.attachment[0].url, "https://cdn.example/image.webp");
+});
+
+test("article normalization truncates long summaries deterministically", () => {
+  const article = normalizeArticleObject({
+    object: {
+      id: "https://matters.example/articles/long-summary",
+      type: "Article",
+      url: "https://matters.town/@alice/long-summary",
+      summary: "a".repeat(400),
+      content: "<p>Body</p>",
+    },
+  });
+
+  assert.equal(article.summary.length, 280);
+  assert.match(article.summary, /\.\.\.$/);
+});
+
+test("article normalization derives an empty summary from content text", () => {
+  const article = normalizeArticleObject({
+    object: {
+      id: "https://matters.example/articles/empty-summary",
+      type: "Article",
+      url: "https://matters.town/@alice/empty-summary",
+      summary: "",
+      content: "<p>Derived <em>summary</em> text</p>",
+    },
+  });
+
+  assert.equal(article.summary, "Derived summary text");
+});
+
+test("article normalization preserves code language class and strips unsafe attributes", () => {
+  const article = normalizeArticleObject({
+    object: {
+      id: "https://matters.example/articles/code-block",
+      type: "Article",
+      url: "https://matters.town/@alice/code-block",
+      content: "<pre><code class=\"language-js extra\" onclick=\"bad()\">const ok = true;</code></pre>",
+    },
+  });
+
+  assert.match(article.content, /<pre><code class="language-js">const ok = true;<\/code><\/pre>/);
+  assert.doesNotMatch(article.content, /onclick|extra/);
+});
+
+test("article normalization preserves cross-language summary text", () => {
+  const article = normalizeArticleObject({
+    object: {
+      id: "https://matters.example/articles/multilingual",
+      type: "Article",
+      name: "Multilingual",
+      url: "https://matters.town/@alice/multilingual",
+      content: "<p>中文段落 English paragraph 日本語の段落</p>",
+    },
+  });
+
+  assert.equal(article.summary, "中文段落 English paragraph 日本語の段落");
+  assert.equal(article.name, "Multilingual");
 });
 
 test("admin domain block and abuse endpoints expose moderation state", async () => {
@@ -2477,6 +3107,79 @@ test("outbox Update fans out to accepted followers", async () => {
   assert.equal(payload.deliveries.length, 1);
   assert.equal(deliveries[0].activity.type, "Update");
   assert.equal(deliveries[0].activity.object.id, "https://matters.example/articles/hello-fediverse");
+});
+
+test("outbox Update normalizes Article content before fanout", async () => {
+  const { app, store, deliveries } = await createHarness();
+  await store.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    inbox: "https://remote.example/users/zoe/inbox",
+    sharedInbox: "https://remote.example/inbox",
+    status: "accepted",
+    followedAt: "2026-03-21T00:00:00.000Z",
+    lastActivityId: "https://remote.example/activities/follow-1",
+  });
+
+  const response = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/update", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: "https://matters.example/articles/normalized-update",
+          type: "Article",
+          url: "https://matters.town/@alice/normalized-update",
+          content: "<h3>Update</h3><img src=\"ipfs://bafyupdate/photo.jpg\" alt=\"Update photo\"><script>bad()</script>",
+        },
+      }),
+    }),
+  );
+
+  assert.equal(response.status, 202);
+  const object = deliveries[0].activity.object;
+  assert.equal(object.type, "Article");
+  assert.match(object.content, /<h3>Update<\/h3>/);
+  assert.doesNotMatch(object.content, /img|script|bad\(\)/);
+  assert.equal(object.attachment[0].url, "https://ipfs.io/ipfs/bafyupdate/photo.jpg");
+});
+
+test("outbox Create normalizes public Article before fanout", async () => {
+  const { app, store, deliveries } = await createHarness();
+  await store.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    inbox: "https://remote.example/users/zoe/inbox",
+    sharedInbox: "https://remote.example/inbox",
+    status: "accepted",
+    followedAt: "2026-03-21T00:00:00.000Z",
+    lastActivityId: "https://remote.example/activities/follow-1",
+  });
+
+  const response = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: "https://matters.example/articles/normalized-create",
+          type: "Article",
+          name: "Normalized Create",
+          url: "https://matters.town/@alice/normalized-create",
+          content: "<p>Create body</p><a href=\"javascript:bad()\">bad link</a>",
+        },
+      }),
+    }),
+  );
+
+  assert.equal(response.status, 202);
+  const object = deliveries[0].activity.object;
+  assert.equal(object.type, "Article");
+  assert.equal(object.name, "Normalized Create");
+  assert.doesNotMatch(object.content, /javascript:|<\/a>bad link/);
+  assert.match(object.content, /Original Matters link:/);
 });
 
 test("outbox Create reply fans out to followers, explicit targets, and mention recipients", async () => {
@@ -5110,6 +5813,60 @@ test("key refresh path re-fetches remote actor after signature rotation", async 
   assert.equal(refreshCount, 1);
 });
 
+test("inbound signature verification accepts remote previous key during overlap", async () => {
+  const { config, remoteKeys } = await createHarness();
+  const previousRemoteKeys = pemPair();
+  const activity = {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    id: "https://remote.example/activities/follow-previous-key",
+    type: "Follow",
+    actor: "https://remote.example/users/zoe",
+    object: "https://matters.example/users/alice",
+  };
+
+  config.remoteActors["https://remote.example/users/zoe"] = {
+    keyId: "https://remote.example/users/zoe#key-current",
+    inbox: "https://remote.example/users/zoe/inbox",
+    sharedInbox: "https://remote.example/inbox",
+    publicKeyPem: remoteKeys.publicKeyPem,
+    previousKeyId: "https://remote.example/users/zoe#main-key",
+    previousPublicKeyPem: previousRemoteKeys.publicKeyPem,
+  };
+
+  const store = new FileStateStore({
+    stateFile: path.join(
+      os.tmpdir(),
+      `matters-gateway-previous-key-${Date.now()}-${Math.random().toString(16).slice(2)}.json`,
+    ),
+  });
+  await store.init();
+
+  const previousKeyApp = createGatewayApp({
+    config,
+    store,
+    deliveryClient: {
+      async deliver() {
+        return { status: 202 };
+      },
+    },
+  });
+
+  const body = JSON.stringify(activity);
+  const response = await previousKeyApp.handle(
+    signedRequest({
+      method: "POST",
+      url: "https://matters.example/users/alice/inbox",
+      body,
+      keyId: "https://remote.example/users/zoe#main-key",
+      privateKeyPem: previousRemoteKeys.privateKeyPem,
+    }),
+  );
+
+  assert.equal(response.status, 202);
+  const snapshot = store.getSnapshot();
+  assert.equal(snapshot.actors.alice.followers["https://remote.example/users/zoe"].status, "accepted");
+});
+
 test("temporary delivery failure schedules retry and then dead-letters", async () => {
   const localKeys = pemPair();
   const remoteKeys = pemPair();
@@ -5395,7 +6152,7 @@ test("backup script creates sqlite backup and manifest", async () => {
     ),
   );
 
-  const { stdout } = await execFile("node", ["scripts/backup-sqlite.mjs", "--config", configPath, "--output-dir", backupDir], {
+  const { stdout } = await execFile(nodeBin, ["scripts/backup-sqlite.mjs", "--config", configPath, "--output-dir", backupDir], {
     cwd: path.resolve(process.cwd()),
   });
   const payload = JSON.parse(stdout);
@@ -5447,8 +6204,7 @@ test("restore script restores sqlite backup and stamps runtime metadata", async 
     ),
   );
 
-  const { stdout } = await execFile(
-    "node",
+  const { stdout } = await execFile(nodeBin,
     ["scripts/restore-sqlite.mjs", "--config", configPath, "--input-file", backupFile, "--target-file", restoredFile],
     {
       cwd: path.resolve(process.cwd()),
@@ -5465,6 +6221,452 @@ test("restore script restores sqlite backup and stamps runtime metadata", async 
   assert.equal(snapshot.outboundQueue[0].activity.type, "Update");
   assert.ok(metadata.lastRestoredAt);
   assert.equal(metadata.restoredFromBackup, backupFile);
+});
+
+test("consistency scan script reports follower, inbound object, and engagement drift", async () => {
+  const { store: sqliteStore, sqliteFile } = await createSqliteStoreHarness();
+  const tmpDir = path.dirname(sqliteFile);
+  const stateFile = path.join(tmpDir, "state.json");
+  const fileStore = new FileStateStore({ stateFile });
+  await fileStore.init();
+
+  await fileStore.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    status: "accepted",
+    followedAt: "2026-03-21T00:00:00.000Z",
+  });
+  await sqliteStore.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    status: "pending",
+    followedAt: "2026-03-21T00:00:00.000Z",
+  });
+  await fileStore.upsertInboundObject("alice", {
+    objectId: "https://remote.example/notes/file-only",
+    activityId: "https://remote.example/activities/create-file-only",
+    type: "Create",
+  });
+  await sqliteStore.upsertInboundObject("alice", {
+    objectId: "https://remote.example/notes/sqlite-only",
+    activityId: "https://remote.example/activities/create-sqlite-only",
+    type: "Create",
+  });
+  await fileStore.upsertInboundEngagement("alice", {
+    activityId: "https://remote.example/activities/like-1",
+    type: "Like",
+    objectId: "https://remote.example/notes/file-only",
+  });
+  await sqliteStore.upsertInboundEngagement("alice", {
+    activityId: "https://remote.example/activities/like-1",
+    type: "Like",
+    objectId: "https://remote.example/notes/file-only",
+  });
+
+  const configPath = path.join(tmpDir, "consistency-test.instance.json");
+  const outputDir = path.join(tmpDir, "scan-reports");
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        instance: {
+          domain: "matters.example",
+        },
+        actors: {},
+        runtime: {
+          stateFile,
+          sqliteFile,
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  const { stdout } = await execFile(nodeBin,
+    [
+      "scripts/scan-consistency.mjs",
+      "--config",
+      configPath,
+      "--output-dir",
+      outputDir,
+      "--now",
+      "2026-03-21T00:00:00.000Z",
+    ],
+    {
+      cwd: path.resolve(process.cwd()),
+    },
+  );
+  const payload = JSON.parse(stdout);
+  const report = JSON.parse(await readFile(payload.jsonReportFile, "utf8"));
+  const markdown = await readFile(payload.markdownReportFile, "utf8");
+
+  assert.equal(report.dryRun, true);
+  assert.equal(report.summary.totalDiffs, 3);
+  assert.equal(report.summary.byCollection.followers.valueMismatches, 1);
+  assert.equal(report.summary.byCollection.inboundObjects.missingInFile, 1);
+  assert.equal(report.summary.byCollection.inboundObjects.missingInSqlite, 1);
+  assert.equal(report.summary.byCollection.inboundEngagements.total, 0);
+  assert.equal(markdown.includes("Gateway Consistency Scan"), true);
+  assert.equal(markdown.includes("Missing in SQLite"), true);
+});
+
+test("consistency scan script repairs sqlite from file store when requested", async () => {
+  const { store: sqliteStore, sqliteFile } = await createSqliteStoreHarness();
+  const tmpDir = path.dirname(sqliteFile);
+  const stateFile = path.join(tmpDir, "state.json");
+  const fileStore = new FileStateStore({ stateFile });
+  await fileStore.init();
+
+  await fileStore.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    status: "accepted",
+    followedAt: "2026-03-21T00:00:00.000Z",
+  });
+  await sqliteStore.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    status: "pending",
+    followedAt: "2026-03-21T00:00:00.000Z",
+  });
+  await fileStore.upsertInboundObject("alice", {
+    objectId: "https://remote.example/notes/file-only",
+    activityId: "https://remote.example/activities/create-file-only",
+    type: "Create",
+  });
+
+  const configPath = path.join(tmpDir, "consistency-repair-test.instance.json");
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        instance: {
+          domain: "matters.example",
+        },
+        actors: {},
+        runtime: {
+          stateFile,
+          sqliteFile,
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  const { stdout } = await execFile(nodeBin,
+    [
+      "scripts/scan-consistency.mjs",
+      "--config",
+      configPath,
+      "--repair",
+      "--repair-target",
+      "sqlite",
+      "--now",
+      "2026-03-21T00:05:00.000Z",
+    ],
+    {
+      cwd: path.resolve(process.cwd()),
+    },
+  );
+  const payload = JSON.parse(stdout);
+  assert.equal(payload.repair.target, "sqlite");
+  assert.equal(payload.repair.applied, 2);
+  assert.equal(payload.summary.totalDiffs, 0);
+
+  const repaired = new SqliteStateStore({ sqliteFile });
+  await repaired.init();
+  assert.equal(repaired.getFollower("alice", "https://remote.example/users/zoe").status, "accepted");
+  assert.equal(repaired.getInboundObject("alice", "https://remote.example/notes/file-only").type, "Create");
+  repaired.close();
+});
+
+test("misskey sandbox interop script resolves and follows remote gateway actor", async () => {
+  const gatewayServer = await createActivityPubSurfaceServer({ handle: "alice" });
+  const gatewayHost = new URL(gatewayServer.baseUrl).host;
+  const misskeyServer = await createMisskeyInteropServer({
+    token: "misskey-script-secret",
+    gatewayHost,
+    handle: "alice",
+  });
+
+  try {
+    const { stdout } = await execFile(nodeBin,
+      ["scripts/run-misskey-sandbox-interop.mjs"],
+      {
+        cwd: path.resolve(process.cwd()),
+        env: {
+          ...process.env,
+          MISSKEY_BASE_URL: misskeyServer.baseUrl,
+          MISSKEY_ACCESS_TOKEN: "misskey-script-secret",
+          MISSKEY_OPERATOR_PROFILE_URL: "https://gyutte.site/@mashbean",
+          GATEWAY_PUBLIC_BASE_URL: gatewayServer.baseUrl,
+          GATEWAY_HANDLE: "alice",
+          MISSKEY_RELATION_POLL_ATTEMPTS: "1",
+          MISSKEY_RELATION_POLL_INTERVAL_MS: "1",
+        },
+      },
+    );
+
+    const payload = JSON.parse(stdout);
+    assert.equal(payload.ok, true);
+    assert.deepEqual(payload.failures, []);
+    assert.equal(payload.report.misskey.baseUrl, misskeyServer.baseUrl);
+    assert.equal(payload.report.misskey.operatorProfileUrl, "https://gyutte.site/@mashbean");
+    assert.equal(payload.report.misskey.resolveMethod, "ap/show");
+    assert.equal(payload.report.misskey.resolvedUserId, "misskey-remote-user-1");
+    assert.equal(payload.report.misskey.resolvedUsername, "alice");
+    assert.equal(payload.report.misskey.resolvedHost, gatewayHost);
+    assert.equal(payload.report.misskey.relation.hasPendingFollowRequestFromYou, true);
+    assert.equal(stdout.includes("misskey-script-secret"), false);
+    assert.deepEqual(
+      misskeyServer.requests.map((entry) => entry.url),
+      ["/api/ap/show", "/api/following/create", "/api/users/relation"],
+    );
+    assert.equal(misskeyServer.requests.every((entry) => entry.headers.authorization === "Bearer misskey-script-secret"), true);
+  } finally {
+    await gatewayServer.close();
+    await misskeyServer.close();
+  }
+});
+
+test("misskey sandbox interop script falls back to users/show when ap/show rejects the actor", async () => {
+  const gatewayServer = await createActivityPubSurfaceServer({ handle: "alice" });
+  const gatewayHost = new URL(gatewayServer.baseUrl).host;
+  const misskeyServer = await createMisskeyInteropServer({
+    token: "misskey-script-secret",
+    gatewayHost,
+    handle: "alice",
+    apShowStatus: 400,
+  });
+
+  try {
+    const { stdout } = await execFile(nodeBin,
+      ["scripts/run-misskey-sandbox-interop.mjs"],
+      {
+        cwd: path.resolve(process.cwd()),
+        env: {
+          ...process.env,
+          MISSKEY_BASE_URL: misskeyServer.baseUrl,
+          MISSKEY_ACCESS_TOKEN: "misskey-script-secret",
+          MISSKEY_OPERATOR_PROFILE_URL: "https://gyutte.site/@mashbean",
+          GATEWAY_PUBLIC_BASE_URL: gatewayServer.baseUrl,
+          GATEWAY_HANDLE: "alice",
+          MISSKEY_RELATION_POLL_ATTEMPTS: "1",
+          MISSKEY_RELATION_POLL_INTERVAL_MS: "1",
+        },
+      },
+    );
+
+    const payload = JSON.parse(stdout);
+    assert.equal(payload.ok, true);
+    assert.deepEqual(payload.failures, []);
+    assert.equal(payload.report.misskey.resolveMethod, "users/show-after-ap-show-error");
+    assert.match(payload.report.misskey.apShowError, /POST .*\/api\/ap\/show failed with 400/);
+    assert.equal(payload.report.misskey.resolvedUserId, "misskey-remote-user-1");
+    assert.deepEqual(
+      misskeyServer.requests.map((entry) => entry.url),
+      ["/api/ap/show", "/api/users/show", "/api/following/create", "/api/users/relation"],
+    );
+  } finally {
+    await gatewayServer.close();
+    await misskeyServer.close();
+  }
+});
+
+test("misskey sandbox interop script treats already-following as converged", async () => {
+  const gatewayServer = await createActivityPubSurfaceServer({ handle: "alice" });
+  const gatewayHost = new URL(gatewayServer.baseUrl).host;
+  const misskeyServer = await createMisskeyInteropServer({
+    token: "misskey-script-secret",
+    gatewayHost,
+    handle: "alice",
+    alreadyFollowing: true,
+  });
+
+  try {
+    const { stdout } = await execFile(nodeBin,
+      ["scripts/run-misskey-sandbox-interop.mjs"],
+      {
+        cwd: path.resolve(process.cwd()),
+        env: {
+          ...process.env,
+          MISSKEY_BASE_URL: misskeyServer.baseUrl,
+          MISSKEY_ACCESS_TOKEN: "misskey-script-secret",
+          GATEWAY_PUBLIC_BASE_URL: gatewayServer.baseUrl,
+          GATEWAY_HANDLE: "alice",
+          MISSKEY_RELATION_POLL_ATTEMPTS: "1",
+          MISSKEY_RELATION_POLL_INTERVAL_MS: "1",
+        },
+      },
+    );
+
+    const payload = JSON.parse(stdout);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.report.misskey.followResponse.alreadyFollowing, true);
+    assert.equal(payload.report.misskey.relation.hasPendingFollowRequestFromYou, true);
+  } finally {
+    await gatewayServer.close();
+    await misskeyServer.close();
+  }
+});
+
+test("gotosocial sandbox interop script resolves and follows remote gateway actor", async () => {
+  const gatewayServer = await createActivityPubSurfaceServer({ handle: "alice" });
+  const gatewayHost = new URL(gatewayServer.baseUrl).host;
+  const gotosocialServer = await createMastodonApiInteropServer({
+    token: "gotosocial-script-secret",
+    gatewayHost,
+    handle: "alice",
+  });
+
+  try {
+    const { stdout } = await execFile(nodeBin,
+      ["scripts/run-gotosocial-sandbox-interop.mjs"],
+      {
+        cwd: path.resolve(process.cwd()),
+        env: {
+          ...process.env,
+          GOTOSOCIAL_BASE_URL: gotosocialServer.baseUrl,
+          GOTOSOCIAL_ACCESS_TOKEN: "gotosocial-script-secret",
+          GOTOSOCIAL_OPERATOR_PROFILE_URL: "https://gts.example/@mashbean",
+          GATEWAY_PUBLIC_BASE_URL: gatewayServer.baseUrl,
+          GATEWAY_HANDLE: "alice",
+          GOTOSOCIAL_RELATIONSHIP_POLL_ATTEMPTS: "1",
+          GOTOSOCIAL_RELATIONSHIP_POLL_INTERVAL_MS: "1",
+        },
+      },
+    );
+
+    const payload = JSON.parse(stdout);
+    assert.equal(payload.ok, true);
+    assert.deepEqual(payload.failures, []);
+    assert.equal(payload.report.gotosocial.baseUrl, gotosocialServer.baseUrl);
+    assert.equal(payload.report.gotosocial.operatorProfileUrl, "https://gts.example/@mashbean");
+    assert.equal(payload.report.gotosocial.resolvedAccountId, "gotosocial-remote-account-1");
+    assert.equal(payload.report.gotosocial.resolvedAcct, `alice@${gatewayHost}`);
+    assert.equal(payload.report.gotosocial.relationship.requested, true);
+    assert.equal(stdout.includes("gotosocial-script-secret"), false);
+    assert.deepEqual(
+      gotosocialServer.requests.map((entry) => new URL(entry.url, "http://127.0.0.1").pathname),
+      ["/api/v2/search", "/api/v1/accounts/gotosocial-remote-account-1/follow", "/api/v1/accounts/relationships"],
+    );
+    assert.equal(gotosocialServer.requests.every((entry) => entry.headers.authorization === "Bearer gotosocial-script-secret"), true);
+  } finally {
+    await gatewayServer.close();
+    await gotosocialServer.close();
+  }
+});
+
+test("gotosocial sandbox interop script dry-run contract emits endpoint plan without secrets", async () => {
+  const { stdout } = await execFile(nodeBin,
+    ["scripts/run-gotosocial-sandbox-interop.mjs", "--dry-run-contract"],
+    {
+      cwd: path.resolve(process.cwd()),
+      env: {
+        ...process.env,
+        GOTOSOCIAL_BASE_URL: "https://gts.example",
+        GOTOSOCIAL_ACCESS_TOKEN: "dry-run-gotosocial-secret",
+        GOTOSOCIAL_OPERATOR_PROFILE_URL: "https://gts.example/@mashbean",
+        GATEWAY_PUBLIC_BASE_URL: "https://gateway.example",
+        GATEWAY_HANDLE: "alice",
+      },
+    },
+  );
+
+  const payload = JSON.parse(stdout);
+  assert.equal(payload.ok, true);
+  assert.deepEqual(payload.failures, []);
+  assert.equal(payload.report.mode, "dry-run-contract");
+  assert.equal(payload.report.discovery.expectedSubject, "acct:alice@gateway.example");
+  assert.equal(payload.report.discovery.expectedActorId, "https://gateway.example/users/alice");
+  assert.equal(payload.report.gotosocial.baseUrl, "https://gts.example");
+  assert.equal(payload.report.gotosocial.operatorProfileUrl, "https://gts.example/@mashbean");
+  assert.equal(payload.report.gotosocial.authorization, "Bearer <redacted>");
+  assert.deepEqual(
+    payload.report.gotosocial.endpoints.map((endpoint) => `${endpoint.method} ${endpoint.path}`),
+    [
+      "GET /api/v2/search",
+      "POST /api/v1/accounts/:id/follow",
+      "GET /api/v1/accounts/relationships",
+    ],
+  );
+  assert.equal(payload.report.gotosocial.endpoints[0].query.q, "@alice@gateway.example");
+  assert.equal(payload.report.gotosocial.endpoints[1].body.reblogs, "false");
+  assert.equal(payload.report.gotosocial.endpoints[1].body.notify, "false");
+  assert.deepEqual(payload.report.gotosocial.endpoints[2].query["id[]"], [":id"]);
+  assert.equal(stdout.includes("dry-run-gotosocial-secret"), false);
+});
+
+test("interop report writer redacts secrets and writes public markdown", async () => {
+  const tmpDir = path.join(os.tmpdir(), `matters-gateway-interop-report-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(tmpDir, { recursive: true });
+  const inputJson = path.join(tmpDir, "misskey-output.json");
+  const output = path.join(tmpDir, "misskey-run.md");
+  await writeFile(
+    inputJson,
+    JSON.stringify(
+      {
+        ok: true,
+        failures: [],
+        report: {
+          discovery: {
+            subject: "acct:alice@staging-gateway.matters.town",
+            actorId: "https://staging-gateway.matters.town/users/alice",
+            outboxId: "https://staging-gateway.matters.town/users/alice/outbox",
+            outboxTotalItems: 1,
+          },
+          misskey: {
+            baseUrl: "https://gyutte.site",
+            operatorProfileUrl: "https://gyutte.site/@mashbean",
+            resolvedUserId: "remote-user-id",
+            resolvedUrl: "https://gyutte.site/@alice@staging-gateway.matters.town",
+            relation: {
+              isFollowing: true,
+              authorization: "Bearer should-not-appear",
+            },
+          },
+          accessToken: "should-not-appear",
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  const { stdout } = await execFile(nodeBin,
+    [
+      "scripts/write-interop-run-report.mjs",
+      "--input-json",
+      inputJson,
+      "--output",
+      output,
+      "--implementation",
+      "Misskey",
+      "--instance",
+      "https://gyutte.site",
+      "--operator-profile",
+      "https://gyutte.site/@mashbean",
+      "--gateway-url",
+      "https://staging-gateway.matters.town",
+      "--gateway-actor",
+      "alice",
+      "--started-at",
+      "2026-05-02T15:00:00.000Z",
+      "--completed-at",
+      "2026-05-02T15:01:00.000Z",
+      "--gateway-commit",
+      "test-commit",
+    ],
+    {
+      cwd: path.resolve(process.cwd()),
+    },
+  );
+  const payload = JSON.parse(stdout);
+  const markdown = await readFile(payload.output, "utf8");
+
+  assert.equal(markdown.includes("should-not-appear"), false);
+  assert.equal(markdown.includes("Bearer <redacted>"), false);
+  assert.equal(markdown.includes("<redacted>"), true);
+  assert.equal(markdown.includes("Misskey Interop Run 20260502"), true);
+  assert.equal(markdown.includes("remote-user-id"), true);
 });
 
 test("alert dispatch script writes structured payload with metrics and alerts", async () => {
@@ -5523,8 +6725,7 @@ test("alert dispatch script writes structured payload with metrics and alerts", 
   );
 
   try {
-    const { stdout } = await execFile(
-      "node",
+    const { stdout } = await execFile(nodeBin,
       ["scripts/dispatch-runtime-alerts.mjs", "--config", configPath, "--output-file", outputFile],
       {
         cwd: path.resolve(process.cwd()),
@@ -5599,8 +6800,7 @@ test("alert dispatch script posts Slack webhook payload from config", async () =
   );
 
   try {
-    const { stdout } = await execFile(
-      "node",
+    const { stdout } = await execFile(nodeBin,
       ["scripts/dispatch-runtime-alerts.mjs", "--config", configPath, "--output-file", outputFile],
       {
         cwd: path.resolve(process.cwd()),
@@ -5681,8 +6881,7 @@ test("metrics dispatch script writes structured payload and posts webhook bundle
   );
 
   try {
-    const { stdout } = await execFile(
-      "node",
+    const { stdout } = await execFile(nodeBin,
       ["scripts/dispatch-runtime-metrics.mjs", "--config", configPath, "--output-file", outputFile],
       {
         cwd: path.resolve(process.cwd()),
@@ -5769,8 +6968,7 @@ test("logs dispatch script writes structured payload and posts webhook bundle", 
   );
 
   try {
-    const { stdout } = await execFile(
-      "node",
+    const { stdout } = await execFile(nodeBin,
       ["scripts/dispatch-runtime-logs.mjs", "--config", configPath, "--output-file", outputFile],
       {
         cwd: path.resolve(process.cwd()),
@@ -5875,8 +7073,7 @@ test("observability drill script writes bundles, dispatches sinks, and emits a r
   );
 
   try {
-    const { stdout } = await execFile(
-      "node",
+    const { stdout } = await execFile(nodeBin,
       [
         "scripts/run-staging-observability-drill.mjs",
         "--config",
@@ -5925,6 +7122,175 @@ test("observability drill script writes bundles, dispatches sinks, and emits a r
     await slackServer.close();
     await metricsServer.close();
     await logsServer.close();
+  }
+});
+
+test("webhook receiver captures runtime dispatch payloads and masks tokens", async () => {
+  const tmpDir = path.join(os.tmpdir(), `matters-gateway-webhook-receiver-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(tmpDir, { recursive: true });
+  const outputDir = path.join(tmpDir, "webhooks");
+  const tokenFile = path.join(tmpDir, "webhook.token");
+  await writeFile(tokenFile, "receiver-secret\n");
+
+  const receiver = spawn(nodeBin,
+    [
+      "scripts/run-webhook-receiver.mjs",
+      "--port",
+      "0",
+      "--output-dir",
+      outputDir,
+      "--bearer-token-file",
+      tokenFile,
+    ],
+    {
+      cwd: path.resolve(process.cwd()),
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+
+  let stderr = "";
+  let receiverExited = false;
+  receiver.stderr.on("data", (chunk) => {
+    stderr += chunk.toString("utf8");
+  });
+  receiver.once("exit", () => {
+    receiverExited = true;
+  });
+
+  try {
+    const listening = await new Promise((resolve, reject) => {
+      let stdout = "";
+      const timeout = setTimeout(() => {
+        reject(new Error(`webhook receiver did not start: ${stderr}`));
+      }, 3000);
+
+      receiver.stdout.on("data", (chunk) => {
+        stdout += chunk.toString("utf8");
+        const newlineIndex = stdout.indexOf("\n");
+        if (newlineIndex === -1) {
+          return;
+        }
+        clearTimeout(timeout);
+        resolve(JSON.parse(stdout.slice(0, newlineIndex)));
+      });
+      receiver.once("exit", (code) => {
+        clearTimeout(timeout);
+        reject(new Error(`webhook receiver exited with ${code}: ${stderr}`));
+      });
+    });
+
+    assert.equal(listening.status, "listening");
+    assert.equal(listening.bearerTokenRequired, true);
+
+    const unauthorized = await fetch(`http://127.0.0.1:${listening.port}/runtime-alerts`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ status: "should-not-write" }),
+    });
+    assert.equal(unauthorized.status, 401);
+
+    const accepted = await fetch(`http://127.0.0.1:${listening.port}/runtime-alerts?channel=alerts`, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer receiver-secret",
+        "content-type": "application/json",
+        "x-alert-source": "gateway-test",
+        "x-extra-token": "must-not-be-written",
+      },
+      body: JSON.stringify({ status: "ok", channel: "alerts" }),
+    });
+    assert.equal(accepted.status, 202);
+
+    const responsePayload = await accepted.json();
+    assert.equal(responsePayload.status, "accepted");
+
+    const files = await readdir(outputDir);
+    assert.equal(files.length, 1);
+    const captured = JSON.parse(await readFile(path.join(outputDir, files[0]), "utf8"));
+    assert.equal(captured.path, "/runtime-alerts");
+    assert.deepEqual(captured.query, { channel: "alerts" });
+    assert.equal(captured.headers.authorization, "[masked]");
+    assert.equal(captured.headers["x-extra-token"], "[masked]");
+    assert.equal(captured.headers["x-alert-source"], "gateway-test");
+    assert.deepEqual(captured.json, { status: "ok", channel: "alerts" });
+    assert.equal(captured.bodyText.includes("receiver-secret"), false);
+  } finally {
+    if (!receiverExited) {
+      receiver.kill("SIGTERM");
+      await new Promise((resolve) => receiver.once("exit", resolve));
+    }
+  }
+});
+
+test("staging local proxy keeps admin local-only before Access is enabled", async () => {
+  const gateway = createServer((req, res) => {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(
+      JSON.stringify({
+        ok: true,
+        host: req.headers.host,
+        path: req.url,
+      }),
+    );
+  });
+  await new Promise((resolve) => gateway.listen(0, "127.0.0.1", resolve));
+  const gatewayAddress = gateway.address();
+
+  const proxy = createStagingLocalProxy({
+    gatewayTarget: `http://127.0.0.1:${gatewayAddress.port}`,
+  });
+  await new Promise((resolve) => proxy.listen(0, "127.0.0.1", resolve));
+  const proxyAddress = proxy.address();
+
+  async function requestProxy(pathname, host) {
+    return await new Promise((resolve, reject) => {
+      const req = httpRequest(
+        {
+          hostname: "127.0.0.1",
+          port: proxyAddress.port,
+          path: pathname,
+          headers: { host },
+        },
+        (res) => {
+          let body = "";
+          res.setEncoding("utf8");
+          res.on("data", (chunk) => {
+            body += chunk;
+          });
+          res.on("end", () => {
+            resolve({
+              status: res.statusCode,
+              json: body ? JSON.parse(body) : null,
+            });
+          });
+        },
+      );
+      req.on("error", reject);
+      req.end();
+    });
+  }
+
+  try {
+    const publicResponse = await requestProxy("/.well-known/nodeinfo", "staging-gateway.matters.town");
+    assert.equal(publicResponse.status, 200);
+    const publicPayload = publicResponse.json;
+    assert.equal(publicPayload.host, "staging-gateway.matters.town");
+    assert.equal(publicPayload.path, "/.well-known/nodeinfo");
+
+    const privatePublicResponse = await requestProxy("/admin/dashboard", "staging-gateway.matters.town");
+    assert.equal(privatePublicResponse.status, 404);
+
+    const adminResponse = await requestProxy("/.well-known/nodeinfo", "staging-admin.matters.town");
+    assert.equal(adminResponse.status, 404);
+    assert.equal(adminResponse.json.error, "admin_local_only");
+
+    const unknownHostResponse = await requestProxy("/.well-known/nodeinfo", "unknown.matters.town");
+    assert.equal(unknownHostResponse.status, 421);
+  } finally {
+    await new Promise((resolve, reject) => proxy.close((error) => (error ? reject(error) : resolve())));
+    await new Promise((resolve, reject) => gateway.close((error) => (error ? reject(error) : resolve())));
   }
 });
 
@@ -5979,8 +7345,7 @@ test("secret layout check script reports configured file references", async () =
     ),
   );
 
-  const { stdout } = await execFile(
-    "node",
+  const { stdout } = await execFile(nodeBin,
     ["scripts/check-secret-layout.mjs", "--config", configPath],
     {
       cwd: path.resolve(process.cwd()),
@@ -6001,6 +7366,178 @@ test("secret layout check script reports configured file references", async () =
       "runtime.metrics.dispatch.webhookBearerTokenFile",
     ],
   );
+});
+
+test("config loader normalizes actor key rotation overlap fields", async () => {
+  const tmpDir = path.join(os.tmpdir(), `matters-gateway-key-overlap-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(tmpDir, { recursive: true });
+  const currentKeys = pemPair();
+  const previousKeys = pemPair();
+  const configPath = path.join(tmpDir, "instance.json");
+  const publicKeyFile = path.join(tmpDir, "current-public.pem");
+  const privateKeyFile = path.join(tmpDir, "current-private.pem");
+  const previousPublicKeyFile = path.join(tmpDir, "previous-public.pem");
+
+  await writeFile(publicKeyFile, currentKeys.publicKeyPem);
+  await writeFile(privateKeyFile, currentKeys.privateKeyPem);
+  await writeFile(previousPublicKeyFile, previousKeys.publicKeyPem);
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        instance: {
+          domain: "matters.example",
+        },
+        actors: {
+          alice: {
+            keyId: "https://matters.example/users/alice#key-current",
+            previousKeyId: "https://matters.example/users/alice#main-key",
+            publicKeyPemFile: "./current-public.pem",
+            privateKeyPemFile: "./current-private.pem",
+            previousPublicKeyPemFile: "./previous-public.pem",
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  const config = await loadGatewayConfig(configPath);
+
+  assert.equal(config.actors.alice.keyId, "https://matters.example/users/alice#key-current");
+  assert.equal(config.actors.alice.previousKeyId, "https://matters.example/users/alice#main-key");
+  assert.equal(config.actors.alice.previousPublicKeyPem, previousKeys.publicKeyPem);
+});
+
+test("key rotation script writes overlap config and local actor update artifact", async () => {
+  const tmpDir = path.join(os.tmpdir(), `matters-gateway-rotate-key-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(tmpDir, { recursive: true });
+  const currentKeys = pemPair();
+  const configPath = path.join(tmpDir, "instance.json");
+  const publicKeyFile = path.join(tmpDir, "current-public.pem");
+  const privateKeyFile = path.join(tmpDir, "current-private.pem");
+  const outputDir = path.join(tmpDir, "rotation");
+
+  await writeFile(publicKeyFile, currentKeys.publicKeyPem);
+  await writeFile(privateKeyFile, currentKeys.privateKeyPem);
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        instance: {
+          domain: "matters.example",
+        },
+        actors: {
+          alice: {
+            publicKeyPemFile: "./current-public.pem",
+            privateKeyPemFile: "./current-private.pem",
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  const { stdout } = await execFile(nodeBin,
+    [
+      "scripts/rotate-key.mjs",
+      "--config",
+      configPath,
+      "--actor",
+      "alice",
+      "--output-dir",
+      outputDir,
+      "--overlap-days",
+      "7",
+      "--write",
+    ],
+    {
+      cwd: path.resolve(process.cwd()),
+    },
+  );
+
+  const report = JSON.parse(stdout);
+  const updatedConfig = JSON.parse(await readFile(configPath, "utf8"));
+  const actorUpdate = JSON.parse(await readFile(report.files.actorUpdateFile, "utf8"));
+  const rotationEvent = JSON.parse(await readFile(report.files.rotationEventFile, "utf8"));
+
+  assert.equal(report.status, "written");
+  assert.equal(updatedConfig.actors.alice.previousKeyId, "https://matters.example/users/alice#main-key");
+  assert.equal(updatedConfig.actors.alice.previousPublicKeyPemFile, "./current-public.pem");
+  assert.match(updatedConfig.actors.alice.keyId, /^https:\/\/matters\.example\/users\/alice#key-/);
+  assert.equal(actorUpdate.type, "Update");
+  assert.equal(actorUpdate.object.previousPublicKey.id, "https://matters.example/users/alice#main-key");
+  assert.equal(rotationEvent.overlapEndsAt > rotationEvent.overlapStartedAt, true);
+});
+
+test("key rotation script retires previous key after overlap", async () => {
+  const tmpDir = path.join(os.tmpdir(), `matters-gateway-retire-key-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(tmpDir, { recursive: true });
+  const currentKeys = pemPair();
+  const previousKeys = pemPair();
+  const configPath = path.join(tmpDir, "instance.json");
+  const publicKeyFile = path.join(tmpDir, "current-public.pem");
+  const privateKeyFile = path.join(tmpDir, "current-private.pem");
+  const previousPublicKeyFile = path.join(tmpDir, "previous-public.pem");
+  const outputDir = path.join(tmpDir, "rotation-retire");
+
+  await writeFile(publicKeyFile, currentKeys.publicKeyPem);
+  await writeFile(privateKeyFile, currentKeys.privateKeyPem);
+  await writeFile(previousPublicKeyFile, previousKeys.publicKeyPem);
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        instance: {
+          domain: "matters.example",
+        },
+        actors: {
+          alice: {
+            keyId: "https://matters.example/users/alice#key-current",
+            previousKeyId: "https://matters.example/users/alice#main-key",
+            publicKeyPemFile: "./current-public.pem",
+            privateKeyPemFile: "./current-private.pem",
+            previousPublicKeyPemFile: "./previous-public.pem",
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  const { stdout } = await execFile(nodeBin,
+    [
+      "scripts/rotate-key.mjs",
+      "--config",
+      configPath,
+      "--actor",
+      "alice",
+      "--output-dir",
+      outputDir,
+      "--retire-previous-key",
+      "--write",
+    ],
+    {
+      cwd: path.resolve(process.cwd()),
+    },
+  );
+
+  const report = JSON.parse(stdout);
+  const updatedConfig = JSON.parse(await readFile(configPath, "utf8"));
+  const actorUpdate = JSON.parse(await readFile(report.files.actorUpdateFile, "utf8"));
+  const rotationEvent = JSON.parse(await readFile(report.files.rotationEventFile, "utf8"));
+
+  assert.equal(report.status, "written");
+  assert.equal(report.mode, "retire-previous-key");
+  assert.equal(updatedConfig.actors.alice.keyId, "https://matters.example/users/alice#key-current");
+  assert.equal(updatedConfig.actors.alice.previousKeyId, undefined);
+  assert.equal(updatedConfig.actors.alice.previousPublicKeyPemFile, undefined);
+  assert.equal(actorUpdate.object.publicKey.id, "https://matters.example/users/alice#key-current");
+  assert.equal(actorUpdate.object.previousPublicKey, undefined);
+  assert.equal(rotationEvent.event, "actor-key-retire-previous");
 });
 
 test("rollout artifact check script validates required env keys and paths", async () => {
@@ -6029,8 +7566,7 @@ test("rollout artifact check script validates required env keys and paths", asyn
     ].join("\n"),
   );
 
-  const { stdout } = await execFile(
-    "node",
+  const { stdout } = await execFile(nodeBin,
     ["scripts/check-rollout-artifact.mjs", "--env-file", envPath, "--strict-paths"],
     {
       cwd: path.resolve(process.cwd()),

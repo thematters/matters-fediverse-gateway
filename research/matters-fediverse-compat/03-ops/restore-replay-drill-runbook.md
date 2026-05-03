@@ -24,18 +24,24 @@
 4. 驗證 restore metadata
    - 檢查 `last_restored_at`
    - 檢查 `restored_from_backup`
-5. 跑 reconciliation
+5. 先跑 consistency scan
+   - `npm run scan:consistency`
+   - 檢查 JSON 與 markdown 報表中的 followers、inbound objects、engagements 差異
+   - 預設只做 dry-run
+   - SQLite 是 runtime source of truth；一般 repair 方向是 `-- --repair --repair-target file`
+   - 只有在明確確認 file state backup 是可信來源時，才可用 `-- --repair --repair-target sqlite`
+6. 跑 reconciliation
    - 對 drill runtime 執行 `POST /admin/runtime/storage/reconcile`
    - 確認 `backfilledDeadLetters`、`orphanedDeadLetters`
-6. 檢查 runtime signals
+7. 檢查 runtime signals
    - `GET /admin/runtime/storage`
    - `GET /admin/runtime/metrics`
    - `GET /admin/runtime/alerts?minimumSeverity=warn`
-7. 驗證 dead-letter replay
+8. 驗證 dead-letter replay
    - 找一筆 open dead letter
    - 執行 `POST /admin/dead-letters/replay`
    - 確認 audit、trace、evidence 都有新紀錄
-8. 收尾
+9. 收尾
    - 保存本次 drill bundle 與操作紀錄
    - 清理 drill target
    - 更新 drill 結果與待修事項
@@ -44,6 +50,7 @@
 
 - restore 可成功產出可讀 SQLite runtime
 - `last_restored_at` 與 `restored_from_backup` 正確寫入
+- consistency scan 可輸出 JSON 與 markdown 報表，且 operator 已判讀差異是否需要 repair
 - reconciliation 可成功完成，且沒有意外新增 orphaned records
 - 至少一筆 dead-letter replay 可成功走完
 - alerts / metrics 可正常輸出
@@ -51,6 +58,7 @@
 ## Failure Handling
 
 - 如果 restore 失敗，停止 drill，保留 source backup 與錯誤輸出
+- 如果 consistency scan 顯示 file / SQLite 差異，先保留報表；預設信任 SQLite，不要把 JSON file state 自動覆蓋回 SQLite
 - 如果 reconciliation 出現異常 orphaned records，先封存 bundle，再回頭分析資料一致性
 - 如果 replay 失敗，確認是不是 policy 阻擋、target domain block 或 remote delivery 失敗，不要直接重覆 replay
 

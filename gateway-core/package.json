@@ -9,14 +9,23 @@
     "test": "node --test",
     "backup:sqlite": "node scripts/backup-sqlite.mjs --config ./config/dev.instance.json",
     "restore:sqlite": "node scripts/restore-sqlite.mjs --config ./config/dev.instance.json",
+    "scan:consistency": "node scripts/scan-consistency.mjs --config ./config/dev.instance.json",
+    "rotate:key": "node scripts/rotate-key.mjs --config ./config/dev.instance.json",
     "dispatch:metrics": "node scripts/dispatch-runtime-metrics.mjs --config ./config/dev.instance.json",
     "dispatch:logs": "node scripts/dispatch-runtime-logs.mjs --config ./config/dev.instance.json",
     "dispatch:alerts": "node scripts/dispatch-runtime-alerts.mjs --config ./config/dev.instance.json",
     "drill:observability": "node scripts/run-staging-observability-drill.mjs --config ./config/dev.instance.json --require-sinks",
+    "receive:webhooks": "node scripts/run-webhook-receiver.mjs",
+    "proxy:staging-local": "node scripts/run-staging-local-proxy.mjs",
     "check:secret-layout": "node scripts/check-secret-layout.mjs --config ./config/dev.instance.json",
     "check:rollout-artifact": "node scripts/check-rollout-artifact.mjs --env-file ./deploy/matters-gateway-core.env.example",
     "check:local-sandbox": "node scripts/run-local-sandbox-interop.mjs",
-    "check:mastodon-sandbox": "node scripts/run-mastodon-sandbox-interop.mjs"
+    "check:mastodon-sandbox": "node scripts/run-mastodon-sandbox-interop.mjs",
+    "check:misskey-sandbox": "node scripts/run-misskey-sandbox-interop.mjs",
+    "check:misskey-display": "node scripts/run-misskey-article-display-probe.mjs",
+    "check:gotosocial-contract": "node scripts/run-gotosocial-sandbox-interop.mjs --dry-run-contract",
+    "check:gotosocial-sandbox": "node scripts/run-gotosocial-sandbox-interop.mjs",
+    "report:interop": "node scripts/write-interop-run-report.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

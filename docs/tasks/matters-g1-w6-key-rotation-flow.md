@@ -1,13 +1,13 @@
 ---
 task_slug: matters-g1-w6-key-rotation-flow
-status: queued
+status: done
 goal: 實作 gateway 的金鑰輪替流程，含 overlap window、rotation script 與 runbook
 dispatcher: human-fallback
 executor: codex-local
 host: any
 branch: task/matters-g1-w6-key-rotation-flow
-latest_commit: UNSET
-last_updated: 2026-04-25T00:00:00+08:00
+latest_commit: 4c847aa
+last_updated: 2026-05-01T18:28:00-04:00
 tmux_session: none
 host_affinity: none
 outputs_scope: gateway-core
@@ -25,7 +25,7 @@ local_paths:
 start_command: none
 stop_command: none
 verify_command: cd gateway-core && npm test
-next_step: 設計 actor 多 publicKey 並存模型，寫 `npm run rotate:key`，補單元測試與 runbook
+next_step: 依 Decision 07，由 mashbean 管理 production key material；production cutover 時採 overlap rotation 並 publish generated Actor Update，key exposure 情境留到 legal review
 blockers: none
 ---
 
@@ -49,7 +49,14 @@ G1 工作項目 W6。目前 gateway actor 只支援單把 publicKey；要支援�
 ## Change Log
 
 - 2026-04-25 created from G1 roadmap; not yet started
+- 2026-05-01 completed by codex-local in `4c847aa`; added current/previous key overlap model, previous-key inbound verification fallback, rotate-key script, runbook, and W6 tests
+- 2026-05-01 Decision 07 confirmed production key ownership, Actor Update publishing intent, and legal-review boundary for key exposure
 
 ## Validation
 
-- TBD
+- 2026-05-01 `node --test --test-name-pattern "key rotation|previous public key|previous key|overlap" test/gateway-core.test.mjs`：6 pass / 0 fail
+- 2026-05-01 `node scripts/rotate-key.mjs --config ./config/dev.instance.json --actor alice --output-dir /tmp/matters-rotate-key-dry-run-codex-check`：dry-run pass
+- 2026-05-01 `node scripts/rotate-key.mjs --config ./config/dev.instance.json --actor alice --output-dir /tmp/matters-rotate-key-retire-dry-run-codex-check --retire-previous-key`：dry-run pass
+- 2026-05-01 `node scripts/check-secret-layout.mjs --config ./config/dev.instance.json`：pass
+- 2026-05-01 `node --test`：102 pass / 0 fail
+- 2026-05-01 `git diff --check`：pass

@@ -31,6 +31,12 @@ function collectFileRefs(rawConfig) {
         relativePath: actor.privateKeyPemFile.trim(),
       });
     }
+    if (actor?.previousPublicKeyPemFile?.trim()) {
+      refs.push({
+        key: `actors.${handle}.previousPublicKeyPemFile`,
+        relativePath: actor.previousPublicKeyPemFile.trim(),
+      });
+    }
   }
 
   const dispatchRefs = [

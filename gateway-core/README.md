@@ -129,7 +129,7 @@ cd gateway-core
 npm test
 ```
 
-The latest recorded local verification snapshot had 85 tests passing.
+The latest recorded local verification snapshot had 107 tests passing.
 
 ## SQLite Backup
 
@@ -247,14 +247,32 @@ node scripts/run-staging-observability-drill.mjs \
 
 The output directory contains `alerts.json`, `metrics.json`, `logs.json`, and `report.json`.
 
+Local webhook receiver for the no-cost staging path:
+
+```bash
+cd gateway-core
+npm run receive:webhooks -- \
+  --host 127.0.0.1 \
+  --port 8788 \
+  --output-dir ./runtime/webhooks \
+  --bearer-token-file ./config/staging.secrets/webhook-receiver.token
+```
+
+This accepts the generic `runtime-alerts`, `runtime-metrics`, and `runtime-logs` webhook payloads and writes captured payloads to disk with token-like headers masked.
+
+The receiver uses a bearer-token-only model. It is intended for staging drills behind Cloudflare Access or another private boundary; it is not an HMAC signature verifier. Request bodies are retained in full, so drill payloads must not contain secrets.
+
 ## Deployment Baseline
 
 - Staging config template: `config/staging.instance.example.json`
 - Staging secret layout template: `config/staging.secrets.example/README.md`
+- Cloudflare Tunnel template: `deploy/cloudflared-staging.example.yml`
+- Cloudflare Tunnel Caddy template: `deploy/Caddyfile.cloudflare-tunnel.example`
 - Reverse proxy template: `deploy/Caddyfile.example`
 - Rollout environment template: `deploy/matters-gateway-core.env.example`
 - System service template: `deploy/matters-gateway-core.service.example`
 - Deployment topology baseline: `../research/matters-fediverse-compat/03-ops/deployment-topology-baseline.md`
+- Cloudflare Tunnel staging runbook: `../research/matters-fediverse-compat/03-ops/staging-cloudflare-tunnel-runbook.md`
 
 The G1 baseline runs `gateway-core` behind a public reverse proxy with SQLite persistence. External observability sinks are configured under `runtime.alerting.dispatch`, `runtime.metrics.dispatch`, and `runtime.logs.dispatch`.
 
@@ -304,3 +322,38 @@ npm run check:mastodon-sandbox
 ```
 
 This reuses the local sandbox acceptance fields against a real Mastodon instance: remote account resolution, follow, and relationship polling.
+
+## Misskey Sandbox Interop
+
+```bash
+cd gateway-core
+MISSKEY_BASE_URL="https://gyutte.site" \
+MISSKEY_ACCESS_TOKEN="<token>" \
+MISSKEY_OPERATOR_PROFILE_URL="https://gyutte.site/@mashbean" \
+GATEWAY_PUBLIC_BASE_URL="https://gateway.example" \
+npm run check:misskey-sandbox
+```
+
+This checks the gateway discovery surface against a real Misskey instance, resolves the remote actor with Misskey APIs, creates a follow, and polls the relationship state. The token is read from the environment and is not written to reports.
+
+## GoToSocial Sandbox Interop
+
+Local static contract check, no network listener and no external GoToSocial token:
+
+```bash
+cd gateway-core
+npm run check:gotosocial-contract
+```
+
+This emits the GoToSocial-compatible endpoint plan and gateway discovery expectations with secrets redacted.
+
+```bash
+cd gateway-core
+GOTOSOCIAL_BASE_URL="https://gts.example" \
+GOTOSOCIAL_ACCESS_TOKEN="<token>" \
+GOTOSOCIAL_OPERATOR_PROFILE_URL="https://gts.example/@mashbean" \
+GATEWAY_PUBLIC_BASE_URL="https://gateway.example" \
+npm run check:gotosocial-sandbox
+```
+
+This checks the gateway discovery surface against a real GoToSocial instance using its Mastodon-compatible client API surface: remote account search, follow, and relationship polling. The token is read from the environment and is not written to reports.

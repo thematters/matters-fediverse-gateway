@@ -154,6 +154,11 @@ async function readMaybeFile(baseDir, value, fallbackFileKey) {
   return readFile(filePath, "utf8");
 }
 
+async function readOptionalKeyFile(configDir, value, fileKey) {
+  const key = await readMaybeFile(configDir, value, fileKey);
+  return key.trim() ? key : null;
+}
+
 export async function loadGatewayConfig(configPath) {
   const absoluteConfigPath = path.resolve(configPath);
   const configDir = path.dirname(absoluteConfigPath);
@@ -182,10 +187,21 @@ export async function loadGatewayConfig(configPath) {
       actor.privateKeyPem,
       actor.privateKeyPemFile,
     );
+    const previousPublicKeyPem = await readOptionalKeyFile(
+      configDir,
+      actor.previousPublicKeyPem,
+      actor.previousPublicKeyPemFile,
+    );
 
     if (!publicKeyPem.trim()) {
       throw new Error(`actors.${handle}.publicKeyPem or publicKeyPemFile is required`);
     }
+
+    const actorUrl = `${instanceBaseUrl}/users/${handle}`;
+    const keyId = actor.keyId?.trim() || `${actorUrl}#main-key`;
+    const previousKeyId = previousPublicKeyPem
+      ? actor.previousKeyId?.trim() || `${actorUrl}#previous-key`
+      : null;
 
     actors[handle] = {
       handle,
@@ -196,15 +212,20 @@ export async function loadGatewayConfig(configPath) {
       staticOutboxFile: actor.staticOutboxFile
         ? path.resolve(configDir, actor.staticOutboxFile)
         : null,
+      staticBundleManifestFile: actor.staticBundleManifestFile
+        ? path.resolve(configDir, actor.staticBundleManifestFile)
+        : null,
       profileUrl: `${instanceBaseUrl}/@${handle}`,
-      actorUrl: `${instanceBaseUrl}/users/${handle}`,
+      actorUrl,
       inboxUrl: `${instanceBaseUrl}/users/${handle}/inbox`,
       outboxUrl: `${instanceBaseUrl}/users/${handle}/outbox`,
       followersUrl: `${instanceBaseUrl}/users/${handle}/followers`,
       followingUrl: `${instanceBaseUrl}/users/${handle}/following`,
       publicKeyPem,
       privateKeyPem,
-      keyId: `${instanceBaseUrl}/users/${handle}#main-key`,
+      keyId,
+      previousPublicKeyPem,
+      previousKeyId,
     };
   }
 

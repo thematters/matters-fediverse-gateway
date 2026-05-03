@@ -1,6 +1,6 @@
 {
   "instance": {
-    "domain": "staging-gateway.example",
+    "domain": "staging-gateway.matters.town",
     "title": "Matters Gateway Staging",
     "summary": "Staging instance for gateway-core deployment topology verification",
     "softwareName": "matters-gateway-core",
@@ -16,8 +16,8 @@
       "aliases": [
         "https://matters.town/@alice"
       ],
-      "publicKeyPemFile": "./staging-public-key.pem",
-      "privateKeyPemFile": "./staging-private-key.pem"
+      "publicKeyPemFile": "./staging.secrets.example/staging-public-key.pem",
+      "privateKeyPemFile": "./staging.secrets.example/staging-private-key.pem"
     }
   },
   "remoteActors": {},
@@ -60,25 +60,25 @@
       "openAbuseCaseThreshold": 0,
       "pendingQueueThreshold": 25,
       "dispatch": {
-        "webhookUrl": "https://ops.example/runtime-alerts",
+        "webhookUrl": "https://staging-hooks.matters.town/runtime-alerts",
         "webhookBearerTokenFile": "./staging.secrets.example/alert-webhook.token",
-        "slackWebhookUrl": "https://hooks.slack.com/services/xxx/yyy/zzz",
+        "slackWebhookUrl": "",
         "slackChannel": "#gateway-alerts",
         "slackUsername": "matters-gateway",
-        "slackIconEmoji": ":satellite:",
+        "slackIconEmoji": ":warning:",
         "timeoutMs": 10000
       }
     },
     "metrics": {
       "dispatch": {
-        "webhookUrl": "https://ops.example/runtime-metrics",
+        "webhookUrl": "https://staging-hooks.matters.town/runtime-metrics",
         "webhookBearerTokenFile": "./staging.secrets.example/metrics-webhook.token",
         "timeoutMs": 10000
       }
     },
     "logs": {
       "dispatch": {
-        "webhookUrl": "https://ops.example/runtime-logs",
+        "webhookUrl": "https://staging-hooks.matters.town/runtime-logs",
         "webhookBearerTokenFile": "./staging.secrets.example/logs-webhook.token",
         "timeoutMs": 10000,
         "auditLimit": 200,
