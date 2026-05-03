@@ -10,7 +10,7 @@
 
 - **完成度**：單實例 gateway 原型可跑，117 tests passing；已與 `mastodon.social`、`g0v.social`、gyutte.site Misskey 完成黑箱互通；real Matters public Article 已透過 staging gateway 投遞到 Misskey；GoToSocial probe 已有本地驗證但 public run 依目前決策暫跳過
 - **目前階段**：G1 · 官方聯邦化基礎版（3 個月，2026-05 ~ 2026-07）
-- **下一步**：收斂 `matters-server` G2-A draft PR 的 CI/Codecov；npm `@matters` scope 權限到位後，發布 `@matters/ipns-site-generator@0.1.9` 並把 server 端臨時 tarball dependency 換回 registry dependency
+- **下一步**：修 `matters-server` G2-A draft PR 的 Codecov patch coverage；目前 GitHub Actions build 已通過，但 Codecov 仍失敗。npm `@matters` scope 權限到位後，發布 `@matters/ipns-site-generator@0.1.9` 並把 server 端臨時 tarball dependency 換回 registry dependency
 - **程式碼**：[`gateway-core/`](../../gateway-core)（sibling repo root）
 
 ---

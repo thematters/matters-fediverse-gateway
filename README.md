@@ -86,7 +86,7 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 
 The project is past fixture-only proof of concept, but it is not production-ready. The next concrete work items are:
 
-1. Wait for `matters-server` PR #4761 CI and Codecov to settle. If Codecov still fails, add narrow tests rather than widening runtime scope.
+1. Fix `matters-server` PR #4761 Codecov: GitHub Actions build passes, but Codecov still reports 26.20% patch coverage with missing lines mainly in `federationExportService.ts` and the federation settings migration scaffold.
 2. After npm `@matters` scope permission is available, publish `@matters/ipns-site-generator@0.1.9`, replace the temporary vendored tarball in `matters-server`, and rerun Node 18 build/lint/targeted tests.
 3. Keep G2-A non-production until production credentials, storage target, migration timing, and canonical `acct:user@matters.town` cutover are explicitly approved.
 4. Continue G2-B contract work locally: author opt-in state, per-article federation setting behavior, export trigger boundaries, and product-facing copy/API shape.
