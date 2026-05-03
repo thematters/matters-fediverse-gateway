@@ -391,7 +391,7 @@
   <span class="badge">Functional demo · in development</span>
   <h1>Bring Matters long-form publishing into the Fediverse.</h1>
   <p class="subtitle">A small, inspectable gateway for Mastodon, Misskey, GoToSocial, and other ActivityPub implementations to discover, read, follow, and interact with public Matters articles.</p>
-  <p class="demo-note">This page uses Matters main-site publishing as the case study. It links to a live Cloudflare Worker ActivityPub demo, static prototype endpoints, and an ActivityPub seed bundle that models the output expected from <code>thematters/ipns-site-generator</code>. Source code is available in the <a href="https://github.com/thematters/matters-fediverse-gateway">GitHub repository</a>.</p>
+  <p class="demo-note">This page uses Matters main-site publishing as the case study. It links to a live Cloudflare Worker ActivityPub demo, static prototype endpoints, and the repo-backed plan for moving real public Matters articles into a non-production gateway. Source code is available in the <a href="https://github.com/thematters/matters-fediverse-gateway">GitHub repository</a>.</p>
 </header>
 
 <section>
@@ -460,6 +460,20 @@
 </section>
 
 <section>
+  <h2>Latest progress</h2>
+  <p>The project has moved beyond fixture-only demos. A G2-A preflight slice now connects selected real public Matters article data to the federation bundle contract, while keeping the work non-production and reviewable.</p>
+  <table>
+    <thead><tr><th>Area</th><th>Current state</th><th>Next step</th></tr></thead>
+    <tbody>
+      <tr><td>Gateway runtime</td><td><code>gateway-core</code> has 117 local automated tests passing with SQLite as the runtime state source of truth.</td><td>Keep hardening staging operations, backup/restore, replay, and observability drills.</td></tr>
+      <tr><td>Interop</td><td>Mastodon and g0v.social discovery/follow paths are archived. Misskey public discovery, follow, text Article display, media display, and human visual review are complete on gyutte.site.</td><td>Keep GoToSocial public run deferred unless the test strategy changes.</td></tr>
+      <tr><td>Real Matters article export</td><td><code>matters-server</code> draft PR <a href="https://github.com/thematters/matters-server/pull/4761">#4761</a> adds a non-production exporter, CLI, eligibility gate, settings migration scaffold, strict mode, and decision report.</td><td>Wait for CI/Codecov; after npm permission arrives, replace the temporary vendored generator tarball with the registry package.</td></tr>
+      <tr><td>Staging proof</td><td><code>@charlesmungerai</code> public Matters articles were exported into a staging bundle; one fresh public Article was delivered to gyutte.site Misskey through the gateway.</td><td>Do not treat this as production. Keep staging local/tunnel-based until production credentials, storage, Access, and rollout gates are approved.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
   <h2>ActivityPub seed bundle</h2>
   <p>The seed bundle is the contract between <code>ipns-site-generator</code> and <code>gateway-core</code>. The static publisher should only emit public data that is safe to federate. The gateway then rewrites that seed into canonical ActivityPub identity and runtime state.</p>
   <div class="bundle-list">
@@ -514,11 +528,23 @@ Mastodon / Misskey / GoToSocial / other Fediverse servers</pre>
   <ul>
     <li>Public ActivityPub prototype endpoints are live: WebFinger, actor, outbox, Article, seed bundle, and NodeInfo.</li>
     <li>Cloudflare Worker edge implementation is deployed for correct ActivityPub content types, edge routing, seed bundle exposure, and future runtime pass-through.</li>
-    <li>107 automated tests passed in the latest recorded local verification snapshot.</li>
-    <li>Black-box interoperability checks completed with Mastodon surfaces, including successful exact discovery and inbound follow delivery from <code>g0v.social</code>; Misskey / GoToSocial probes have local contract coverage.</li>
+    <li>117 <code>gateway-core</code> automated tests passed in the latest local verification snapshot.</li>
+    <li>Black-box interoperability checks completed with Mastodon surfaces, including successful exact discovery and inbound follow delivery from <code>g0v.social</code>; Misskey public Article delivery and display have also passed on gyutte.site.</li>
     <li>SQLite persistence plus backup, restore, reconcile, and replay tooling are in place.</li>
     <li>Webhook dispatch exists for metrics, alerts, logs, and Slack incoming webhooks.</li>
+    <li>G2-A real Matters article export is active in draft PRs, but production rollout is blocked on npm registry migration, CI review, credentials/storage, canonical identity, and legal/privacy gates.</li>
   </ul>
+</section>
+
+<section>
+  <h2>Next work</h2>
+  <ol>
+    <li>Finish <code>matters-server</code> PR #4761 CI and Codecov review.</li>
+    <li>Publish <code>@matters/ipns-site-generator@0.1.9</code> after npm scope permission is available, then remove the temporary vendored tarball from <code>matters-server</code>.</li>
+    <li>Continue G2-B contract scaffolding: author opt-in state, per-article federation setting behavior, export trigger boundaries, and admin inspection.</li>
+    <li>Keep staging in temporary no-Zero-Trust mode until Cloudflare permission is available; admin stays local-only.</li>
+    <li>Do not start production rollout until pilot author list, production credentials/storage, legal/privacy review, and canonical <code>acct:user@matters.town</code> cutover are approved.</li>
+  </ol>
 </section>
 
 <section>

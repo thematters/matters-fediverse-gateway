@@ -6,8 +6,8 @@ dispatcher: triad
 executor: codex-local
 host: any
 branch: codex/add-fediverse-execution-plan
-latest_commit: local
-last_updated: 2026-05-02T22:55:00-04:00
+latest_commit: updated-in-branch
+last_updated: 2026-05-02T22:50:00-04:00
 tmux_session: none
 host_affinity: none
 outputs_scope: matters-server, ipns-site-generator, gateway-core
@@ -29,8 +29,8 @@ local_paths:
 start_command: none
 stop_command: none
 verify_command: matters-server npm ci, npm run build, targeted federationExportService Jest, targeted ESLint, git diff --check
-next_step: Continue with non-production G2-B contract scaffolding while npm registry migration, production credentials, canonical identity, author opt-in, and legal/privacy gates remain deferred.
-blockers: npm @matters scope publish permission for registry migration; production author allowlist, opt-in semantics, canonical acct:user@matters.town cutover timing, and production credentials remain human/product gates.
+next_step: Wait for matters-server PR #4761 CI/Codecov, then resolve npm registry migration once @matters scope publish permission is available; continue G2-B contract scaffolding without production deployment.
+blockers: npm @matters scope publish permission for registry migration; production credentials/storage, canonical acct:user@matters.town cutover timing, author-facing copy/defaults, and legal/privacy beta readiness remain human/product gates.
 ---
 
 # Task Handoff
@@ -76,6 +76,9 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - 2026-05-02 `matters-server` commit `3497556` wired strict gate enforcement into the exporter behind `--enforce-federation-gate` / `MATTERS_FEDERATION_REQUIRE_OPT_IN=true`; default preflight behavior remains unchanged
 - 2026-05-02 `matters-server` commit `2ae14bf` kept default DB export migration-safe: federation setting tables are joined only when strict gate mode is explicitly enabled
 - 2026-05-02 `matters-server` commit `266a1e1` added CLI `decisionReport` output so export runs record selected, eligible, skipped, and per-article gate reasons without exposing secrets
+- 2026-05-02 `matters-server` commit `9e3ae63` added DB loader tests for migration-safe default export and strict-setting query behavior; local Node 18 verification passed with build, targeted lint, targeted Jest 18/18, `federationExportService.ts` 97.61% local line coverage, `git diff --check`, and pre-commit build/gen/lint/format
+- 2026-05-02 `gateway-core` rebuilt `better-sqlite3` for Node 18 and full `npm test` passed 117/117
+- 2026-05-02 gateway docs PR branch rebased onto `origin/main`, duplicate local `* 2.*` untracked files cleaned, and draft PR #5 updated
 
 ## Current Repo-Backed Findings
 
@@ -128,7 +131,7 @@ G2-A replaces fixture-only ActivityPub seed data with selected real Matters publ
 - Task: G2-A production data integration preflight
 - Branch: `codex/add-fediverse-execution-plan`
 - Changed files: this task note plus the G2-A runtime slice
-- Verification: repo-backed source inspection; `ipns-site-generator` tests/lint pass; `matters-server npm ci`, build, targeted Jest, targeted ESLint, `git diff --check`, and commit hook checks pass under Node 18
-- Result: G2-A has a non-production exporter scaffold in `matters-server` commit `50e2219`, a local bundle writer in commit `bac7511`, a CLI in commit `4761f78`, a G2-B eligibility gate scaffold in commit `f8d410b`, settings schema scaffold in commit `af4dffb`, optional strict exporter enforcement in commit `3497556`, a migration-safe default export fix in commit `2ae14bf`, and export decision reporting in commit `266a1e1`; it produced public API snapshot bundles for `mashbean` and `charlesmungerai`, served `charlesmungerai` through public staging WebFinger/actor/outbox, and delivered one real public Matters Article to Misskey
-- Remaining risks: product gates above, npm `@matters` scope publish permission, registry migration from the temporary vendored tarball, production credential/storage choices, and canonical `acct:user@matters.town` cutover
-- Follow-up task: continue G2-B contract scaffolding locally; after npm permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from vendored tarball to registry dependency, and rerun the Node 18 checks
+- Verification: repo-backed source inspection; `ipns-site-generator` tests/lint pass; `matters-server npm ci`, build, targeted Jest 18/18, targeted ESLint, `git diff --check`, and commit hook checks pass under Node 18; `gateway-core npm test` passed 117/117 after rebuilding `better-sqlite3`
+- Result: G2-A has a non-production exporter scaffold in `matters-server` commits `50e2219`, `bac7511`, `4761f78`, `f8d410b`, `af4dffb`, `3497556`, `2ae14bf`, `266a1e1`, and `9e3ae63`; it produced public API snapshot bundles for `mashbean` and `charlesmungerai`, served `charlesmungerai` through public staging WebFinger/actor/outbox, and delivered one real public Matters Article to Misskey
+- Remaining risks: product gates above, npm `@matters` scope publish permission, registry migration from the temporary vendored tarball, production credential/storage choices, canonical `acct:user@matters.town` cutover, and PR #4761 CI/Codecov completion
+- Follow-up task: wait for PR #4761 CI/Codecov; after npm permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from vendored tarball to registry dependency, rerun Node 18 checks, then continue G2-B author opt-in/per-article setting/API contract scaffolding

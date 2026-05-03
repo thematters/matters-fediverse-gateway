@@ -21,7 +21,7 @@ This plan deliberately excludes DID / shared DID work, ZK anonymity, and Billboa
 | G1-A Static Article Contract | done | `ipns-site-generator`, `gateway-core` | Public Article seed bundle passes bridge and generator tests |
 | G1-B Gateway Hardening | queued | `gateway-core` | Gateway runtime passes hardening tests and staging drill |
 | G1-C Interop Validation | done with deferral | `gateway-core`, ops reports | Mastodon and Misskey reports are archived; GoToSocial is skipped until a later decision |
-| G2-A Matters Production Data Integration | active preflight | `matters-server`, `ipns-site-generator`, `gateway-core` | Selected real Matters authors resolve and publish public Article objects |
+| G2-A Matters Production Data Integration | active preflight, npm/CI gate | `matters-server`, `ipns-site-generator`, `gateway-core` | Selected real Matters authors resolve and publish public Article objects |
 | G2-B Matters Web/App Integration | queued | `matters-web`, `matters-server`, `gateway-core` | Pilot authors can control federation and see inbound interactions |
 | G2-C Production Rollout | queued | product, ops, docs | Beta rollout has legal, comms, rollback, and monitoring readiness |
 | G3 Second Instance Validation | queued | `gateway-core`, deployment docs | A second independent instance passes black-box acceptance |
@@ -117,6 +117,9 @@ Status:
 - 2026-05-02: `matters-server` commit `3497556` wired strict gate enforcement into the exporter behind `--enforce-federation-gate` / `MATTERS_FEDERATION_REQUIRE_OPT_IN=true`, preserving default preflight behavior.
 - 2026-05-02: `matters-server` commit `2ae14bf` kept the default DB export migration-safe by joining federation setting tables only when strict gate mode is explicitly enabled.
 - 2026-05-02: `matters-server` commit `266a1e1` added `decisionReport` output so export runs expose selected/eligible/skipped counts and per-article gate reasons.
+- 2026-05-02: `matters-server` commit `9e3ae63` added DB loader tests for migration-safe default export and strict-setting query behavior. Local Node 18 verification passed: build, targeted lint, targeted Jest 18/18, `federationExportService.ts` line coverage 97.61%, `git diff --check`, and pre-commit build/gen/lint/format.
+- 2026-05-02: `gateway-core` local `better-sqlite3` native module was rebuilt for Node 18 and the full gateway test suite passed 117/117. The gateway docs branch was rebased onto `origin/main` and pushed as draft PR #5.
+- 2026-05-02: npm registry migration remains blocked by missing `@matters` scope publish permission. Until that is resolved, `matters-server` keeps the temporary vendored `@matters/ipns-site-generator@0.1.9` tarball and production rollout remains disabled.
 
 Dependencies:
 
@@ -263,7 +266,7 @@ Stop/go gate:
 - Owned areas: article export, manifest path, gateway ingestion config.
 - Verification: targeted backend tests plus `gateway-core npm test`.
 - Acceptance: selected public articles from real authors appear as gateway-served Article objects.
-- Handoff output: `matters-server` commits `50e2219`, `bac7511`, `4761f78`, `f8d410b`, `af4dffb`, `3497556`, `2ae14bf`, and `266a1e1` provide the non-production exporter scaffold, local writer, CLI, eligibility gate, schema scaffold, optional strict enforcement, migration-safe default export behavior, decision reporting, docs, and targeted tests; current public API sample author is `charlesmungerai` with articles `1182465`, `1181808`, and `1181797`; local and public staging gateway probes passed; Misskey received one real public Matters Article through fresh `outbox/create`.
+- Handoff output: `matters-server` commits `50e2219`, `bac7511`, `4761f78`, `f8d410b`, `af4dffb`, `3497556`, `2ae14bf`, `266a1e1`, and `9e3ae63` provide the non-production exporter scaffold, local writer, CLI, eligibility gate, schema scaffold, optional strict enforcement, migration-safe default export behavior, decision reporting, docs, and targeted tests; current public API sample author is `charlesmungerai` with articles `1182465`, `1181808`, and `1181797`; local and public staging gateway probes passed; Misskey received one real public Matters Article through fresh `outbox/create`.
 
 ### G2-A2: Add Federation Settings Backend Contract
 
@@ -344,8 +347,8 @@ Matters product integration:
 | Area | Required verification |
 |---|---|
 | `gateway-core` | `npm test` for every gateway change |
-| `ipns-site-generator` | Existing package test command after static bundle changes |
-| `matters-server` | Targeted GraphQL/API tests for federation settings and export |
+| `ipns-site-generator` | Existing package test command after static bundle changes; publish `@matters/ipns-site-generator@0.1.9` once npm scope permission is available |
+| `matters-server` | Targeted export, DB-loader, settings, and CLI tests; keep CI/Codecov green before promoting draft PR |
 | `matters-web` | Targeted UI/workflow tests for controls and interaction display |
 | Interop | Mastodon, Misskey, and GoToSocial black-box reports |
 | Ops | Staging observability drill, backup/restore, replay, rollback, incident tabletop |

@@ -37,6 +37,7 @@ The existing production path stops at single article IPFS publication. The Activ
 | `matters-server` | `db/migrations/20260503000000_create_federation_setting_tables.js` | durable settings schema scaffold exists in commit `af4dffb`; it creates `user_federation_setting` and `article_federation_setting`, but was not run against production |
 | `matters-server` | `npm run federation:export -- --enforce-federation-gate` | optional strict mode exists in commit `3497556`; commit `2ae14bf` keeps default DB export migration-safe by joining setting tables only when strict mode is enabled |
 | `matters-server` | `decisionReport` in `npm run federation:export` output | export audit summary exists in commit `266a1e1`; it reports selected, eligible, skipped, and per-article gate reasons |
+| `matters-server` | `src/connectors/__test__/federationExportService.test.ts` DB loader coverage | commit `9e3ae63` covers migration-safe default export and strict-setting query behavior; local targeted coverage for `federationExportService.ts` is 97.61% lines |
 | `matters-server` | `package-lock.json` resolves `@matters/ipns-site-generator@0.1.9` from `vendor/matters-ipns-site-generator-0.1.9.tgz` | temporary bridge until npm `@matters` scope publish permission is available |
 | `ipns-site-generator` | `src/makeHomepage/index.ts` exports `makeActivityPubBundles` | seed generation exists |
 | `ipns-site-generator` | `src/types.ts` requires `HomepageContext.byline.author.webfDomain` | canonical host must be provided by caller |
@@ -127,7 +128,9 @@ Required `HomepageContext` mapping:
 - `matters-server` commit `3497556` wired the strict gate into the exporter behind an explicit CLI flag / env var; verification passed with Node 18 build, targeted federationExportService Jest 12/12, targeted ESLint, `git diff --check`, and the repository pre-commit hook.
 - `matters-server` commit `2ae14bf` fixed the default DB export path so environments without the new settings migration can still run non-strict exports; verification passed with Node 18 build, targeted federationExportService Jest 12/12, targeted ESLint, `git diff --check`, CLI help output, and the repository pre-commit hook.
 - `matters-server` commit `266a1e1` added export decision reporting; verification passed with Node 18 build, targeted federationExportService Jest 13/13, targeted ESLint, `git diff --check`, CLI fixture export, and the repository pre-commit hook.
-- `matters-server` verification passed: `npm run build`, targeted `federationExportService` Jest 7/7, targeted ESLint, `git diff --check`, CLI fixture export, and commit hook build/gen/lint/prettier checks.
+- `matters-server` commit `9e3ae63` added DB loader tests for default migration-safe export and strict federation setting joins; verification passed with Node 18 build, targeted federation export Jest 18/18, targeted ESLint, `git diff --check`, and commit hook build/gen/lint/prettier checks. Local targeted coverage for `federationExportService.ts` is 97.61% lines.
+- `gateway-core` local `better-sqlite3` native module was rebuilt for Node 18 and the full test suite passed 117/117.
+- `matters-fediverse-gateway` draft PR #5 was rebased onto `origin/main`; `git diff --check` and `triad-ops` validation passed.
 
 ## Blocked Human Decisions
 
@@ -140,4 +143,4 @@ Required `HomepageContext` mapping:
 
 ## Next Engineering Action
 
-Continue G2-B contract scaffolding locally: author opt-in state, per-article federation setting shape, and export trigger boundaries. Keep npm registry migration deferred: after npm `@matters` scope permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from the vendored tarball to `^0.1.9`, and rerun the same Node 18 checks before any staging deployment.
+Wait for `matters-server` PR #4761 CI/Codecov. If Codecov still fails, add focused tests around the reported lines. Keep npm registry migration deferred: after npm `@matters` scope permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from the vendored tarball to `^0.1.9`, and rerun the same Node 18 checks before any staging deployment. In parallel, continue G2-B contract scaffolding locally: author opt-in state, per-article federation setting shape, export trigger boundaries, and admin/review surfaces.

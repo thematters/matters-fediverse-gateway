@@ -7,6 +7,7 @@ An open-source ActivityPub gateway that connects Matters' long-form publishing l
 > **Canonical demo actor**: `acct:matters@matters.town`
 > **Worker testbed**: <https://gateway-demo.matters.town>
 > **Source**: <https://github.com/thematters/matters-fediverse-gateway>
+> **Current integration slice**: G2-A preflight is active in draft PRs. Real public Matters articles have been exported into a non-production staging gateway and delivered once to gyutte.site Misskey; production rollout is not enabled.
 
 ## Why
 
@@ -71,11 +72,26 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 - Observability: metrics, alerts, logs, webhook dispatch, and Slack incoming webhook support
 - Mastodon sandbox black-box interoperability check completed
 - `g0v.social` exact discovery and inbound follow delivery confirmed for `acct:matters@matters.town`
-- Misskey / GoToSocial probes have local contract coverage
-- 107 automated tests passing in the latest recorded local verification snapshot
+- Misskey public interoperability now covers discovery, follow, text Article delivery, media attachment display, and human UI visual review on gyutte.site
+- GoToSocial probe has local contract coverage; public GoToSocial run is intentionally deferred
+- 117 `gateway-core` automated tests passing in the latest local verification snapshot after rebuilding `better-sqlite3` for Node 18
 - Public static ActivityPub prototype endpoints and seed bundle live under `thematters.github.io`
 - Canonical Matters-domain Cloudflare Worker routes are deployed under `matters.town`
 - Isolated Cloudflare Worker testbed remains deployed under `gateway-demo.matters.town`
+- G2-A non-production export scaffold exists in `matters-server` draft PR [#4761](https://github.com/thematters/matters-server/pull/4761), using a temporary vendored `@matters/ipns-site-generator@0.1.9` tarball until npm `@matters` scope publish permission is available
+- Real public Matters articles for `@charlesmungerai` were exported into a staging bundle, served through `charlesmungerai@staging-gateway.matters.town`, and one fresh public Article was delivered to gyutte.site Misskey
+- The gateway execution/reporting docs are tracked in draft PR [#5](https://github.com/thematters/matters-fediverse-gateway/pull/5)
+
+## Current blockers and next work
+
+The project is past fixture-only proof of concept, but it is not production-ready. The next concrete work items are:
+
+1. Wait for `matters-server` PR #4761 CI and Codecov to settle. If Codecov still fails, add narrow tests rather than widening runtime scope.
+2. After npm `@matters` scope permission is available, publish `@matters/ipns-site-generator@0.1.9`, replace the temporary vendored tarball in `matters-server`, and rerun Node 18 build/lint/targeted tests.
+3. Keep G2-A non-production until production credentials, storage target, migration timing, and canonical `acct:user@matters.town` cutover are explicitly approved.
+4. Continue G2-B contract work locally: author opt-in state, per-article federation setting behavior, export trigger boundaries, and product-facing copy/API shape.
+5. Keep Zero Trust setup deferred until Cloudflare permission is available; current staging uses local admin lockout plus bearer-token hooks.
+6. Keep legal/privacy review as the gate for beta and takedown/key-exposure policy.
 
 ## G1 roadmap, May-July 2026
 
