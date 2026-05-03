@@ -487,7 +487,8 @@
 
 <section>
   <h2>Architecture</h2>
-  <pre class="ascii">matters.town public article
+  <pre class="ascii">matters-server
+real public Matters article rows / author identity
         |
         v
 ipns-site-generator
@@ -512,6 +513,15 @@ gateway-core runtime
               v
 Mastodon / Misskey / GoToSocial / other Fediverse servers</pre>
   <p><strong>Static + dynamic split</strong>: public article output remains durable through the IPFS/IPNS-oriented publishing layer. The gateway handles the dynamic social layer: discovery, inbox handling, followers, delivery state, moderation, and recovery. The proposed integration contract and Worker deployment path are documented in the <a href="https://github.com/thematters/matters-fediverse-gateway/blob/main/docs/ipns-gateway-cloudflare-plan.md">IPNS gateway plan</a>.</p>
+  <table>
+    <thead><tr><th>Repository</th><th>Responsibility</th><th>Boundary</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://github.com/thematters/matters-server"><code>matters-server</code></a></td><td>Owns Matters product data and backend rules. For G2-A it selects explicit public article rows, author identity, IPNS key data, and future author/article federation settings.</td><td>It does not own Fediverse delivery state, remote followers, inbox processing, or moderation queues.</td></tr>
+      <tr><td><a href="https://github.com/thematters/ipns-site-generator"><code>ipns-site-generator</code></a></td><td>Owns static publishing output. It turns a <code>HomepageContext</code> into HTML, RSS, JSON Feed, WebFinger, actor, outbox, and <code>activitypub-manifest.json</code>.</td><td>It does not read production DB directly, decide product permissions, or deliver ActivityPub activities.</td></tr>
+      <tr><td><a href="https://github.com/thematters/matters-fediverse-gateway"><code>matters-fediverse-gateway</code></a></td><td>Owns the federation runtime repo. Its <code>gateway-core</code> reads the generated manifest and serves canonical ActivityPub identity, inbox/outbox, signatures, followers, queues, moderation, persistence, and observability.</td><td>It does not replace Matters article editing/publishing or the IPFS/IPNS static generator.</td></tr>
+    </tbody>
+  </table>
+  <p>Put simply: <code>matters-server</code> decides which real public Matters content may be exported, <code>ipns-site-generator</code> turns that content into a durable public ActivityPub seed bundle, and <code>gateway-core</code> turns the seed bundle into a live Fediverse actor.</p>
 </section>
 
 <section>

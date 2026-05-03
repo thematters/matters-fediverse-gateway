@@ -121,7 +121,8 @@ The default development runtime reads `config/dev.instance.json` and writes stat
 ## Architecture
 
 ```text
-Matters main platform
+matters-server
+real public Matters article rows / author identity
         |
         v
 ipns-site-generator
@@ -139,7 +140,15 @@ dynamic inbox / followers state / delivery queue / moderation / ops
 Mastodon, Misskey, GoToSocial, and other ActivityPub implementations
 ```
 
-`ipns-site-generator` remains responsible for public article output and static publishing. `gateway-core` handles dynamic federation behavior: discovery, inbox handling, signatures, followers, delivery state, moderation operations, and recovery.
+The integration spans three key repositories:
+
+| Repo | Role | Produces / consumes | Does not own |
+| --- | --- | --- | --- |
+| [`thematters/matters-server`](https://github.com/thematters/matters-server) | Matters product backend and source of real article data | Selects allowlisted public article rows, author identity, IPNS key data, and future author/article federation settings; calls the generator contract through the G2-A exporter | ActivityPub delivery state, remote followers, Fediverse inbox processing |
+| [`thematters/ipns-site-generator`](https://github.com/thematters/ipns-site-generator) | Static publishing and bundle generator | Converts a `HomepageContext` into HTML, RSS, JSON Feed, WebFinger, actor, outbox, and `activitypub-manifest.json` files | Product permissions, production DB access, delivery queues, moderation runtime |
+| [`thematters/matters-fediverse-gateway`](https://github.com/thematters/matters-fediverse-gateway) | Federation gateway repository | Contains `gateway-core` and the Cloudflare Worker/testbed docs; ingests the generated manifest and serves canonical ActivityPub identity, inbox/outbox, delivery, moderation, persistence, and observability | Source article editing/publishing UI and the IPFS/IPNS static page generator |
+
+In short: `matters-server` decides which real public Matters content may be exported, `ipns-site-generator` turns that content into a durable public ActivityPub seed bundle, and `gateway-core` turns the seed bundle into a live Fediverse actor with signatures, followers, queues, moderation, and recovery.
 
 For the proposed static bundle contract and edge deployment path, see [`docs/ipns-gateway-cloudflare-plan.md`](docs/ipns-gateway-cloudflare-plan.md).
 
