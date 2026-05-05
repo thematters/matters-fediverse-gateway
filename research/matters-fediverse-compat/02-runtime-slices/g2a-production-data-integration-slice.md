@@ -1,29 +1,28 @@
 # G2-A Production Data Integration Slice
 
-Status: active preflight  
-Date: 2026-05-02  
-Scope: `matters-server`, `ipns-site-generator`, `gateway-core`
+Status: active preflight
+Date: 2026-05-05
+Scope: `matters-server`, `lambda-handlers`, `ipns-site-generator`, `gateway-core`
 
 ## Objective
 
-Replace fixture-only ActivityPub seed data with selected real Matters public author/article output, while keeping the first engineering slice non-production and reversible.
+Replace fixture-only ActivityPub seed data with selected real Matters public author/article output, while keeping the first engineering slice non-production and reversible. The current architecture keeps public-content eligibility in `matters-server`, moves retryable bundle generation and optional file publication to `lambda-handlers`, keeps static bundle rendering in `ipns-site-generator`, and leaves federation runtime state in `gateway-core`.
 
 ## Current Data Chain
 
 ```mermaid
 flowchart LR
-  A["matters-server article publish"] --> B["IPFSPublicationService"]
-  B --> C["makeArticlePage"]
-  C --> D["single article IPFS bundle"]
-
-  E["ipns-site-generator homepage context"] --> F["makeHomepageBundles"]
-  E --> G["makeActivityPubBundles"]
-  G --> H["activitypub-manifest.json + outbox.jsonld"]
+  A["matters-server selected public article rows"] --> B["public-only preflight + federation settings"]
+  B --> C["lambda-handlers federation-export"]
+  C --> D["ipns-site-generator homepage context"]
+  D --> E["makeHomepageBundles"]
+  D --> F["makeActivityPubBundles"]
+  F --> H["activitypub-manifest.json + outbox.jsonld"]
   H --> I["gateway-core staticBundleManifestFile"]
   I --> J["canonical ActivityPub actor/outbox"]
 ```
 
-The existing production path stops at single article IPFS publication. The ActivityPub seed bundle path exists in `ipns-site-generator`, and gateway ingestion exists in `gateway-core`, but `matters-server` does not yet produce the homepage/ActivityPub bundle from real article data.
+The existing production path stops at single article IPFS publication. The ActivityPub seed bundle path exists in `ipns-site-generator`, and gateway ingestion exists in `gateway-core`. Per CTO guidance, `matters-server` should not own retryable bundle generation or file publication; it should own eligibility and source-data boundaries, then hand off async export work to `lambda-handlers`.
 
 ## Repo Evidence
 
@@ -32,13 +31,14 @@ The existing production path stops at single article IPFS publication. The Activ
 | `matters-server` | `src/connectors/article/ipfsPublicationService.ts` imports `makeArticlePage` | single article page publishing exists |
 | `matters-server` | `src/handlers/ipfsPublication.ts` handles `{ articleId, articleVersionId }` SQS messages | publication worker exists |
 | `matters-server` | `src/queries/user/ipnsKey.ts` resolves `user_ipns_keys` | author IPNS identity exists |
-| `matters-server` | `src/connectors/article/federationExportService.ts` imports `makeHomepageBundles` / `makeActivityPubBundles` and writes bundle files to a caller-provided output directory | non-production ActivityPub export scaffold exists in commit `50e2219`; local writer exists in commit `bac7511`; CLI exists in commit `4761f78` |
+| `matters-server` | `src/connectors/article/federationExportService.ts` exposes public-only eligibility and selected article loading | PR [#4761](https://github.com/thematters/matters-server/pull/4761) is review-ready against `develop`; GitHub Actions and Codecov pass |
 | `matters-server` | `resolveFederationExportGate` in `src/connectors/article/federationExportService.ts` | G2-B contract scaffold exists in commit `f8d410b`; explicit author opt-in is required, per-article settings are `inherit` / `enabled` / `disabled`, and non-public content cannot be overridden |
 | `matters-server` | `db/migrations/20260503000000_create_federation_setting_tables.js` | durable settings schema scaffold exists in commit `af4dffb`; it creates `user_federation_setting` and `article_federation_setting`, but was not run against production |
 | `matters-server` | `npm run federation:export -- --enforce-federation-gate` | optional strict mode exists in commit `3497556`; commit `2ae14bf` keeps default DB export migration-safe by joining setting tables only when strict mode is enabled |
 | `matters-server` | `decisionReport` in `npm run federation:export` output | export audit summary exists in commit `266a1e1`; it reports selected, eligible, skipped, and per-article gate reasons |
 | `matters-server` | `src/connectors/__test__/federationExportService.test.ts` DB loader coverage | commit `9e3ae63` covers migration-safe default export and strict-setting query behavior; local targeted coverage for `federationExportService.ts` is 97.61% lines |
-| `matters-server` | `package-lock.json` resolves `@matters/ipns-site-generator@0.1.9` from `vendor/matters-ipns-site-generator-0.1.9.tgz` | temporary bridge until npm `@matters` scope publish permission is available |
+| `matters-server` | `package-lock.json` resolves `@matters/ipns-site-generator@0.1.9` from the npm registry | registry package migration is in the PR; no temporary vendored tarball remains in the current server branch |
+| `lambda-handlers` | `handlers/federation-export.ts` | PR [#217](https://github.com/thematters/lambda-handlers/pull/217) is merged; Build & Test passed, but post-merge ECR publish needs a fresh immutable image tag or version retry |
 | `ipns-site-generator` | `src/makeHomepage/index.ts` exports `makeActivityPubBundles` | seed generation exists |
 | `ipns-site-generator` | `src/types.ts` requires `HomepageContext.byline.author.webfDomain` | canonical host must be provided by caller |
 | `ipns-site-generator` | `isFederationPublicArticle` filters explicit paid/private/encrypted/draft/message-like content | static public-only boundary exists |
@@ -47,7 +47,7 @@ The existing production path stops at single article IPFS publication. The Activ
 
 ## Proposed Non-Production Contract
 
-`matters-server` should emit a selected-author bundle with:
+`matters-server` should emit or expose a selected-author export payload for `lambda-handlers`, and the async worker should emit a bundle with:
 
 ```text
 index.html
@@ -59,7 +59,7 @@ outbox.jsonld
 activitypub-manifest.json
 ```
 
-The export input should be an allowlisted author and a bounded set of public article IDs. The first slice should run against local/test data or staging-safe data only.
+The export input should be an allowlisted author and a bounded set of public article IDs. The first slice should run against local/test data or staging-safe data only. For staging, generated files may be returned directly to the caller for inspection; S3 publication is optional and should be enabled only when credentials and bucket policy are ready.
 
 Required `HomepageContext` mapping:
 
@@ -95,12 +95,13 @@ Required `HomepageContext` mapping:
 
 ## Minimal Implementation Plan
 
-1. Keep the committed temporary vendored tarball dependency only while npm `@matters` scope publish permission is unavailable.
-2. Publish `@matters/ipns-site-generator@0.1.9` when permission arrives, then migrate `matters-server` to `^0.1.9` and remove the vendored tarball.
-3. Use the committed `matters-server` mapper/service for `HomepageContext` from explicitly selected public article rows.
-4. Use the committed CLI in fixture mode for public API snapshots, or `--article-id` mode when read-only staging DB credentials are available.
-5. Add a gateway staging fixture or config example pointing `staticBundleManifestFile` at that directory.
-6. Run `ipns-site-generator` tests and `gateway-core` tests against the generated manifest.
+1. Merge `ipns-site-generator` PR #161 after a non-author reviewer approves it.
+2. Merge `matters-server` PR #4761 to `develop`, deploy it to `matters.icu`, and verify migration plus public-only preflight behavior before any production branch PR.
+3. Fix or retry the `lambda-handlers` ECR publish step with a fresh image version/tag, then configure the dev federation export Lambda.
+4. Use the committed `matters-server` service for explicitly selected public article rows and decision reports.
+5. Invoke the lambda handler to generate files directly for staging inspection, or write to S3 when staging credentials and bucket policy are ready.
+6. Add or update a gateway staging fixture/config pointing `staticBundleManifestFile` at the generated manifest.
+7. Run `ipns-site-generator` tests and `gateway-core` tests against the generated manifest, then run the `matters.icu` Misskey delivery check.
 
 ## Local Verification Notes
 
@@ -108,8 +109,8 @@ Required `HomepageContext` mapping:
 - Local Node 18.20.8 was installed under the shared tooling directory and `npm ci` passed without rewriting the lockfile.
 - `ipns-site-generator` release-readiness verification passed locally: `npm test -- --runInBand` passed 9/9 and `npm run lint` passed.
 - `ipns-site-generator` package metadata is prepared as `0.1.9` on branch `codex/release-ipns-activitypub-bundle` commit `0cd6e88`; local tarball `/tmp/matters-ipns-site-generator-0.1.9.tgz` was generated for preflight.
-- Direct npm publish is blocked by missing `@matters` scope permission. A temporary granular npm token was created and saved outside git, but it still cannot publish the scoped package.
-- `matters-server` commit `50e2219` added the non-production federation export scaffold, tests, and temporary vendored `@matters/ipns-site-generator@0.1.9` tarball dependency.
+- npm `@matters` scope access was resolved after the initial block; `matters-server` now depends on the registry package in the current PR branch.
+- `matters-server` commit `50e2219` added the non-production federation export scaffold, tests, and the original temporary `@matters/ipns-site-generator@0.1.9` tarball dependency; later commits moved the branch to the npm registry package.
 - `matters-server` commit `bac7511` added a local bundle writer and path traversal guard for generated output files.
 - `matters-server` commit `4761f78` added `npm run federation:export`, supporting JSON fixture input and explicit `--article-id` DB input while keeping credentials in environment variables.
 - Public API read selected `mashbean` article `1111146` (`oq72hz05fwnl`) with `state=active` and `access=public`; no private credential was required.
@@ -128,9 +129,10 @@ Required `HomepageContext` mapping:
 - `matters-server` commit `3497556` wired the strict gate into the exporter behind an explicit CLI flag / env var; verification passed with Node 18 build, targeted federationExportService Jest 12/12, targeted ESLint, `git diff --check`, and the repository pre-commit hook.
 - `matters-server` commit `2ae14bf` fixed the default DB export path so environments without the new settings migration can still run non-strict exports; verification passed with Node 18 build, targeted federationExportService Jest 12/12, targeted ESLint, `git diff --check`, CLI help output, and the repository pre-commit hook.
 - `matters-server` commit `266a1e1` added export decision reporting; verification passed with Node 18 build, targeted federationExportService Jest 13/13, targeted ESLint, `git diff --check`, CLI fixture export, and the repository pre-commit hook.
-- `matters-server` commit `9e3ae63` added DB loader tests for default migration-safe export and strict federation setting joins; verification passed with Node 18 build, targeted federation export Jest 18/18, targeted ESLint, `git diff --check`, and commit hook build/gen/lint/prettier checks. Local targeted coverage for `federationExportService.ts` is 97.61% lines. GitHub Actions build passed, but Codecov still reports 26.20% patch coverage, so the next server-side task is coverage repair.
+- `matters-server` commit `cfd0cb6` added patch-coverage tests for `federationExportService.ts` and the federation settings migration. GitHub Actions build and Codecov patch/project checks now pass on PR #4761.
+- `lambda-handlers` PR #217 merged the federation export handler. Build & Test passed; the post-merge ECR image publish failed because immutable tag `v0.13.5` already exists, so deployment needs a fresh version/tag or workflow retry strategy.
 - `gateway-core` local `better-sqlite3` native module was rebuilt for Node 18 and the full test suite passed 117/117.
-- `matters-fediverse-gateway` draft PR #5 was rebased onto `origin/main`; `git diff --check` and `triad-ops` validation passed.
+- `matters-fediverse-gateway` PR #5 was merged into `main`; `git diff --check` and `triad-ops` validation passed at that handoff.
 
 ## Blocked Human Decisions
 
@@ -143,4 +145,4 @@ Required `HomepageContext` mapping:
 
 ## Next Engineering Action
 
-Fix `matters-server` PR #4761 Codecov. GitHub Actions build is green, but Codecov still reports 26.20% patch coverage with missing lines mainly in `federationExportService.ts` plus the federation settings migration scaffold. Keep npm registry migration deferred: after npm `@matters` scope permission arrives, publish `@matters/ipns-site-generator@0.1.9`, migrate `matters-server` from the vendored tarball to `^0.1.9`, and rerun the same Node 18 checks before any staging deployment. In parallel, continue G2-B contract scaffolding locally: author opt-in state, per-article federation setting shape, export trigger boundaries, and admin/review surfaces.
+After `ipns-site-generator` PR #161 and `matters-server` PR #4761 are approved and merged, deploy the server branch through the normal `develop` -> `matters.icu` checkpoint. In parallel, fix or rerun the `lambda-handlers` ECR publish with a fresh image tag, then configure a dev federation export Lambda. The first end-to-end staging pass should use explicit public article IDs on `matters.icu`, confirm the server preflight report, run lambda bundle generation, inspect returned files or S3 output, ingest the manifest into the staging gateway, and deliver one public Article to gyutte.site Misskey.
