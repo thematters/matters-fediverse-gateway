@@ -92,6 +92,8 @@ The project is past fixture-only proof of concept, but it is not production-read
 2. Merge `matters-server` PR #4761 to `develop`, deploy it to the `matters.icu` test environment, and verify the migration plus public-only preflight behavior there before any master/production PR.
 3. Fix or retry the `lambda-handlers` ECR publish step with a fresh image version/tag, then create or update the federation export dev Lambda from the merged handler.
 4. Run the end-to-end `matters.icu` staging check: select explicit public article IDs, run server eligibility/preflight, invoke the lambda generator, inspect returned files or S3 output, ingest the manifest into the staging gateway, and send a public Article to Misskey.
+   - The repeatable staging runner is `gateway-core/scripts/run-matters-icu-staging-check.mjs`; see [`research/matters-fediverse-compat/03-ops/matters-icu-staging-e2e-check.md`](research/matters-fediverse-compat/03-ops/matters-icu-staging-e2e-check.md).
+   - Product settings, legal/privacy, and production rollout approvals are tracked in [`research/matters-fediverse-compat/05-roadmap/decisions/08-production-rollout-human-approval.md`](research/matters-fediverse-compat/05-roadmap/decisions/08-production-rollout-human-approval.md).
 5. Continue G2-B contract work locally: author opt-in state, per-article federation setting behavior, export trigger boundaries, and product-facing copy/API shape.
 6. Keep G2-A non-production until production credentials, storage target, migration timing, legal/privacy review, and canonical `acct:user@matters.town` cutover are explicitly approved.
 
