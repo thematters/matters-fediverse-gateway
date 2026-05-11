@@ -38,7 +38,7 @@ The existing production path stops at single article IPFS publication. The Activ
 | `matters-server` | `decisionReport` in `npm run federation:export` output | export audit summary exists in commit `266a1e1`; it reports selected, eligible, skipped, and per-article gate reasons |
 | `matters-server` | `src/connectors/__test__/federationExportService.test.ts` DB loader coverage | commit `9e3ae63` covers migration-safe default export and strict-setting query behavior; local targeted coverage for `federationExportService.ts` is 97.61% lines |
 | `matters-server` | `package-lock.json` resolves `@matters/ipns-site-generator@0.1.9` from the npm registry | registry package migration is in the PR; no temporary vendored tarball remains in the current server branch |
-| `lambda-handlers` | `handlers/federation-export.ts` | PR [#217](https://github.com/thematters/lambda-handlers/pull/217) is merged; Build & Test passed, but post-merge ECR publish needs a fresh immutable image tag or version retry |
+| `lambda-handlers` | `handlers/federation-export.ts` | PR [#217](https://github.com/thematters/lambda-handlers/pull/217) is merged; PR [#223](https://github.com/thematters/lambda-handlers/pull/223) removed duplicate manifest output and deployed `v0.14.1` to `federation-export-dev` |
 | `ipns-site-generator` | `src/makeHomepage/index.ts` exports `makeActivityPubBundles` | seed generation exists |
 | `ipns-site-generator` | `src/types.ts` requires `HomepageContext.byline.author.webfDomain` | canonical host must be provided by caller |
 | `ipns-site-generator` | `isFederationPublicArticle` filters explicit paid/private/encrypted/draft/message-like content | static public-only boundary exists |
@@ -95,12 +95,10 @@ Required `HomepageContext` mapping:
 
 ## Minimal Implementation Plan
 
-1. Merge or approve `lambda-handlers` PR #223 so the federation export bundle no longer contains duplicate `activitypub-manifest.json` paths.
-2. Publish the next immutable lambda-handlers image tag and update `federation-export-dev`.
-3. Invoke the deployed Lambda with real `matters.icu` rows or DB-backed article IDs, then inspect returned files or S3 output.
-4. Add or update a gateway staging fixture/config pointing `staticBundleManifestFile` at the generated manifest.
-5. Run `gateway-core` tests against the generated manifest, then run the `matters.icu` Misskey delivery check.
-6. Keep production disabled until storage, credentials, rollout timing, legal/privacy, and canonical identity cutover are explicitly approved.
+1. Invoke the deployed Lambda with real `matters.icu` rows or DB-backed article IDs, then inspect returned files or S3 output.
+2. Add or update a gateway staging fixture/config pointing `staticBundleManifestFile` at the generated manifest.
+3. Run `gateway-core` tests against the generated manifest, then run the `matters.icu` Misskey delivery check.
+4. Keep production disabled until storage, credentials, rollout timing, legal/privacy, and canonical identity cutover are explicitly approved.
 
 ## Local Verification Notes
 
@@ -133,7 +131,7 @@ Required `HomepageContext` mapping:
 - `ipns-site-generator` PR #161 merged to `main` on 2026-05-11.
 - `matters-server` PR #4761 merged to `develop` on 2026-05-11; the post-merge develop deploy and schema workflow passed for `matters.icu`.
 - Local `matters.icu` staging dry-run through the lambda handler passed with real public API rows: article `23520` was eligible, paywalled article `23522` was skipped as `article_not_public`, and the generated bundle contained seven unique files after the manifest de-duplication fix.
-- `lambda-handlers` PR #223 is open as a draft to remove duplicate manifest output, enable Jest ESM execution, and add federation export regression coverage.
+- `lambda-handlers` PR #223 merged on 2026-05-11. Build & Deploy passed, ECR image `v0.14.1` was published, `federation-export-dev` was updated, and the provision workflow fixture smoke test passed.
 - `gateway-core` local `better-sqlite3` native module was rebuilt for Node 18 and the full test suite passed 117/117.
 - `matters-fediverse-gateway` PR #5 was merged into `main`; `git diff --check` and `triad-ops` validation passed at that handoff.
 
@@ -148,4 +146,4 @@ Required `HomepageContext` mapping:
 
 ## Next Engineering Action
 
-After `lambda-handlers` PR #223 is merged, publish or deploy the next image tag to `federation-export-dev`. The next end-to-end staging pass should use explicit public article IDs or real `matters.icu` rows, confirm the decision report, run deployed Lambda bundle generation, inspect returned files or S3 output, ingest the manifest into the staging gateway, and deliver one public Article to gyutte.site Misskey.
+The next end-to-end staging pass should use explicit public article IDs or real `matters.icu` rows, confirm the decision report, run deployed Lambda bundle generation, inspect returned files or S3 output, ingest the manifest into the staging gateway, and deliver one public Article to gyutte.site Misskey.
