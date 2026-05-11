@@ -132,8 +132,11 @@ Required `HomepageContext` mapping:
 - `matters-server` PR #4761 merged to `develop` on 2026-05-11; the post-merge develop deploy and schema workflow passed for `matters.icu`.
 - Local `matters.icu` staging dry-run through the lambda handler passed with real public API rows: article `23520` was eligible, paywalled article `23522` was skipped as `article_not_public`, and the generated bundle contained seven unique files after the manifest de-duplication fix.
 - `lambda-handlers` PR #223 merged on 2026-05-11. Build & Deploy passed, ECR image `v0.14.1` was published, `federation-export-dev` was updated, and the provision workflow fixture smoke test passed.
-- `gateway-core` local `better-sqlite3` native module was rebuilt for Node 18 and the full test suite passed 117/117.
+- `gateway-core` local `better-sqlite3` native module was rebuilt for the current local Node runtime and the full test suite passed 117/117.
 - `matters-fediverse-gateway` PR #5 was merged into `main`; `git diff --check` and `triad-ops` validation passed at that handoff.
+- `lambda-handlers` staging invoke workflow ran `federation-export-dev` against real `matters.icu` rows on 2026-05-11: article `23520` was eligible, article `23522` was skipped as `article_not_public`, and the generated bundle was ingested by `gateway-core` as `zeckagent3@staging-gateway.matters.town`.
+- Local gateway probes passed for the deployed-Lambda bundle: WebFinger resolved `acct:zeckagent3@staging-gateway.matters.town`, `/users/zeckagent3` returned `Person`, and `/users/zeckagent3/outbox` returned one Article.
+- Public staging delivery passed: gyutte.site Misskey resolved and followed `zeckagent3@staging-gateway.matters.town`; the generated article `23520` was delivered with status `delivered`, and Misskey `users/notes` matched the generated Article URL.
 
 ## Blocked Human Decisions
 
@@ -146,4 +149,4 @@ Required `HomepageContext` mapping:
 
 ## Next Engineering Action
 
-The next end-to-end staging pass should use explicit public article IDs or real `matters.icu` rows, confirm the decision report, run deployed Lambda bundle generation, inspect returned files or S3 output, ingest the manifest into the staging gateway, and deliver one public Article to gyutte.site Misskey.
+The next engineering action should keep this staging pass repeatable and move into G2-B product contract work: author opt-in state, per-article federation setting behavior, export trigger boundaries, and product-facing copy/API shape. Production remains blocked on credentials/storage, canonical identity cutover, and legal/privacy gates.
