@@ -1,7 +1,11 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const gatewayCoreDir = path.resolve(moduleDir, "..");
 
 function parseArgs(argv) {
   const options = {
@@ -16,8 +20,8 @@ function parseArgs(argv) {
     gatewayPostUrl: null,
     enforceFederationGate: false,
     skipGatewayProbes: false,
-    publicKeyFile: "./config/staging.secrets/staging-public-key.pem",
-    privateKeyFile: "./config/staging.secrets/staging-private-key.pem",
+    publicKeyFile: path.join(gatewayCoreDir, "config/staging.secrets/staging-public-key.pem"),
+    privateKeyFile: path.join(gatewayCoreDir, "config/staging.secrets/staging-private-key.pem"),
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -54,6 +58,8 @@ function parseArgs(argv) {
   }
 
   options.articleIds = options.articleIds.map((value) => value?.trim()).filter(Boolean);
+  options.publicKeyFile = path.resolve(options.publicKeyFile);
+  options.privateKeyFile = path.resolve(options.privateKeyFile);
   if (options.articleIds.length === 0 && !options.lambdaResponseFile) {
     throw new Error("At least one --article-id is required unless --lambda-response-file is provided");
   }
