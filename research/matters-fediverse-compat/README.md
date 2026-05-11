@@ -2,15 +2,15 @@
 
 在 Matters 站前架一座「大使館」（代號 `gateway-core`），讓長文能以 ActivityPub `Article` 型別雙向對接 Fediverse（Mastodon / Misskey / GoToSocial），同時保護付費/加密/私訊內容不外流。
 
-最後更新：2026-05-05
+最後更新：2026-05-11
 
 ---
 
 ## 現況一眼看
 
-- **完成度**：單實例 gateway 原型可跑，117 tests passing；已與 `mastodon.social`、`g0v.social`、gyutte.site Misskey 完成黑箱互通；real Matters public Article 已透過 staging gateway 投遞到 Misskey；GoToSocial probe 已有本地驗證但 public run 依目前決策暫跳過
+- **完成度**：單實例 gateway 原型可跑，117 tests passing；已與 `mastodon.social`、`g0v.social`、gyutte.site Misskey 完成黑箱互通；real Matters public Article 已透過 staging gateway 投遞到 Misskey；`federation-export-dev` public-only dry-run 與 gateway probe 已在 `matters.icu` 重跑通過；GoToSocial probe 已有本地驗證但 public run 依目前決策暫跳過
 - **目前階段**：G1 · 官方聯邦化基礎版（3 個月，2026-05 ~ 2026-07）
-- **下一步**：等 `ipns-site-generator` PR #161 與 `matters-server` PR #4761 完成非作者 review 後 merge；server 先進 `develop` 並部署到 `matters.icu` 測 migration 與 public-only preflight。`lambda-handlers` PR #217 已 merge，但 ECR 發布因 immutable tag 重複需要用新版本/tag 重跑，再接 dev federation export Lambda。
+- **下一步**：取得 staging admin 權限後，寫入或確認 author/article federation setting，重跑 `enforce_federation_gate=true` 的 strict gate staging 驗證；在此之前可繼續用 public-only dry-run 做 regression coverage。
 - **程式碼**：[`gateway-core/`](../../gateway-core)（sibling repo root）
 
 ---
@@ -55,4 +55,5 @@
 ## 相關任務
 
 - 活躍 task：[matters-gateway-core-minimum-slice](../../docs/tasks/matters-gateway-core-minimum-slice.md)
+- 最新 staging 紀錄：[matters-icu-public-only-rerun-20260511T2012Z.md](03-ops/matters-icu-public-only-rerun-20260511T2012Z.md)
 - 最新 interop 紀錄：[misskey-public-run-20260502T224743-charlesmungerai.md](03-ops/misskey-public-run-20260502T224743-charlesmungerai.md)
