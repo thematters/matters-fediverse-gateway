@@ -293,6 +293,8 @@ async function runGatewayProbes({ gatewayUrl, handle, webfDomain }) {
   const webfinger = await fetchJson(webfingerUrl);
   const actor = await fetchJson(new URL(`/users/${handle}`, baseUrl));
   const outbox = await fetchJson(new URL(`/users/${handle}/outbox`, baseUrl));
+  const nodeInfoDirectory = await fetchJson(new URL("/.well-known/nodeinfo", baseUrl));
+  const nodeInfo = await fetchJson(new URL("/nodeinfo/2.1", baseUrl));
 
   if (webfinger.subject !== `acct:${handle}@${webfDomain}`) {
     throw new Error(`Unexpected WebFinger subject: ${webfinger.subject}`);
@@ -303,12 +305,25 @@ async function runGatewayProbes({ gatewayUrl, handle, webfDomain }) {
   if (!Array.isArray(outbox.orderedItems ?? outbox.items)) {
     throw new Error("Outbox did not return an ActivityStreams collection");
   }
+  if (!nodeInfoDirectory?.links?.some((link) => link.href === `${baseUrl}/nodeinfo/2.1`)) {
+    throw new Error("NodeInfo directory did not advertise the expected 2.1 endpoint");
+  }
+  if (nodeInfo.version !== "2.1") {
+    throw new Error(`Unexpected NodeInfo version: ${nodeInfo.version}`);
+  }
+  if (!nodeInfo.protocols?.includes("activitypub")) {
+    throw new Error("NodeInfo did not advertise ActivityPub support");
+  }
 
   return {
     webfingerSubject: webfinger.subject,
     actorId: actor.id,
     actorType: actor.type,
     outboxItemCount: (outbox.orderedItems ?? outbox.items).length,
+    nodeInfoDirectoryHref: `${baseUrl}/nodeinfo/2.1`,
+    nodeInfoSoftware: nodeInfo.software,
+    nodeInfoProtocols: nodeInfo.protocols,
+    nodeInfoUserTotal: nodeInfo.usage?.users?.total,
   };
 }
 

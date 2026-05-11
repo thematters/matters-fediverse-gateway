@@ -7,7 +7,7 @@ An open-source ActivityPub gateway that connects Matters' long-form publishing l
 > **Canonical demo actor**: `acct:matters@matters.town`
 > **Worker testbed**: <https://gateway-demo.matters.town>
 > **Source**: <https://github.com/thematters/matters-fediverse-gateway>
-> **Current integration slice**: G2-A preflight has moved past review-stage PRs. `ipns-site-generator` PR #161 is merged to `main`, `matters-server` PR #4761 is merged to `develop` and deployed to `matters.icu`, `lambda-handlers` PR #223 is deployed to `federation-export-dev` as `v0.14.1`, and a real deployed-Lambda staging bundle has been ingested by `gateway-core` and delivered to gyutte.site Misskey. Production rollout is not enabled.
+> **Current integration slice**: G2-A preflight has moved past review-stage PRs. `ipns-site-generator` PR #161 is merged to `main`, `matters-server` PR #4761 is merged to `develop` and deployed to `matters.icu`, `lambda-handlers` PR #223 is deployed to `federation-export-dev` as `v0.14.1`, and real deployed-Lambda staging bundles have been ingested by `gateway-core`, checked through WebFinger / actor / outbox / NodeInfo, and verified against gyutte.site Misskey without admin mutations. Production rollout is not enabled.
 
 ## Why
 
@@ -81,9 +81,10 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 - G2-A server preflight landed in `matters-server` PR [#4761](https://github.com/thematters/matters-server/pull/4761), merged to `develop`, and the post-merge develop deploy to `matters.icu` passed
 - The ActivityPub bundle contract landed in `ipns-site-generator` PR [#161](https://github.com/thematters/ipns-site-generator/pull/161), merged to `main`
 - The async federation export worker landed in `lambda-handlers` PR [#217](https://github.com/thematters/lambda-handlers/pull/217); follow-up PR [#223](https://github.com/thematters/lambda-handlers/pull/223) removed duplicate manifest output, published `v0.14.1`, updated `federation-export-dev`, and passed fixture smoke verification
-- Real `matters.icu` public API data passed the deployed `federation-export-dev` Lambda path: article `23520` was eligible, paywalled article `23522` was skipped as `article_not_public`, the generated bundle contained seven unique files, and `gateway-core` served it as `zeckagent3@staging-gateway.matters.town`
+- Real `matters.icu` public API data passed the deployed `federation-export-dev` Lambda path twice: article `23520` was eligible, paywalled article `23522` was skipped as `article_not_public`, the generated bundle contained seven unique files, and `gateway-core` served it as `zeckagent3@staging-gateway.matters.town`
 - The same `matters.icu` rows also passed a strict gate staging run with row-level `authorFederationSetting=enabled` and `articleFederationSetting=inherit`; public article `23520` remained eligible while paywalled article `23522` remained blocked as `article_not_public`
-- The generated `zeckagent3` Article was delivered through `gateway-core` to gyutte.site Misskey; `users/notes` matched the generated Article URL
+- The generated `zeckagent3` Article was delivered through `gateway-core` to gyutte.site Misskey; a follow-up read-only Misskey dry-run resolved the actor, confirmed one follower, and prepared a public Create without sending it
+- The latest `zeckagent3` staging probe also validates WebFinger, actor, outbox, NodeInfo discovery, NodeInfo 2.1 ActivityPub support, bundle manifest shape, and SQLite consistency with zero diffs
 - Real public Matters articles for `@charlesmungerai` were exported into a staging bundle, served through `charlesmungerai@staging-gateway.matters.town`, and one fresh public Article was delivered to gyutte.site Misskey
 - The gateway execution/reporting docs were merged in PR [#5](https://github.com/thematters/matters-fediverse-gateway/pull/5)
 
