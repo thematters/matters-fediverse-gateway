@@ -1,7 +1,7 @@
 # G2-B Product Contract Slice
 
 Date: 2026-05-11
-Status: contract scaffold active; no production rollout
+Status: develop integration merged; staging UI validation blocked on pilot/admin permission; no production rollout
 
 ## Goal
 
@@ -65,7 +65,7 @@ flowchart TD
   I --> J["gateway-core ingests bundle and delivers via ActivityPub"]
 ```
 
-## API Contract Needed Next
+## API Contract
 
 Read fields:
 
@@ -106,10 +106,16 @@ type ArticleFederationEligibility {
 Mutation policy:
 
 - Existing admin-only mutations remain for staging/internal setup.
-- Add user-facing mutations only after pilot gating is defined.
-- User-facing author mutation can only update the viewer's own author setting.
-- User-facing article mutation can only update an article owned by the viewer.
+- User-facing author mutation can only update the viewer's own author setting
+  after the viewer has the pilot feature flag.
+- User-facing article mutation can only update an article owned by the viewer
+  after the viewer has the pilot feature flag.
 - Both mutations must return the computed effective state or eligibility reason.
+
+As of 2026-05-11, `matters-server` PR #4773 has merged this contract to
+`develop`, and the develop deploy exposes the expected fields on
+`server.matters.icu`. `matters-web` PR #5883 has also merged the pilot UI
+controls to `develop`.
 
 ## Export Trigger Boundary
 
@@ -160,13 +166,19 @@ Beta warning:
 ## Implementation Order
 
 1. Add read-side federation setting and eligibility fields in `matters-server`.
+   Done in PR #4773.
 2. Add pilot-scoped user-facing setting mutations in `matters-server`.
+   Done in PR #4773.
 3. Add account-level control in `matters-web`.
+   Done in PR #5883.
 4. Add per-article control in `matters-web`.
-5. Add export-trigger dry-run and decision audit in `matters-server` or
+   Done in PR #5883.
+5. Grant staging pilot/admin permission to `mashbean@matters.town`, add
+   `fediverseBeta`, and run UI validation on `matters.icu`.
+6. Add export-trigger dry-run and decision audit in `matters-server` or
    `lambda-handlers`.
-6. Re-run `matters.icu` staging public-only and strict-gate checks.
-7. Gate production rollout on legal/privacy, pilot author approval, storage, and
+7. Re-run `matters.icu` staging public-only and strict-gate checks.
+8. Gate production rollout on legal/privacy, pilot author approval, storage, and
    canonical identity cutover.
 
 ## Current Human Decisions
@@ -180,9 +192,14 @@ Recommended defaults:
 - Existing article backlog: do not auto-export on opt-in until a separate pilot
   action is approved.
 
+Still needs staging permission before UI validation:
+
+- `mashbean@matters.town` must be granted the required staging admin / pilot
+  permission.
+- `fediverseBeta` must be assigned to the pilot account.
+
 Still needs human approval before production:
 
-- Pilot author list.
 - Final copy.
 - Backfill policy for existing public articles.
 - Delete/update behavior when an already federated article becomes non-public.

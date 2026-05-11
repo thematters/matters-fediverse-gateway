@@ -1,13 +1,13 @@
 ---
 task_slug: matters-g2-b-web-app-integration
-status: active
+status: staging-validation-blocked
 goal: Define and implement the Matters product-facing federation controls without enabling production rollout
 dispatcher: triad
 executor: codex-local
 host: any
-branch: codex/g2b-product-contract
-latest_commit: pending
-last_updated: 2026-05-11T20:45:00-04:00
+branch: develop integration merged
+latest_commit: server #4773 / web #5883 merged
+last_updated: 2026-05-11T19:00:00-04:00
 tmux_session: none
 host_affinity: none
 outputs_scope: matters-web, matters-server, gateway-core
@@ -29,9 +29,9 @@ local_paths:
   - none
 start_command: none
 stop_command: none
-verify_command: docs only for this slice; implementation follow-up should run matters-web typecheck/tests and matters-server targeted GraphQL tests
-next_step: Add read-side GraphQL fields for federation settings, then wire matters-web author settings and article settings controls behind a pilot flag
-blockers: pilot author list, copy approval, legal/privacy beta approval, production storage and canonical acct:user@matters.town cutover remain human gates
+verify_command: gateway-core npm test; scan:consistency; check:rollout-artifact; check:secret-layout; staging UI still requires pilot/admin permission
+next_step: Grant mashbean@matters.town staging admin / fediverseBeta, then validate account-level and per-article UI controls on matters.icu
+blockers: mashbean@matters.town is only the intended staging pilot/admin account and does not yet have permission; legal/privacy beta approval, production storage, and canonical acct:user@matters.town cutover remain human gates
 ---
 
 # Task Handoff
@@ -43,9 +43,22 @@ G2-A proved that selected real public `matters.icu` article data can move throug
 WebFinger / actor / outbox / NodeInfo probes, SQLite consistency scan, and
 Misskey read-only verification.
 
-G2-B is the product contract layer. It should let selected pilot authors
-understand and control federation in Matters Web/App, while keeping production
-rollout gated.
+G2-B is the product contract layer. It lets selected pilot authors understand
+and control federation in Matters Web/App, while keeping production rollout
+gated.
+
+As of 2026-05-11, the code portion is merged to `develop`:
+
+- `matters-server` PR #4773 added read-side federation settings, article
+  eligibility, and pilot-scoped author/article mutations.
+- `matters-web` PR #5883 added the account-level and per-article pilot UI
+  controls.
+- Both develop deploys passed on `matters.icu`.
+- `server.matters.icu` exposes the expected G2-B schema fields and mutations.
+
+The remaining staging blocker is account permission, not implementation:
+`mashbean@matters.town` is the intended staging pilot/admin test account, but it
+is not yet confirmed as staging admin and does not yet have `fediverseBeta`.
 
 ## Recommended Product Contract
 
@@ -132,23 +145,23 @@ Beta warning:
 
 ## Backend Contract Gaps
 
-Already present in `matters-server`:
+Already present in `matters-server` after PR #4773:
 
 - `putUserFederationSetting(input: { id, state })`
 - `putArticleFederationSetting(input: { id, state })`
 - `resolveFederationExportGate`
 - `decisionReport`
 - strict gate support for export runs
-
-Still needed for G2-B:
-
 - Read-side GraphQL fields on viewer/user/article for current federation setting.
 - Non-admin, pilot-scoped mutation for the viewer to update their own author
   setting.
 - Author-owned mutation for article federation override.
+
+Still needed after staging UI validation:
+
 - Export trigger contract after publish/edit when an eligible public article
   changes.
-- Audit log for setting changes and export decisions.
+- Audit log or durable decision record for setting changes and export decisions.
 
 ## Acceptance Criteria
 
@@ -166,26 +179,32 @@ Still needed for G2-B:
 
 Server:
 
-- Targeted GraphQL tests for read fields and pilot-scoped mutations.
-- Targeted tests proving non-public content stays blocked after UI mutations.
-- Export-trigger dry-run test that records a decision report but does not publish.
+- Targeted GraphQL tests for read fields and pilot-scoped mutations are covered
+  in the merged server PR.
+- Read-only `server.matters.icu` checks confirmed the schema fields and
+  conservative default gate behavior.
+- Strict-gate Lambda dry-run still blocks the paywalled article as
+  `article_not_public`.
 
 Web:
 
-- Type generation and typecheck after schema update.
-- Component tests or Storybook snapshots for account setting, article setting,
-  disabled state, and pilot unavailable state.
-- Manual QA on `matters.icu` before any production PR.
+- Merged pilot controls need manual QA on `matters.icu` after
+  `mashbean@matters.town` receives staging admin / `fediverseBeta`.
+- Validate account setting, article setting, disabled state, and pilot
+  unavailable state before any production PR.
 
 Gateway:
 
 - No new runtime requirement for the first UI slice.
 - Continue using staging public probes and SQLite consistency scan after export
   trigger dry-runs.
+- 2026-05-11 local gateway verification passed: `npm test` 117/117,
+  `scan:consistency` total diffs `0`, `check:rollout-artifact` OK, and
+  `check:secret-layout` OK.
 
 ## Human Gates
 
-- Pilot author list.
+- Pilot author/admin permission setup for `mashbean@matters.town`.
 - Final copy approval.
 - Whether pilot authors can force-enable individual public articles or only
   inherit/disable during the first beta.
