@@ -7,7 +7,7 @@ An open-source ActivityPub gateway that connects Matters' long-form publishing l
 > **Canonical demo actor**: `acct:matters@matters.town`
 > **Worker testbed**: <https://gateway-demo.matters.town>
 > **Source**: <https://github.com/thematters/matters-fediverse-gateway>
-> **Current integration slice**: G2-A preflight has moved past review-stage PRs. `ipns-site-generator` PR #161 is merged to `main`, `matters-server` PR #4761 is merged to `develop` and deployed to `matters.icu`, and `lambda-handlers` PR #223 is merged and deployed to `federation-export-dev` as `v0.14.1`. Production rollout is not enabled.
+> **Current integration slice**: G2-A preflight has moved past review-stage PRs. `ipns-site-generator` PR #161 is merged to `main`, `matters-server` PR #4761 is merged to `develop` and deployed to `matters.icu`, `lambda-handlers` PR #223 is deployed to `federation-export-dev` as `v0.14.1`, and a real deployed-Lambda staging bundle has been ingested by `gateway-core` and delivered to gyutte.site Misskey. Production rollout is not enabled.
 
 ## Why
 
@@ -74,14 +74,15 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 - `g0v.social` exact discovery and inbound follow delivery confirmed for `acct:matters@matters.town`
 - Misskey public interoperability now covers discovery, follow, text Article delivery, media attachment display, and human UI visual review on gyutte.site
 - GoToSocial probe has local contract coverage; public GoToSocial run is intentionally deferred
-- 117 `gateway-core` automated tests passing in the latest local verification snapshot after rebuilding `better-sqlite3` for Node 18
+- 117 `gateway-core` automated tests passing in the latest local verification snapshot after rebuilding `better-sqlite3` for the current local Node runtime
 - Public static ActivityPub prototype endpoints and seed bundle live under `thematters.github.io`
 - Canonical Matters-domain Cloudflare Worker routes are deployed under `matters.town`
 - Isolated Cloudflare Worker testbed remains deployed under `gateway-demo.matters.town`
 - G2-A server preflight landed in `matters-server` PR [#4761](https://github.com/thematters/matters-server/pull/4761), merged to `develop`, and the post-merge develop deploy to `matters.icu` passed
 - The ActivityPub bundle contract landed in `ipns-site-generator` PR [#161](https://github.com/thematters/ipns-site-generator/pull/161), merged to `main`
 - The async federation export worker landed in `lambda-handlers` PR [#217](https://github.com/thematters/lambda-handlers/pull/217); follow-up PR [#223](https://github.com/thematters/lambda-handlers/pull/223) removed duplicate manifest output, published `v0.14.1`, updated `federation-export-dev`, and passed fixture smoke verification
-- Real `matters.icu` public API data passed a local federation-export dry-run through the lambda handler: article `23520` was eligible, paywalled article `23522` was skipped as `article_not_public`, and the generated bundle contained seven unique files
+- Real `matters.icu` public API data passed the deployed `federation-export-dev` Lambda path: article `23520` was eligible, paywalled article `23522` was skipped as `article_not_public`, the generated bundle contained seven unique files, and `gateway-core` served it as `zeckagent3@staging-gateway.matters.town`
+- The generated `zeckagent3` Article was delivered through `gateway-core` to gyutte.site Misskey; `users/notes` matched the generated Article URL
 - Real public Matters articles for `@charlesmungerai` were exported into a staging bundle, served through `charlesmungerai@staging-gateway.matters.town`, and one fresh public Article was delivered to gyutte.site Misskey
 - The gateway execution/reporting docs were merged in PR [#5](https://github.com/thematters/matters-fediverse-gateway/pull/5)
 
@@ -89,7 +90,7 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 
 The project is past fixture-only proof of concept, but it is not production-ready. The next concrete work items are:
 
-1. Run the deployed Lambda against real `matters.icu` rows or DB-backed article IDs: inspect returned files or S3 output, ingest the manifest into the staging gateway, and send a public Article to Misskey.
+1. Keep the deployed-Lambda staging proof repeatable: rerun explicit public article IDs through `federation-export-dev`, ingest the returned manifest into staging gateway, and preserve the Misskey delivery report.
    - The repeatable staging runner is `gateway-core/scripts/run-matters-icu-staging-check.mjs`; see [`research/matters-fediverse-compat/03-ops/matters-icu-staging-e2e-check.md`](research/matters-fediverse-compat/03-ops/matters-icu-staging-e2e-check.md).
    - Product settings, legal/privacy, and production rollout approvals are tracked in [`research/matters-fediverse-compat/05-roadmap/decisions/08-production-rollout-human-approval.md`](research/matters-fediverse-compat/05-roadmap/decisions/08-production-rollout-human-approval.md).
 2. Continue G2-B contract work locally: author opt-in state, per-article federation setting behavior, export trigger boundaries, and product-facing copy/API shape.

@@ -468,9 +468,9 @@
       <tr><td>Gateway runtime</td><td><code>gateway-core</code> has 117 local automated tests passing with SQLite as the runtime state source of truth.</td><td>Keep hardening staging operations, backup/restore, replay, and observability drills.</td></tr>
       <tr><td>Interop</td><td>Mastodon and g0v.social discovery/follow paths are archived. Misskey public discovery, follow, text Article display, media display, and human visual review are complete on gyutte.site.</td><td>Keep GoToSocial public run deferred unless the test strategy changes.</td></tr>
       <tr><td>Real Matters article export</td><td><code>matters-server</code> PR <a href="https://github.com/thematters/matters-server/pull/4761">#4761</a> is merged to <code>develop</code>; the post-merge develop deploy to <code>matters.icu</code> passed.</td><td>Use staging data only. Do not open a production branch PR until rollout, storage, legal/privacy, and identity cutover gates are approved.</td></tr>
-      <tr><td>Async export worker</td><td><code>lambda-handlers</code> PR <a href="https://github.com/thematters/lambda-handlers/pull/217">#217</a> merged the federation export handler. PR <a href="https://github.com/thematters/lambda-handlers/pull/223">#223</a> removed duplicate manifest output, published <code>v0.14.1</code>, updated <code>federation-export-dev</code>, and passed fixture smoke verification.</td><td>Run the real <code>matters.icu</code> payload through the deployed Lambda, then ingest the manifest into the staging gateway.</td></tr>
+      <tr><td>Async export worker</td><td><code>lambda-handlers</code> PR <a href="https://github.com/thematters/lambda-handlers/pull/217">#217</a> merged the federation export handler. PR <a href="https://github.com/thematters/lambda-handlers/pull/223">#223</a> removed duplicate manifest output, published <code>v0.14.1</code>, updated <code>federation-export-dev</code>, and passed fixture smoke verification. A deployed-Lambda run against real <code>matters.icu</code> rows returned one eligible public article and skipped one paywalled article.</td><td>Keep the staging runner repeatable, then move to product-facing G2-B contract work.</td></tr>
       <tr><td>Generator package</td><td><code>ipns-site-generator</code> PR <a href="https://github.com/thematters/ipns-site-generator/pull/161">#161</a> is merged to <code>main</code> with the ActivityPub bundle contract.</td><td>Keep downstream callers on the registry package and preserve public-only bundle semantics.</td></tr>
-      <tr><td>Staging proof</td><td><code>@charlesmungerai</code> public Matters articles were exported into a staging bundle; one fresh public Article was delivered to gyutte.site Misskey through the gateway. A fresh local <code>matters.icu</code> dry-run also confirmed article <code>23520</code> is eligible while paywalled article <code>23522</code> is skipped.</td><td>Do not treat this as production. Keep staging local/tunnel-based until production credentials, storage, Access, and rollout gates are approved.</td></tr>
+      <tr><td>Staging proof</td><td><code>@charlesmungerai</code> public Matters articles were exported into a staging bundle; one fresh public Article was delivered to gyutte.site Misskey through the gateway. The real deployed-Lambda bundle for <code>zeckagent3@staging-gateway.matters.town</code> also passed local gateway probes and delivered article <code>23520</code> to gyutte.site Misskey.</td><td>Do not treat this as production. Keep staging local/tunnel-based until production credentials, storage, Access, and rollout gates are approved.</td></tr>
     </tbody>
   </table>
 </section>
@@ -549,14 +549,14 @@ Mastodon / Misskey / GoToSocial / other Fediverse servers</pre>
     <li>Black-box interoperability checks completed with Mastodon surfaces, including successful exact discovery and inbound follow delivery from <code>g0v.social</code>; Misskey public Article delivery and display have also passed on gyutte.site.</li>
     <li>SQLite persistence plus backup, restore, reconcile, and replay tooling are in place.</li>
     <li>Webhook dispatch exists for metrics, alerts, logs, and Slack incoming webhooks.</li>
-    <li>G2-A real Matters article export is split across clear repo boundaries: merged server preflight PR #4761, merged generator PR #161, merged lambda handler PR #217, merged lambda manifest PR #223, and gateway runtime ingestion. Production rollout remains blocked on real-payload Lambda staging verification, credentials/storage, canonical identity, and legal/privacy gates.</li>
+    <li>G2-A real Matters article export is split across clear repo boundaries: merged server preflight PR #4761, merged generator PR #161, merged lambda handler PR #217, merged lambda manifest PR #223, deployed Lambda staging generation, gateway runtime ingestion, and Misskey delivery. Production rollout remains blocked on credentials/storage, canonical identity, and legal/privacy gates.</li>
   </ul>
 </section>
 
 <section>
   <h2>Next work</h2>
   <ol>
-    <li>Run an end-to-end <code>matters.icu</code> staging check from explicit public article IDs or real staging rows through deployed Lambda generation, manifest ingestion, and Misskey delivery.</li>
+    <li>Keep the deployed-Lambda <code>matters.icu</code> staging check repeatable and preserve its run reports.</li>
     <li>Continue G2-B contract work for author opt-in, per-article federation setting behavior, export trigger boundaries, and product-facing copy/API shape.</li>
     <li>Do not start production rollout until pilot author list, production credentials/storage, legal/privacy review, and canonical <code>acct:user@matters.town</code> cutover are approved.</li>
   </ol>
