@@ -549,17 +549,16 @@ Mastodon / Misskey / GoToSocial / other Fediverse servers</pre>
     <li>Black-box interoperability checks completed with Mastodon surfaces, including successful exact discovery and inbound follow delivery from <code>g0v.social</code>; Misskey public Article delivery and display have also passed on gyutte.site.</li>
     <li>SQLite persistence plus backup, restore, reconcile, and replay tooling are in place.</li>
     <li>Webhook dispatch exists for metrics, alerts, logs, and Slack incoming webhooks.</li>
-    <li>G2-A real Matters article export is split across clear repo boundaries: server preflight PR #4761, generator PR #161, merged lambda handler PR #217, and gateway runtime ingestion. Production rollout remains blocked on staging verification, credentials/storage, canonical identity, and legal/privacy gates.</li>
+    <li>G2-A real Matters article export is split across clear repo boundaries: merged server preflight PR #4761, merged generator PR #161, merged lambda handler PR #217, follow-up lambda manifest PR #223, and gateway runtime ingestion. Production rollout remains blocked on deployed Lambda staging verification, credentials/storage, canonical identity, and legal/privacy gates.</li>
   </ul>
 </section>
 
 <section>
   <h2>Next work</h2>
   <ol>
-    <li>Merge <code>ipns-site-generator</code> PR #161 after a non-author reviewer approves it.</li>
-    <li>Merge <code>matters-server</code> PR #4761 to <code>develop</code>, deploy to <code>matters.icu</code>, and verify migration plus public-only preflight behavior.</li>
-    <li>Retry or fix the <code>lambda-handlers</code> ECR image publish with a fresh version/tag, then configure the dev federation export Lambda.</li>
-    <li>Run an end-to-end <code>matters.icu</code> staging check from explicit public article IDs through lambda generation, manifest ingestion, and Misskey delivery.</li>
+    <li>Merge <code>lambda-handlers</code> PR #223, publish image tag <code>v0.14.1</code>, and update <code>federation-export-dev</code>.</li>
+    <li>Run an end-to-end <code>matters.icu</code> staging check from explicit public article IDs or real staging rows through deployed Lambda generation, manifest ingestion, and Misskey delivery.</li>
+    <li>Continue G2-B contract work for author opt-in, per-article federation setting behavior, export trigger boundaries, and product-facing copy/API shape.</li>
     <li>Do not start production rollout until pilot author list, production credentials/storage, legal/privacy review, and canonical <code>acct:user@matters.town</code> cutover are approved.</li>
   </ol>
 </section>
