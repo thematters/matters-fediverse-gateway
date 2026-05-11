@@ -10,7 +10,7 @@
 
 - **完成度**：單實例 gateway 原型可跑，117 tests passing；已與 `mastodon.social`、`g0v.social`、gyutte.site Misskey 完成黑箱互通；real Matters public Article 已透過 staging gateway 投遞到 Misskey；`federation-export-dev` public-only dry-run 與 gateway probe 已在 `matters.icu` 重跑通過；GoToSocial probe 已有本地驗證但 public run 依目前決策暫跳過
 - **目前階段**：G1 · 官方聯邦化基礎版（3 個月，2026-05 ~ 2026-07）
-- **下一步**：取得 staging admin 權限後，寫入或確認 author/article federation setting，重跑 `enforce_federation_gate=true` 的 strict gate staging 驗證；在此之前可繼續用 public-only dry-run 做 regression coverage。
+- **下一步**：G2-B 產品合約切片已啟動：先補 read-side GraphQL fields、pilot-scoped mutations、帳號層與文章層控制、export-trigger dry-run；staging admin 權限到位後再重跑 strict gate staging 驗證。
 - **程式碼**：[`gateway-core/`](../../gateway-core)（sibling repo root）
 
 ---
@@ -55,5 +55,7 @@
 ## 相關任務
 
 - 活躍 task：[matters-gateway-core-minimum-slice](../../docs/tasks/matters-gateway-core-minimum-slice.md)
+- G2-B task：[matters-g2-b-web-app-integration](../../docs/tasks/matters-g2-b-web-app-integration.md)
+- G2-B 產品合約：[g2b-product-contract-slice.md](02-runtime-slices/g2b-product-contract-slice.md)
 - 最新 staging 紀錄：[matters-icu-public-only-rerun-20260511T2012Z.md](03-ops/matters-icu-public-only-rerun-20260511T2012Z.md)
 - 最新 interop 紀錄：[misskey-public-run-20260502T224743-charlesmungerai.md](03-ops/misskey-public-run-20260502T224743-charlesmungerai.md)

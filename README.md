@@ -95,7 +95,10 @@ The project is past fixture-only proof of concept, but it is not production-read
 1. Keep the deployed-Lambda staging proof repeatable: rerun explicit public article IDs through `federation-export-dev`, ingest the returned manifest into staging gateway, and preserve the Misskey delivery report.
    - The repeatable staging runner is `gateway-core/scripts/run-matters-icu-staging-check.mjs`; see [`research/matters-fediverse-compat/03-ops/matters-icu-staging-e2e-check.md`](research/matters-fediverse-compat/03-ops/matters-icu-staging-e2e-check.md).
    - Product settings, legal/privacy, and production rollout approvals are tracked in [`research/matters-fediverse-compat/05-roadmap/decisions/08-production-rollout-human-approval.md`](research/matters-fediverse-compat/05-roadmap/decisions/08-production-rollout-human-approval.md).
-2. Continue G2-B contract work locally: author opt-in state, per-article federation setting behavior, export trigger boundaries, and product-facing copy/API shape.
+2. Continue G2-B implementation from the product contract scaffold: author opt-in state, per-article federation setting behavior, export trigger boundaries, and product-facing copy/API shape.
+   - The G2-B task note is [`docs/tasks/matters-g2-b-web-app-integration.md`](docs/tasks/matters-g2-b-web-app-integration.md).
+   - The product contract slice is [`research/matters-fediverse-compat/02-runtime-slices/g2b-product-contract-slice.md`](research/matters-fediverse-compat/02-runtime-slices/g2b-product-contract-slice.md).
+   - The accepted default is conservative: author federation is off by default, pilot-only at first, article setting defaults to `inherit`, and existing public articles are not backfilled automatically on opt-in.
 3. Keep G2-A non-production until production credentials, storage target, migration timing, legal/privacy review, and canonical `acct:user@matters.town` cutover are explicitly approved.
 
 ## G1 roadmap, May-July 2026

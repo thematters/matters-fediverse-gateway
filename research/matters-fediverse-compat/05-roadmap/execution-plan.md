@@ -21,8 +21,8 @@ This plan deliberately excludes DID / shared DID work, ZK anonymity, and Billboa
 | G1-A Static Article Contract | done | `ipns-site-generator`, `gateway-core` | Public Article seed bundle passes bridge and generator tests |
 | G1-B Gateway Hardening | queued | `gateway-core` | Gateway runtime passes hardening tests and staging drill |
 | G1-C Interop Validation | done with deferral | `gateway-core`, ops reports | Mastodon and Misskey reports are archived; GoToSocial is skipped until a later decision |
-| G2-A Matters Production Data Integration | active preflight, npm/CI gate | `matters-server`, `ipns-site-generator`, `gateway-core` | Selected real Matters authors resolve and publish public Article objects |
-| G2-B Matters Web/App Integration | queued | `matters-web`, `matters-server`, `gateway-core` | Pilot authors can control federation and see inbound interactions |
+| G2-A Matters Production Data Integration | staging preflight passed, production gated | `matters-server`, `ipns-site-generator`, `lambda-handlers`, `gateway-core` | Selected real Matters public articles pass deployed-Lambda dry-run, gateway probes, and Misskey verification |
+| G2-B Matters Web/App Integration | active contract scaffold | `matters-web`, `matters-server`, `gateway-core` | Pilot authors can control federation and see inbound interactions |
 | G2-C Production Rollout | queued | product, ops, docs | Beta rollout has legal, comms, rollback, and monitoring readiness |
 | G3 Second Instance Validation | queued | `gateway-core`, deployment docs | A second independent instance passes black-box acceptance |
 
@@ -143,6 +143,13 @@ Dependencies:
 - G2-A backend integration.
 - Pilot author list.
 - Product copy for author-facing controls.
+
+Current contract scaffold:
+
+- Task note: `docs/tasks/matters-g2-b-web-app-integration.md`
+- Runtime/product slice: `research/matters-fediverse-compat/02-runtime-slices/g2b-product-contract-slice.md`
+- Decision: `research/matters-fediverse-compat/05-roadmap/decisions/09-g2b-product-contract.md`
+- Recommended defaults: author-level federation default off, pilot-only first, article default `inherit`, and no automatic backfill of existing public articles on opt-in.
 
 Stop/go gate:
 
@@ -375,5 +382,5 @@ Each task should end with:
 - `development-plan.md` remains the high-level roadmap.
 - This file is the execution controller for G1-G3 implementation work.
 - Existing `docs/tasks/matters-g1-*` files remain valid task-level handoffs.
-- G2 and G3 task notes will be added under `docs/tasks/` when those stages enter execution.
+- G3 task notes will be added under `docs/tasks/` when that stage enters execution.
 - DID, ZK, and Billboard are intentionally out of scope for this execution plan.
