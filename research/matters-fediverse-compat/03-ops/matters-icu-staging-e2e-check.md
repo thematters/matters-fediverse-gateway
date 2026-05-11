@@ -1,7 +1,7 @@
 # matters.icu Staging E2E Check
 
 Date: 2026-05-11
-Status: server and generator PRs are merged, `matters.icu` develop deploy passed, `federation-export-dev` is updated to `lambda-handlers` `v0.14.1`, and the first real deployed-Lambda staging bundle has passed gateway and Misskey verification
+Status: server and generator PRs are merged, `matters.icu` develop deploy passed, `federation-export-dev` is updated to `lambda-handlers` `v0.14.1`, and real deployed-Lambda staging bundles have passed gateway, NodeInfo, SQLite consistency, and Misskey verification without admin mutations
 
 ## Goal
 
@@ -12,8 +12,9 @@ matters.icu selected public article IDs
 -> federation-export-dev Lambda
 -> generated ActivityPub seed bundle
 -> gateway-core staging config
--> WebFinger / actor / outbox probe
--> optional Misskey delivery check
+-> WebFinger / actor / outbox / NodeInfo probe
+-> SQLite consistency scan
+-> optional Misskey delivery or read-only check
 ```
 
 This check is not a production rollout. It does not mutate production data, enable federation for all users, or publish canonical `acct:user@matters.town` identities.
@@ -80,6 +81,8 @@ node src/server.mjs --config ./runtime/matters-icu-staging/gateway.instance.json
 - WebFinger resolves `acct:<handle>@staging-gateway.matters.town`.
 - Actor endpoint returns a valid ActivityPub actor.
 - Outbox returns at least one ActivityPub Article.
+- NodeInfo discovery advertises `/nodeinfo/2.1`.
+- NodeInfo 2.1 advertises `activitypub`.
 - Optional Misskey delivery displays the selected public Article in gyutte.site.
 
 ## Failure Boundaries
@@ -90,16 +93,17 @@ node src/server.mjs --config ./runtime/matters-icu-staging/gateway.instance.json
 - If Misskey delivery fails after gateway outbox passes, treat it as interop/delivery debugging and preserve the generated bundle plus `staging-check-report.json`.
 - If Cloudflare serves a stale 404 for WebFinger, confirm the origin with a cache-busting query and purge the Cloudflare cache when the operator token has cache-purge permission. Do not treat this as a gateway runtime failure if the origin and uncached route pass.
 
-## 2026-05-11 Deployed-Lambda Result
+## 2026-05-11 Latest Public-Only Deployed-Lambda Result
 
-- Workflow run: `thematters/lambda-handlers` `Invoke Federation Export Staging`, run `25653127777`.
+- Workflow run: `thematters/lambda-handlers` `Invoke Federation Export Staging`, run `25695506631`.
 - Inputs: `short_hashes=ej8tf2513uky,zne4qktk3xk0`.
 - Lambda result: `statusCode=200`, `selected=2`, `eligible=1`, `skipped=1`.
 - Decision report: article `23520` was `eligible`; article `23522` was skipped as `article_not_public`.
 - Bundle actor: `zeckagent3@staging-gateway.matters.town`.
 - Bundle files: `.well-known/webfinger`, `about.jsonld`, `activitypub-manifest.json`, `feed.json`, `index.html`, `outbox.jsonld`, `rss.xml`.
-- Local gateway probe: WebFinger resolved `acct:zeckagent3@staging-gateway.matters.town`, actor type was `Person`, and outbox item count was `1`.
-- Public delivery: gyutte.site Misskey resolved and followed `zeckagent3@staging-gateway.matters.town`; the generated article `23520` was delivered with status `delivered`, and Misskey `users/notes` matched the generated Article URL.
+- Local gateway probe: WebFinger resolved `acct:zeckagent3@staging-gateway.matters.town`, actor type was `Person`, outbox item count was `1`, NodeInfo discovery advertised `/nodeinfo/2.1`, and NodeInfo 2.1 advertised `activitypub`.
+- SQLite consistency scan: total diffs `0`.
+- Misskey read-only probe: gyutte.site resolved `zeckagent3@staging-gateway.matters.town`, followers collection had `1` recipient, and no new public `Create` was sent.
 
 ## 2026-05-11 Strict Gate Result
 
