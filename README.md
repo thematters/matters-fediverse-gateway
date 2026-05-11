@@ -7,7 +7,7 @@ An open-source ActivityPub gateway that connects Matters' long-form publishing l
 > **Canonical demo actor**: `acct:matters@matters.town`
 > **Worker testbed**: <https://gateway-demo.matters.town>
 > **Source**: <https://github.com/thematters/matters-fediverse-gateway>
-> **Current integration slice**: G2-A preflight has moved past review-stage PRs. `ipns-site-generator` PR #161 is merged to `main`, `matters-server` PR #4761 is merged to `develop` and deployed to `matters.icu`, and `lambda-handlers` has a follow-up draft PR #223 for the manifest de-duplication found during staging verification. Production rollout is not enabled.
+> **Current integration slice**: G2-A preflight has moved past review-stage PRs. `ipns-site-generator` PR #161 is merged to `main`, `matters-server` PR #4761 is merged to `develop` and deployed to `matters.icu`, and `lambda-handlers` PR #223 is merged and deployed to `federation-export-dev` as `v0.14.1`. Production rollout is not enabled.
 
 ## Why
 
@@ -80,7 +80,7 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 - Isolated Cloudflare Worker testbed remains deployed under `gateway-demo.matters.town`
 - G2-A server preflight landed in `matters-server` PR [#4761](https://github.com/thematters/matters-server/pull/4761), merged to `develop`, and the post-merge develop deploy to `matters.icu` passed
 - The ActivityPub bundle contract landed in `ipns-site-generator` PR [#161](https://github.com/thematters/ipns-site-generator/pull/161), merged to `main`
-- The async federation export worker landed in `lambda-handlers` PR [#217](https://github.com/thematters/lambda-handlers/pull/217); `federation-export-dev` exists and smoke-tested with fixture rows, and follow-up draft PR [#223](https://github.com/thematters/lambda-handlers/pull/223) removes duplicate manifest output found during real `matters.icu` dry-run verification
+- The async federation export worker landed in `lambda-handlers` PR [#217](https://github.com/thematters/lambda-handlers/pull/217); follow-up PR [#223](https://github.com/thematters/lambda-handlers/pull/223) removed duplicate manifest output, published `v0.14.1`, updated `federation-export-dev`, and passed fixture smoke verification
 - Real `matters.icu` public API data passed a local federation-export dry-run through the lambda handler: article `23520` was eligible, paywalled article `23522` was skipped as `article_not_public`, and the generated bundle contained seven unique files
 - Real public Matters articles for `@charlesmungerai` were exported into a staging bundle, served through `charlesmungerai@staging-gateway.matters.town`, and one fresh public Article was delivered to gyutte.site Misskey
 - The gateway execution/reporting docs were merged in PR [#5](https://github.com/thematters/matters-fediverse-gateway/pull/5)
@@ -89,13 +89,11 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 
 The project is past fixture-only proof of concept, but it is not production-ready. The next concrete work items are:
 
-1. Merge or approve `lambda-handlers` PR #223, then let Build & Test and ECR publish produce the next immutable image tag.
-2. Update `federation-export-dev` to the new image tag so the generated bundle contains only one canonical `activitypub-manifest.json`.
-3. Run the deployed Lambda against real `matters.icu` rows or DB-backed article IDs: inspect returned files or S3 output, ingest the manifest into the staging gateway, and send a public Article to Misskey.
+1. Run the deployed Lambda against real `matters.icu` rows or DB-backed article IDs: inspect returned files or S3 output, ingest the manifest into the staging gateway, and send a public Article to Misskey.
    - The repeatable staging runner is `gateway-core/scripts/run-matters-icu-staging-check.mjs`; see [`research/matters-fediverse-compat/03-ops/matters-icu-staging-e2e-check.md`](research/matters-fediverse-compat/03-ops/matters-icu-staging-e2e-check.md).
    - Product settings, legal/privacy, and production rollout approvals are tracked in [`research/matters-fediverse-compat/05-roadmap/decisions/08-production-rollout-human-approval.md`](research/matters-fediverse-compat/05-roadmap/decisions/08-production-rollout-human-approval.md).
-4. Continue G2-B contract work locally: author opt-in state, per-article federation setting behavior, export trigger boundaries, and product-facing copy/API shape.
-5. Keep G2-A non-production until production credentials, storage target, migration timing, legal/privacy review, and canonical `acct:user@matters.town` cutover are explicitly approved.
+2. Continue G2-B contract work locally: author opt-in state, per-article federation setting behavior, export trigger boundaries, and product-facing copy/API shape.
+3. Keep G2-A non-production until production credentials, storage target, migration timing, legal/privacy review, and canonical `acct:user@matters.town` cutover are explicitly approved.
 
 ## G1 roadmap, May-July 2026
 
