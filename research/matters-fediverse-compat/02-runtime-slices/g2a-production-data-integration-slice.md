@@ -95,13 +95,12 @@ Required `HomepageContext` mapping:
 
 ## Minimal Implementation Plan
 
-1. Merge `ipns-site-generator` PR #161 after a non-author reviewer approves it.
-2. Merge `matters-server` PR #4761 to `develop`, deploy it to `matters.icu`, and verify migration plus public-only preflight behavior before any production branch PR.
-3. Fix or retry the `lambda-handlers` ECR publish step with a fresh image version/tag, then configure the dev federation export Lambda.
-4. Use the committed `matters-server` service for explicitly selected public article rows and decision reports.
-5. Invoke the lambda handler to generate files directly for staging inspection, or write to S3 when staging credentials and bucket policy are ready.
-6. Add or update a gateway staging fixture/config pointing `staticBundleManifestFile` at the generated manifest.
-7. Run `ipns-site-generator` tests and `gateway-core` tests against the generated manifest, then run the `matters.icu` Misskey delivery check.
+1. Merge or approve `lambda-handlers` PR #223 so the federation export bundle no longer contains duplicate `activitypub-manifest.json` paths.
+2. Publish the next immutable lambda-handlers image tag and update `federation-export-dev`.
+3. Invoke the deployed Lambda with real `matters.icu` rows or DB-backed article IDs, then inspect returned files or S3 output.
+4. Add or update a gateway staging fixture/config pointing `staticBundleManifestFile` at the generated manifest.
+5. Run `gateway-core` tests against the generated manifest, then run the `matters.icu` Misskey delivery check.
+6. Keep production disabled until storage, credentials, rollout timing, legal/privacy, and canonical identity cutover are explicitly approved.
 
 ## Local Verification Notes
 
@@ -131,6 +130,10 @@ Required `HomepageContext` mapping:
 - `matters-server` commit `266a1e1` added export decision reporting; verification passed with Node 18 build, targeted federationExportService Jest 13/13, targeted ESLint, `git diff --check`, CLI fixture export, and the repository pre-commit hook.
 - `matters-server` commit `cfd0cb6` added patch-coverage tests for `federationExportService.ts` and the federation settings migration. GitHub Actions build and Codecov patch/project checks now pass on PR #4761.
 - `lambda-handlers` PR #217 merged the federation export handler. Build & Test passed; the post-merge ECR image publish failed because immutable tag `v0.13.5` already exists, so deployment needs a fresh version/tag or workflow retry strategy.
+- `ipns-site-generator` PR #161 merged to `main` on 2026-05-11.
+- `matters-server` PR #4761 merged to `develop` on 2026-05-11; the post-merge develop deploy and schema workflow passed for `matters.icu`.
+- Local `matters.icu` staging dry-run through the lambda handler passed with real public API rows: article `23520` was eligible, paywalled article `23522` was skipped as `article_not_public`, and the generated bundle contained seven unique files after the manifest de-duplication fix.
+- `lambda-handlers` PR #223 is open as a draft to remove duplicate manifest output, enable Jest ESM execution, and add federation export regression coverage.
 - `gateway-core` local `better-sqlite3` native module was rebuilt for Node 18 and the full test suite passed 117/117.
 - `matters-fediverse-gateway` PR #5 was merged into `main`; `git diff --check` and `triad-ops` validation passed at that handoff.
 
@@ -145,4 +148,4 @@ Required `HomepageContext` mapping:
 
 ## Next Engineering Action
 
-After `ipns-site-generator` PR #161 and `matters-server` PR #4761 are approved and merged, deploy the server branch through the normal `develop` -> `matters.icu` checkpoint. In parallel, fix or rerun the `lambda-handlers` ECR publish with a fresh image tag, then configure a dev federation export Lambda. The first end-to-end staging pass should use explicit public article IDs on `matters.icu`, confirm the server preflight report, run lambda bundle generation, inspect returned files or S3 output, ingest the manifest into the staging gateway, and deliver one public Article to gyutte.site Misskey.
+After `lambda-handlers` PR #223 is merged, publish or deploy the next image tag to `federation-export-dev`. The next end-to-end staging pass should use explicit public article IDs or real `matters.icu` rows, confirm the decision report, run deployed Lambda bundle generation, inspect returned files or S3 output, ingest the manifest into the staging gateway, and deliver one public Article to gyutte.site Misskey.
