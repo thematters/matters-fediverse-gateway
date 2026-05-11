@@ -100,3 +100,11 @@ node src/server.mjs --config ./runtime/matters-icu-staging/gateway.instance.json
 - Bundle files: `.well-known/webfinger`, `about.jsonld`, `activitypub-manifest.json`, `feed.json`, `index.html`, `outbox.jsonld`, `rss.xml`.
 - Local gateway probe: WebFinger resolved `acct:zeckagent3@staging-gateway.matters.town`, actor type was `Person`, and outbox item count was `1`.
 - Public delivery: gyutte.site Misskey resolved and followed `zeckagent3@staging-gateway.matters.town`; the generated article `23520` was delivered with status `delivered`, and Misskey `users/notes` matched the generated Article URL.
+
+## 2026-05-11 Strict Gate Result
+
+- Workflow run: `thematters/lambda-handlers` `Invoke Federation Export Staging`, run `25680894969`.
+- Inputs: `short_hashes=ej8tf2513uky,zne4qktk3xk0`, `enforce_federation_gate=true`, `author_federation_setting=enabled`, `article_federation_setting=inherit`.
+- Lambda result: `statusCode=200`, `selected=2`, `eligible=1`, `skipped=1`.
+- Decision report: article `23520` was `eligible`; article `23522` was still skipped as `article_not_public`.
+- This verifies that strict gate payloads can pass through `federation-export-dev` while preserving the public-only boundary. It is still a staging row-level payload test, not a production settings rollout.
