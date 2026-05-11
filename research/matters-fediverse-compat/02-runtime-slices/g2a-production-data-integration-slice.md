@@ -135,6 +135,7 @@ Required `HomepageContext` mapping:
 - `gateway-core` local `better-sqlite3` native module was rebuilt for the current local Node runtime and the full test suite passed 117/117.
 - `matters-fediverse-gateway` PR #5 was merged into `main`; `git diff --check` and `triad-ops` validation passed at that handoff.
 - `lambda-handlers` staging invoke workflow ran `federation-export-dev` against real `matters.icu` rows on 2026-05-11: article `23520` was eligible, article `23522` was skipped as `article_not_public`, and the generated bundle was ingested by `gateway-core` as `zeckagent3@staging-gateway.matters.town`.
+- A follow-up strict gate staging invocation also passed on 2026-05-11 with row-level `authorFederationSetting=enabled` and `articleFederationSetting=inherit`: article `23520` remained eligible, while paywalled article `23522` remained blocked as `article_not_public`.
 - Local gateway probes passed for the deployed-Lambda bundle: WebFinger resolved `acct:zeckagent3@staging-gateway.matters.town`, `/users/zeckagent3` returned `Person`, and `/users/zeckagent3/outbox` returned one Article.
 - Public staging delivery passed: gyutte.site Misskey resolved and followed `zeckagent3@staging-gateway.matters.town`; the generated article `23520` was delivered with status `delivered`, and Misskey `users/notes` matched the generated Article URL.
 
