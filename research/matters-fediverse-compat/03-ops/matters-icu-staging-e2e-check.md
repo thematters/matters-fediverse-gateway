@@ -1,7 +1,7 @@
 # matters.icu Staging E2E Check
 
-Date: 2026-05-05
-Status: ready for staging execution after the server and generator PRs are merged and deployed
+Date: 2026-05-11
+Status: server and generator PRs are merged and `matters.icu` develop deploy passed; next run should wait for `lambda-handlers` PR #223 or use the current dev Lambda only with awareness that it emits duplicate manifest paths
 
 ## Goal
 
@@ -20,9 +20,10 @@ This check is not a production rollout. It does not mutate production data, enab
 
 ## Prerequisites
 
-- `ipns-site-generator` PR #161 merged.
+- `ipns-site-generator` PR #161 merged to `main`.
 - `matters-server` PR #4761 merged to `develop` and deployed to `matters.icu`.
-- `lambda-handlers` image tag is available in ECR.
+- `lambda-handlers` PR #223 merged or otherwise accounted for, so generated bundles contain only one canonical `activitypub-manifest.json`.
+- A fresh `lambda-handlers` image tag is available in ECR.
 - `federation-export-dev` exists. If it does not, run the `Provision Federation Export Dev Lambda` workflow in `thematters/lambda-handlers`.
 - Staging gateway host is available, normally `https://staging-gateway.matters.town`.
 - Staging gateway private/public key files exist locally and are not committed.
