@@ -182,18 +182,23 @@ node src/server.mjs --config ./runtime/matters-icu-staging/gateway.instance.json
   `mashbeanmatters@staging-gateway.matters.town` through `users/show`; no public
   Misskey `Create` was sent in this pass.
 
-## 2026-05-13 Pre-Rollout Trigger Scaffold
+## 2026-05-13 Record-Only Trigger Scaffold Deploy
 
 - `matters-server` PR
-  <https://github.com/thematters/matters-server/pull/4774> is open against
+  [#4774](https://github.com/thematters/matters-server/pull/4774) merged to
   `develop`.
-- The PR adds `federation_export_event` plus
-  `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE`.
-- Default behavior remains `off`.
-- The staging-only validation mode is `record_only`: after immediate publish or
-  content revision, server records the strict federation eligibility decision
-  without calling Lambda, writing S3, pushing IPNS, or delivering ActivityPub.
-- Next staging check after merge/deploy: set
-  `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only` on `matters.icu`, publish
-  or revise a pilot public article, and confirm a `federation_export_event` row
-  with `eligible=true`, reason `eligible`, and the strict `decisionReport`.
+- Deploy run
+  [25768243309](https://github.com/thematters/matters-server/actions/runs/25768243309)
+  passed build, develop DB migration, Elastic Beanstalk deploy, develop Lambda
+  deploy, and Slack notification.
+- Production deploy, production Lambda deploy, and production DB migration jobs
+  were skipped in that run.
+- `server.matters.icu` GraphQL responded after deploy.
+- The scaffold remains default-off until the develop server environment is
+  configured with `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only`.
+- Next staging action: set `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only`
+  on `matters.icu` develop, redeploy or restart the server environment, publish
+  and edit pilot public article `23525`, then query `federation_export_event`
+  for `publish_article` and `revise_article` audit rows. Expected result:
+  strict eligibility is recorded, normal publish/edit remains unblocked, and no
+  Lambda, S3, IPNS, or ActivityPub delivery is invoked from `matters-server`.
