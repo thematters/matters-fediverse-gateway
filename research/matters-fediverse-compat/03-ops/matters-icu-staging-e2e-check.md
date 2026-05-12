@@ -181,3 +181,19 @@ node src/server.mjs --config ./runtime/matters-icu-staging/gateway.instance.json
 - gyutte.site Misskey read-side probe resolved
   `mashbeanmatters@staging-gateway.matters.town` through `users/show`; no public
   Misskey `Create` was sent in this pass.
+
+## 2026-05-13 Pre-Rollout Trigger Scaffold
+
+- `matters-server` PR
+  <https://github.com/thematters/matters-server/pull/4774> is open against
+  `develop`.
+- The PR adds `federation_export_event` plus
+  `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE`.
+- Default behavior remains `off`.
+- The staging-only validation mode is `record_only`: after immediate publish or
+  content revision, server records the strict federation eligibility decision
+  without calling Lambda, writing S3, pushing IPNS, or delivering ActivityPub.
+- Next staging check after merge/deploy: set
+  `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only` on `matters.icu`, publish
+  or revise a pilot public article, and confirm a `federation_export_event` row
+  with `eligible=true`, reason `eligible`, and the strict `decisionReport`.
