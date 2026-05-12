@@ -1,13 +1,13 @@
 ---
 task_slug: matters-g2-b-web-app-integration
-status: staging-validation-blocked
+status: staging-api-validation-passed
 goal: Define and implement the Matters product-facing federation controls without enabling production rollout
 dispatcher: triad
 executor: codex-local
 host: any
 branch: develop integration merged
 latest_commit: server #4773 / web #5883 merged
-last_updated: 2026-05-11T19:00:00-04:00
+last_updated: 2026-05-12T00:10:00-04:00
 tmux_session: none
 host_affinity: none
 outputs_scope: matters-web, matters-server, gateway-core
@@ -29,9 +29,9 @@ local_paths:
   - none
 start_command: none
 stop_command: none
-verify_command: gateway-core npm test; scan:consistency; check:rollout-artifact; check:secret-layout; staging UI still requires pilot/admin permission
-next_step: Grant mashbean@matters.town staging admin / fediverseBeta, then validate account-level and per-article UI controls on matters.icu
-blockers: mashbean@matters.town is only the intended staging pilot/admin account and does not yet have permission; legal/privacy beta approval, production storage, and canonical acct:user@matters.town cutover remain human gates
+verify_command: gateway-core npm test; scan:consistency; check:secret-layout; lambda strict-gate run 25712528545; staging browser UI QA still pending
+next_step: Finish browser UI QA for account-level Fediverse row, article edit override, and disabled-state copy on matters.icu
+blockers: current pilot account has no owned staging articles for browser article-control QA; legal/privacy beta approval, production storage, and canonical acct:user@matters.town cutover remain human gates
 ---
 
 # Task Handoff
@@ -56,9 +56,11 @@ As of 2026-05-11, the code portion is merged to `develop`:
 - Both develop deploys passed on `matters.icu`.
 - `server.matters.icu` exposes the expected G2-B schema fields and mutations.
 
-The remaining staging blocker is account permission, not implementation:
-`mashbean@matters.town` is the intended staging pilot/admin test account, but it
-is not yet confirmed as staging admin and does not yet have `fediverseBeta`.
+The account permission gate is cleared for API validation:
+`mashbean@matters.town` is confirmed as staging admin, has `fediverseBeta`, and
+its account-level federation setting is enabled on `matters.icu`. Browser UI QA
+still needs a real staging article owned by the pilot account, or an agreed test
+author/article path.
 
 ## Recommended Product Contract
 
@@ -188,8 +190,9 @@ Server:
 
 Web:
 
-- Merged pilot controls need manual QA on `matters.icu` after
-  `mashbean@matters.town` receives staging admin / `fediverseBeta`.
+- API validation confirmed the pilot account has `fediverseBeta` and
+  account-level federation is `enabled`.
+- Merged pilot controls still need manual browser QA on `matters.icu`.
 - Validate account setting, article setting, disabled state, and pilot
   unavailable state before any production PR.
 
@@ -198,13 +201,19 @@ Gateway:
 - No new runtime requirement for the first UI slice.
 - Continue using staging public probes and SQLite consistency scan after export
   trigger dry-runs.
+- 2026-05-12 deployed-Lambda strict-gate run
+  `25712528545` selected public article `23520` and paywalled article `23522`;
+  `23520` was exported, `23522` stayed blocked as `article_not_public`, the
+  bundle was ingested by `gateway-core`, WebFinger / actor / outbox / NodeInfo
+  probes passed, and SQLite consistency scan returned `totalDiffs=0`.
 - 2026-05-11 local gateway verification passed: `npm test` 117/117,
   `scan:consistency` total diffs `0`, `check:rollout-artifact` OK, and
   `check:secret-layout` OK.
 
 ## Human Gates
 
-- Pilot author/admin permission setup for `mashbean@matters.town`.
+- Browser UI QA for the pilot account and a staging article owned by that
+  account, or an agreed alternate test author/article.
 - Final copy approval.
 - Whether pilot authors can force-enable individual public articles or only
   inherit/disable during the first beta.

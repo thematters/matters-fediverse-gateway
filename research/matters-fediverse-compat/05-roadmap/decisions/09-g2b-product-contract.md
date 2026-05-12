@@ -1,7 +1,7 @@
 # Decision 09: G2-B Product Contract
 
-Date: 2026-05-11
-Status: accepted; develop integration merged; staging UI validation pending pilot/admin permission
+Date: 2026-05-12
+Status: accepted; develop integration merged; staging API validation passed; browser UI QA pending
 
 ## Decision
 
@@ -56,5 +56,8 @@ authors test the workflow.
 - No production setting, storage, or deployment is changed by this decision.
 - `matters-server` PR #4773 and `matters-web` PR #5883 are merged to
   `develop` and deployed to `matters.icu`.
-- `mashbean@matters.town` is the intended staging pilot/admin test account, but
-  it is not yet granted the permission required for UI validation.
+- `mashbean@matters.town` is confirmed as a staging admin test account, has
+  `fediverseBeta`, and account-level federation is `enabled`.
+- Real staging strict-gate validation passed for public article `23520` while
+  paywalled article `23522` remained blocked as `article_not_public`.
+- Browser UI QA is still needed before production planning.

@@ -132,6 +132,28 @@ node src/server.mjs --config ./runtime/matters-icu-staging/gateway.instance.json
 - Fresh Lambda strict-gate row-level run `25700094876` passed with
   `authorFederationSetting=enabled`, `articleFederationSetting=inherit`,
   public article `23520` eligible, and paywalled article `23522` still blocked.
-- `mashbean@matters.town` is the intended staging pilot/admin test account, but
-  it does not yet have staging admin / `fediverseBeta` permission. UI opt-in
-  validation must wait for that permission.
+- This was the last pre-permission state. The permission gate was cleared on
+  2026-05-12 for API validation.
+
+## 2026-05-12 G2-B Staging API Validation
+
+- `mashbean@matters.town` authenticated on `matters.icu` as staging admin.
+- `fediverseBeta` was added to the test account and account-level federation
+  was set to `enabled`.
+- Public article `23520` (`ej8tf2513uky`) is now `eligible` after author
+  opt-in.
+- Paywalled article `23522` (`zne4qktk3xk0`) remains blocked as
+  `article_not_public`.
+- Deployed-Lambda strict-gate run
+  <https://github.com/thematters/lambda-handlers/actions/runs/25712528545>
+  passed with `selected=2`, `eligible=1`, and `skipped=1`.
+- The returned bundle contains the expected seven files:
+  `.well-known/webfinger`, `about.jsonld`, `activitypub-manifest.json`,
+  `feed.json`, `index.html`, `outbox.jsonld`, and `rss.xml`.
+- `gateway-core` ingested the bundle locally, WebFinger / actor / outbox /
+  NodeInfo probes passed, and SQLite consistency scan returned `totalDiffs=0`.
+- Public `https://staging-gateway.matters.town` probes also passed for
+  `acct:zeckagent3@staging-gateway.matters.town`.
+- Remaining G2-B gap: browser UI QA for the settings row and article edit
+  override. The current pilot account has no owned staging articles, so
+  article-control UI QA needs a test article or an agreed alternate test author.
