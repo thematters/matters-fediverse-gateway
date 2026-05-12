@@ -2,24 +2,63 @@
 
 Date: 2026-05-05
 Last updated: 2026-05-13
-Status: pending human confirmation before production rollout
+Status: partially approved; final launch window still pending
 
 This brief is for product settings, legal/privacy, and production rollout decisions that should not be silently automated. Engineering can keep building and staging, but these items need explicit approval before public production enablement.
 
-## 2026-05-13 人類決策點
+## 2026-05-13 Accepted Decisions
 
-正式 rollout 前，請逐項確認：
+The product owner approved these rollout decisions in session:
 
-- 是否同意第一階段維持「作者預設關閉、pilot allowlist、作者明確 opt-in」。
-- 是否同意文章預設為 `inherit`，且 `disabled` 永遠優先；`enabled` 不得繞過作者 opt-in。
-- 是否同意 production 前先在 `matters.icu` 啟用 `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only`，只記錄 publish/edit eligibility audit，不打 Lambda、不寫 S3、不對外 delivery。
-- 是否同意 production worker 後續採用「server 記錄決策，lambda-handlers 非同步產生 bundle，gateway-core 負責 federation runtime」的邊界。
-- 是否選定 production generated bundle 的保留方式：建議用私有 S3 bucket/prefix 做 audit/retry；staging 可繼續 direct return。
-- 是否確認 pilot 作者名單與 launch window。
-- 是否確認 user-facing copy：Fediverse 發布會讓公開文章內容與 metadata 被外部站台讀取、快取或轉載。
-- 是否確認 legal takedown owner、privacy notice、key exposure/rotation response path。
-- 是否確認 canonical identity cutover 時機：`acct:user@matters.town` 只在 staging E2E、rollback、takedown 都通過後啟用。
-- 是否確認 production 外部 delivery go/no-go：允許 gateway 對 Misskey/Mastodon 等遠端站台送出 public Create/Update/Delete 的時間點。
+- First phase keeps author federation default-off and requires explicit author opt-in.
+- The allowlist is open rather than limited to a named pilot-author list. A separate pilot author list is not required.
+- Article-level setting defaults to `inherit`.
+- Article-level `disabled` always wins.
+- Article-level `enabled` cannot bypass author opt-in.
+- Before production rollout, `matters.icu` should run `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only` to record publish/edit eligibility audit rows only.
+- `record_only` must not call Lambda, write S3, publish IPNS, or deliver ActivityPub.
+- Production generated bundles should be retained in a private S3 bucket/prefix for audit and retry.
+- The repo boundary is accepted: `matters-server` records product decisions and trigger audit, `lambda-handlers` asynchronously generates bundles, and `gateway-core` owns the federation runtime.
+- Canonical `acct:user@matters.town` cutover waits until staging E2E, rollback, and takedown checks pass.
+- Production public `Create`, `Update`, and `Delete` delivery is approved once production gateway rollout is otherwise enabled; no separate delivery go/no-go is required.
+- Launch window is intentionally deferred until the remaining implementation and staging checks are complete.
+
+## User-Facing Copy Draft
+
+Use this as the first copy draft for settings UI and release notes.
+
+### Account Setting
+
+**Fediverse 發布**
+
+開啟後，你的公開文章可以被 Fediverse 上的其他服務讀取、追蹤與互動。這可能包含 Mastodon、Misskey 或其他相容服務。
+
+只有公開文章會被送出。付費、私人、加密、圈子限定、草稿或已封存內容不會被送出。
+
+請注意：Fediverse 是分散式網路。文章送出後，外部站台可能會保存、快取、轉載或顯示你的公開內容與文章資訊；Matters 無法保證所有外部副本都能同步刪除。
+
+### Article Setting
+
+**Fediverse 發布設定**
+
+- 跟隨作者設定：如果你的帳號已開啟 Fediverse 發布，這篇公開文章可以被送出。
+- 不送出這篇文章：即使帳號已開啟，這篇文章也不會送出。
+
+這個設定不會讓非公開文章被送出。只有公開文章符合 Fediverse 發布條件。
+
+### Short Release Note
+
+Matters 將開始測試 Fediverse 發布功能。作者可自行選擇是否開啟，開啟後公開文章可被 Fediverse 上的其他服務讀取與互動。付費、私人、加密、圈子限定、草稿與已封存內容不會被送出。
+
+## Owner Recommendations
+
+| Area | Recommended owner | Reason |
+| --- | --- | --- |
+| Legal takedown | Matters legal / policy owner, with engineering on evidence preservation | Takedown decisions require policy judgment; engineering should preserve logs, affected URLs, actor IDs, object IDs, and delivery attempts. |
+| Privacy notice | Product owner drafts, legal/policy approves, engineering verifies UI placement | The notice needs user-facing clarity and legal correctness; engineering should not own wording alone. |
+| Key exposure / rotation | CTO or security owner as decision owner; gateway operator executes runbook | Key exposure affects public identity trust. The owner should decide severity, rotation timing, actor update/delete messaging, and whether external notice is needed. |
+| S3 bucket / retention | Infrastructure owner with product/legal retention input | Bucket policy, lifecycle, access logs, and retention are operational controls with privacy implications. |
+| Rollback | Launch commander plus gateway operator | Rollback may include disabling opt-in, pausing export jobs, preserving evidence, and changing public routing. |
 
 ## Recommended Confirmation
 
@@ -30,9 +69,9 @@ Approve this staging-to-production policy:
 - Per-article setting defaults to inherit the author setting.
 - Per-article disable always wins.
 - Public-only boundary is absolute: paid, private, encrypted, circle-only, archived, draft, or message-like content is never exported.
-- First beta uses allowlisted pilot authors only.
+- First beta does not require a named pilot-author list; access can be broad as long as author opt-in remains explicit and default-off.
 - Canonical `acct:user@matters.town` identity is not enabled until staging proves discovery, delivery, rollback, and takedown flows.
-- Generated bundle output may use S3 for staging/production operations, but bucket policy must be private-by-default unless explicitly approved for public serving.
+- Generated production bundle output uses private S3 for audit and retry. Bucket policy must be private-by-default unless explicitly approved for public serving.
 - Legal takedown and key exposure policies remain launch blockers for production beta.
 
 ## Product Settings
@@ -43,16 +82,16 @@ Approve this staging-to-production policy:
 | Article default | `inherit` | Keeps UI simple and lets author opt-in control the normal case. |
 | Article override | `disabled` blocks export, `enabled` only works when author is opted in | Prevents article-level override from bypassing author consent. |
 | Public filter | Active public articles only | Matches current Matters usage while keeping old private/paid paths outside federation. |
-| Pilot scope | Start with a small allowlist, including the current test author if approved | Keeps staging evidence concrete and rollback manageable. |
-| User-facing copy | Explain that Fediverse publication makes public article metadata and content reachable by external servers | Avoids underexplaining federation persistence and replication. |
+| Pilot scope | No named pilot author list required; broad access is acceptable while default-off and explicit opt-in remain in force | Removes launch-list overhead without federating anyone by default. |
+| User-facing copy | Use the draft copy in this brief as the next product-copy baseline | Explains external replication without making the setting scary or vague. |
 
 ## Legal / Privacy
 
 | Decision | Recommended choice | Production blocker? |
 |---|---|---|
-| Takedown handling | Define an internal legal takedown path before beta | Yes |
-| External replication notice | Add copy that federated content may be cached or copied by external servers | Yes |
-| Key exposure response | Treat as legal/security incident; rotate key and publish actor update/delete as appropriate | Yes |
+| Takedown handling | Legal/policy owner decides; engineering preserves evidence and executes approved removal/update steps | Yes |
+| External replication notice | Add copy that federated public content may be cached or copied by external servers | Yes |
+| Key exposure response | CTO/security owner decides severity; gateway operator rotates key and publishes actor update/delete if approved | Yes |
 | Paid/private policy | Do not federate paid/private/encrypted/circle content | Yes |
 | Evidence retention | Keep internal staging and incident records, but do not expose credentials or private payloads | Yes |
 
@@ -62,21 +101,22 @@ Approve this staging-to-production policy:
 |---|---|---|
 | Environment path | `develop` -> `matters.icu` -> production PR | Matches CTO guidance and keeps staging as a checkpoint. |
 | Async generation | Keep bundle generation in `lambda-handlers`, not `matters-server` | Avoids main backend compute and retry load. |
-| Storage | Use S3 if generated files need retention or gateway ingestion across deploys; otherwise direct return is acceptable for staging preflight | S3 is better for production audit/retry, direct return is faster for staging. |
+| Storage | Use private S3 for production generated bundles; staging may continue direct return or private staging output | S3 gives production audit/retry while keeping bundle output private by default. |
 | Gateway state | SQLite remains runtime source for the current gateway slice | Already chosen for staging; backup/restore remains required. |
 | Canonical identity | Delay `acct:user@matters.town` until staging E2E and rollback pass | Prevents premature public identity commitment. |
+| Public delivery | Public `Create`, `Update`, and `Delete` delivery is approved once production gateway rollout is otherwise enabled | No separate delivery decision is required after production gates pass. |
 | Rollback | Disable author opt-in, stop async export, preserve gateway evidence, then remove public routing if needed | Keeps rollback clear and reversible. |
 
 ## Approval Checklist
 
 Before production beta, confirm:
 
-- [ ] Pilot author list.
-- [ ] Author opt-in copy.
-- [ ] Per-article UI copy and default behavior.
+- [x] Pilot author list not required.
+- [ ] Author opt-in copy final approval.
+- [x] Per-article UI default behavior.
 - [ ] Legal takedown owner and response path.
 - [ ] External federation persistence notice.
-- [ ] Production S3 bucket or direct-return decision.
+- [x] Production private S3 decision.
 - [ ] Production Lambda secrets owner.
 - [ ] Gateway canonical domain and actor key owner.
 - [ ] Rollback owner and launch window.
@@ -85,7 +125,7 @@ Before production beta, confirm:
 
 Do not automatically perform these actions from staging work:
 
-- Enable federation for all Matters users.
+- Enable federation by default for all Matters users.
 - Publish canonical `acct:user@matters.town` for real users.
 - Expose production credentials or actor private keys.
 - Push production DNS/Cloudflare routing changes.

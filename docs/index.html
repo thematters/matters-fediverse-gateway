@@ -550,7 +550,7 @@ Mastodon / Misskey / GoToSocial / other Fediverse servers</pre>
     <li>Black-box interoperability checks completed with Mastodon surfaces, including successful exact discovery and inbound follow delivery from <code>g0v.social</code>; Misskey public Article delivery and display have also passed on gyutte.site.</li>
     <li>SQLite persistence plus backup, restore, reconcile, and replay tooling are in place.</li>
     <li>Webhook dispatch exists for metrics, alerts, logs, and Slack incoming webhooks.</li>
-    <li>G2-A real Matters article export is split across clear repo boundaries: merged server preflight PR #4761, merged generator PR #161, merged lambda handler PR #217, merged lambda manifest PR #223, deployed Lambda public-only and strict-gate staging generation, gateway runtime ingestion, NodeInfo public probing, SQLite consistency scan, and Misskey delivery/read-only verification. G2-B product controls are merged to develop through server PR #4773 and web PR #5883. The <code>mashbean@matters.town</code> pilot path now has API validation, browser UI validation, strict-gate Lambda run <code>25713858021</code>, and public staging gateway probes for <code>mashbeanmatters@staging-gateway.matters.town</code>. Server PR <a href="https://github.com/thematters/matters-server/pull/4774">#4774</a> adds the default-off, record-only trigger scaffold for the next staging deploy. Production rollout remains blocked on credentials/storage, canonical identity, external delivery policy, and legal/privacy gates.</li>
+    <li>G2-A real Matters article export is split across clear repo boundaries: merged server preflight PR #4761, merged generator PR #161, merged lambda handler PR #217, merged lambda manifest PR #223, deployed Lambda public-only and strict-gate staging generation, gateway runtime ingestion, NodeInfo public probing, SQLite consistency scan, and Misskey delivery/read-only verification. G2-B product controls are merged to develop through server PR #4773 and web PR #5883. The <code>mashbean@matters.town</code> pilot path now has API validation, browser UI validation, strict-gate Lambda run <code>25713858021</code>, and public staging gateway probes for <code>mashbeanmatters@staging-gateway.matters.town</code>. Server PR <a href="https://github.com/thematters/matters-server/pull/4774">#4774</a> adds the default-off, record-only trigger scaffold for the next staging deploy. Production private S3 and public delivery after rollout are approved; rollout still waits on credentials, canonical identity, rollback/takedown checks, and legal/privacy gates.</li>
   </ul>
 </section>
 
@@ -559,7 +559,7 @@ Mastodon / Misskey / GoToSocial / other Fediverse servers</pre>
   <ol>
     <li>Keep the deployed-Lambda <code>matters.icu</code> staging check repeatable and preserve its run reports.</li>
     <li>Merge server PR <a href="https://github.com/thematters/matters-server/pull/4774">#4774</a> and validate record-only publish/edit trigger audit rows on <code>matters.icu</code>.</li>
-    <li>Do not start production rollout until pilot author list, production credentials/storage, legal/privacy review, and canonical <code>acct:user@matters.town</code> cutover are approved.</li>
+    <li>Do not start production rollout until production credentials, legal/privacy review, rollback/takedown checks, and canonical <code>acct:user@matters.town</code> cutover are complete. Production private S3 storage and public <code>Create</code>/<code>Update</code>/<code>Delete</code> delivery after rollout are approved.</li>
   </ol>
 </section>
 
