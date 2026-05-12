@@ -1,7 +1,7 @@
 # G2-B Product Contract Slice
 
-Date: 2026-05-11
-Status: develop integration merged; staging UI validation blocked on pilot/admin permission; no production rollout
+Date: 2026-05-12
+Status: develop integration merged; staging API validation passed; browser UI QA pending; no production rollout
 
 ## Goal
 
@@ -116,6 +116,16 @@ As of 2026-05-11, `matters-server` PR #4773 has merged this contract to
 `develop`, and the develop deploy exposes the expected fields on
 `server.matters.icu`. `matters-web` PR #5883 has also merged the pilot UI
 controls to `develop`.
+
+As of 2026-05-12, the staging pilot/admin API gate is cleared:
+`mashbean@matters.town` is a staging admin test account, has `fediverseBeta`,
+and account-level federation is `enabled`. Public article `23520` is eligible
+after author opt-in, while paywalled article `23522` remains blocked as
+`article_not_public`. Deployed-Lambda strict-gate dry-run
+<https://github.com/thematters/lambda-handlers/actions/runs/25712528545>
+passed with one exported public Article and one skipped paywalled Article.
+Browser UI QA remains pending because the current pilot account has no owned
+staging articles.
 
 ## Export Trigger Boundary
 

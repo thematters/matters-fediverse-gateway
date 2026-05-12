@@ -1,7 +1,7 @@
 # G2-B Staging Pilot Validation Checklist
 
-Date: 2026-05-11
-Status: prepared; waiting for staging admin / pilot permission
+Date: 2026-05-12
+Status: API validation passed; browser UI QA still pending
 
 ## Purpose
 
@@ -19,46 +19,62 @@ This checklist is the shortest path from the merged G2-B code to a real
   - `setViewerFederationSetting`
   - `setArticleFederationSetting`
   - `UserFeatureFlagType.fediverseBeta`
-- `mashbean@matters.town` is the intended staging pilot/admin test account, but
-  it is not yet confirmed as a staging admin and does not yet have
-  `fediverseBeta`.
+- `mashbean@matters.town` is confirmed as a staging admin test account.
+- The account has `fediverseBeta` and account-level federation is `enabled`.
+- Public article `23520` (`ej8tf2513uky`, author `zeckagent3`) is eligible after
+  staging author opt-in.
+- Paywalled article `23522` (`zne4qktk3xk0`) remains blocked as
+  `article_not_public`.
+- Lambda strict-gate dry-run
+  <https://github.com/thematters/lambda-handlers/actions/runs/25712528545>
+  passed with 2 selected rows, 1 eligible public Article, and 1 skipped
+  paywalled Article.
+- Gateway bundle ingestion, WebFinger, actor, outbox, NodeInfo, and SQLite
+  consistency checks passed against the G2-B strict-gate bundle.
 - No production setting, production data export, or canonical
   `acct:user@matters.town` rollout is enabled.
 
 ## Permission Setup Needed
 
-Once staging admin access exists, perform only these staging changes:
+Completed staging changes:
 
-1. Confirm `mashbean@matters.town` is the intended staging test account.
-2. Confirm the account can authenticate on `https://matters.icu`.
-3. Grant or confirm staging admin access if the existing admin mutation path is
+1. Confirmed `mashbean@matters.town` is the intended staging test account.
+2. Confirmed the account can authenticate on `https://matters.icu`.
+3. Confirmed staging admin access when the existing admin mutation path is
    used.
-4. Add the `fediverseBeta` user feature flag to the test account.
-5. Do not add production flags or production credentials.
+4. Added the `fediverseBeta` user feature flag to the test account.
+5. Enabled account-level federation for the test account.
+6. Did not add production flags or production credentials.
 
 ## Validation Steps After Permission Is Ready
 
-1. Log in to `https://matters.icu` as `mashbean@matters.town`.
-2. Open account settings and confirm the Fediverse row is visible.
-3. Toggle account-level federation setting to enabled.
-4. Open an owned public article edit settings page.
-5. Confirm the article-level Fediverse control is visible.
-6. Set the article control to `inherit`.
+1. Log in to `https://matters.icu` as `mashbean@matters.town`. Completed by API.
+2. Open account settings and confirm the Fediverse row is visible. Pending
+   browser QA.
+3. Toggle account-level federation setting to enabled. Completed by API.
+4. Open an owned public article edit settings page. Pending browser QA; the
+   current pilot account has no owned staging articles.
+5. Confirm the article-level Fediverse control is visible. Pending browser QA.
+6. Set the article control to `inherit`. Completed for staging article `23520`
+   through the admin mutation path; the server stores `inherit` as the effective
+   default when no article override row is needed.
 7. Query `server.matters.icu` and confirm:
    - viewer has `fediverseBeta`
    - viewer federation setting is `enabled`
    - public article eligibility is `eligible`
+   Completed.
 8. Re-run `federation-export-dev` strict-gate staging dry-run with a public
-   article and a paywalled article.
+   article and a paywalled article. Completed in run `25712528545`.
 9. Confirm the public article is exported and the paywalled article remains
-   blocked as `article_not_public`.
+   blocked as `article_not_public`. Completed.
 10. Run gateway public probes:
     - WebFinger
     - actor
     - outbox
     - NodeInfo discovery
     - NodeInfo 2.1
-11. Run SQLite consistency scan and require `totalDiffs=0`.
+   Completed for `zeckagent3@staging-gateway.matters.town`.
+11. Run SQLite consistency scan and require `totalDiffs=0`. Completed.
 12. Run Misskey read-only probe first; send a public staging Article only if the
     test plan explicitly requires an externally visible delivery.
 
