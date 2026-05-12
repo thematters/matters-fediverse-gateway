@@ -106,8 +106,8 @@ The project is past fixture-only proof of concept, but it is not production-read
    - The G2-B task note is [`docs/tasks/matters-g2-b-web-app-integration.md`](docs/tasks/matters-g2-b-web-app-integration.md).
    - The product contract slice is [`research/matters-fediverse-compat/02-runtime-slices/g2b-product-contract-slice.md`](research/matters-fediverse-compat/02-runtime-slices/g2b-product-contract-slice.md).
    - The exact staging pilot checklist is [`research/matters-fediverse-compat/03-ops/g2b-staging-pilot-validation-checklist.md`](research/matters-fediverse-compat/03-ops/g2b-staging-pilot-validation-checklist.md).
-   - The accepted default is conservative: author federation is off by default, pilot-only at first, article setting defaults to `inherit`, and existing public articles are not backfilled automatically on opt-in.
-3. Keep G2-A/G2-B non-production until production credentials, storage target, migration timing, legal/privacy review, external delivery semantics, and canonical `acct:user@matters.town` cutover are explicitly approved.
+   - The accepted default is conservative: author federation is off by default, author opt-in is explicit, article setting defaults to `inherit`, `disabled` always wins, and existing public articles are not backfilled automatically on opt-in.
+3. Keep G2-A/G2-B non-production until production credentials, migration timing, legal/privacy review, rollback/takedown checks, and canonical `acct:user@matters.town` cutover are complete. Production private S3 storage and public `Create`/`Update`/`Delete` delivery after rollout are approved.
 
 ## G1 roadmap, May-July 2026
 
