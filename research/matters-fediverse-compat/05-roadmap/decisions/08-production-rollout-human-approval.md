@@ -1,9 +1,25 @@
 # Production Rollout Human Approval Brief
 
 Date: 2026-05-05
+Last updated: 2026-05-13
 Status: pending human confirmation before production rollout
 
 This brief is for product settings, legal/privacy, and production rollout decisions that should not be silently automated. Engineering can keep building and staging, but these items need explicit approval before public production enablement.
+
+## 2026-05-13 人類決策點
+
+正式 rollout 前，請逐項確認：
+
+- 是否同意第一階段維持「作者預設關閉、pilot allowlist、作者明確 opt-in」。
+- 是否同意文章預設為 `inherit`，且 `disabled` 永遠優先；`enabled` 不得繞過作者 opt-in。
+- 是否同意 production 前先在 `matters.icu` 啟用 `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only`，只記錄 publish/edit eligibility audit，不打 Lambda、不寫 S3、不對外 delivery。
+- 是否同意 production worker 後續採用「server 記錄決策，lambda-handlers 非同步產生 bundle，gateway-core 負責 federation runtime」的邊界。
+- 是否選定 production generated bundle 的保留方式：建議用私有 S3 bucket/prefix 做 audit/retry；staging 可繼續 direct return。
+- 是否確認 pilot 作者名單與 launch window。
+- 是否確認 user-facing copy：Fediverse 發布會讓公開文章內容與 metadata 被外部站台讀取、快取或轉載。
+- 是否確認 legal takedown owner、privacy notice、key exposure/rotation response path。
+- 是否確認 canonical identity cutover 時機：`acct:user@matters.town` 只在 staging E2E、rollback、takedown 都通過後啟用。
+- 是否確認 production 外部 delivery go/no-go：允許 gateway 對 Misskey/Mastodon 等遠端站台送出 public Create/Update/Delete 的時間點。
 
 ## Recommended Confirmation
 
