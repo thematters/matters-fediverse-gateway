@@ -1,7 +1,7 @@
 # matters.icu Staging E2E Check
 
 Date: 2026-05-11
-Status: server and generator PRs are merged, `matters.icu` develop deploy passed, `federation-export-dev` is updated to `lambda-handlers` `v0.14.1`, and real deployed-Lambda staging bundles have passed gateway, NodeInfo, SQLite consistency, and Misskey verification without admin mutations
+Status: server, web, generator, and lambda staging pieces are merged to their develop/main tracks; `matters.icu` server/web develop deploys passed; `federation-export-dev` is updated to `lambda-handlers` `v0.14.1`; real deployed-Lambda staging bundles have passed gateway, NodeInfo, SQLite consistency, and Misskey verification without admin mutations. G2-B UI validation is waiting for staging pilot/admin permission.
 
 ## Goal
 
@@ -112,3 +112,26 @@ node src/server.mjs --config ./runtime/matters-icu-staging/gateway.instance.json
 - Lambda result: `statusCode=200`, `selected=2`, `eligible=1`, `skipped=1`.
 - Decision report: article `23520` was `eligible`; article `23522` was still skipped as `article_not_public`.
 - This verifies that strict gate payloads can pass through `federation-export-dev` while preserving the public-only boundary. It is still a staging row-level payload test, not a production settings rollout.
+
+## 2026-05-11 G2-B Develop Deploy And Permission Gate
+
+- `matters-server` PR #4773 merged to `develop`; deploy run `25699693933`
+  passed.
+- `matters-web` PR #5883 merged to `develop`; deploy run `25699702018`
+  passed.
+- `server.matters.icu` schema exposes the expected G2-B fields and mutations:
+  `User.federationSetting`, `Article.federationSetting`,
+  `Article.federationEligibility`, `setViewerFederationSetting`,
+  `setArticleFederationSetting`, and `UserFeatureFlagType.fediverseBeta`.
+- Read-only gate check:
+  - public article `23520` is currently blocked as `author_not_opted_in`
+    because the author has no federation setting row yet.
+  - paywalled article `23522` is blocked as `article_not_public`.
+- Fresh Lambda public-only run `25700094845` passed with `selected=2`,
+  `eligible=1`, and `skipped=1`.
+- Fresh Lambda strict-gate row-level run `25700094876` passed with
+  `authorFederationSetting=enabled`, `articleFederationSetting=inherit`,
+  public article `23520` eligible, and paywalled article `23522` still blocked.
+- `mashbean@matters.town` is the intended staging pilot/admin test account, but
+  it does not yet have staging admin / `fediverseBeta` permission. UI opt-in
+  validation must wait for that permission.
