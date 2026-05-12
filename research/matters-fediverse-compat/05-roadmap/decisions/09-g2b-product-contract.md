@@ -1,7 +1,7 @@
 # Decision 09: G2-B Product Contract
 
 Date: 2026-05-12
-Status: accepted; develop integration merged; staging API validation passed; browser UI QA pending
+Status: accepted; develop integration merged; staging API and browser UI validation passed
 
 ## Decision
 
@@ -60,4 +60,7 @@ authors test the workflow.
   `fediverseBeta`, and account-level federation is `enabled`.
 - Real staging strict-gate validation passed for public article `23520` while
   paywalled article `23522` remained blocked as `article_not_public`.
-- Browser UI QA is still needed before production planning.
+- Pilot-owned staging article `23525` (`ckl5le599uwc`) passed browser UI QA for
+  the account settings row and article edit override, then exported through
+  strict-gate Lambda run `25713858021` as
+  `mashbeanmatters@staging-gateway.matters.town`.

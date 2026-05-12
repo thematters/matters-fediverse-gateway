@@ -29,9 +29,9 @@ local_paths:
   - none
 start_command: none
 stop_command: none
-verify_command: gateway-core npm test; scan:consistency; check:secret-layout; lambda strict-gate run 25712528545; staging browser UI QA still pending
-next_step: Finish browser UI QA for account-level Fediverse row, article edit override, and disabled-state copy on matters.icu
-blockers: current pilot account has no owned staging articles for browser article-control QA; legal/privacy beta approval, production storage, and canonical acct:user@matters.town cutover remain human gates
+verify_command: gateway-core npm test; scan:consistency; check:secret-layout; lambda strict-gate runs 25712528545 and 25713858021; staging browser UI QA passed
+next_step: Define the export trigger contract for publish/edit events, decision report retention, and replay/suppression behavior
+blockers: legal/privacy beta approval, production storage, production trigger enablement, and canonical acct:user@matters.town cutover remain human gates
 ---
 
 # Task Handoff
@@ -56,11 +56,13 @@ As of 2026-05-11, the code portion is merged to `develop`:
 - Both develop deploys passed on `matters.icu`.
 - `server.matters.icu` exposes the expected G2-B schema fields and mutations.
 
-The account permission gate is cleared for API validation:
+The account permission gate is cleared and the pilot-owned article path has
+passed staging validation:
 `mashbean@matters.town` is confirmed as staging admin, has `fediverseBeta`, and
-its account-level federation setting is enabled on `matters.icu`. Browser UI QA
-still needs a real staging article owned by the pilot account, or an agreed test
-author/article path.
+its account-level federation setting is enabled on `matters.icu`. The staging
+article `23525` (`ckl5le599uwc`) is owned by the pilot account, the account
+settings Fediverse row is visible and enabled, and the article edit settings
+show the Fediverse override as `Follow author setting`.
 
 ## Recommended Product Contract
 
@@ -192,9 +194,12 @@ Web:
 
 - API validation confirmed the pilot account has `fediverseBeta` and
   account-level federation is `enabled`.
-- Merged pilot controls still need manual browser QA on `matters.icu`.
-- Validate account setting, article setting, disabled state, and pilot
-  unavailable state before any production PR.
+- Manual browser QA on `matters.icu` confirmed the account settings row is
+  visible/enabled and the pilot-owned public article shows the article-level
+  Fediverse override as `Follow author setting`.
+- Disabled-state copy is visible in the article settings panel: only public
+  articles can be exported, while private or paywalled articles stay blocked by
+  the server.
 
 Gateway:
 
@@ -206,14 +211,19 @@ Gateway:
   `23520` was exported, `23522` stayed blocked as `article_not_public`, the
   bundle was ingested by `gateway-core`, WebFinger / actor / outbox / NodeInfo
   probes passed, and SQLite consistency scan returned `totalDiffs=0`.
+- 2026-05-12 deployed-Lambda strict-gate run
+  `25713858021` selected pilot-owned public article `23525`
+  (`ckl5le599uwc`); it was exported as
+  `mashbeanmatters@staging-gateway.matters.town`, ingested by `gateway-core`,
+  passed public WebFinger / actor / outbox / NodeInfo probes, resolved from
+  gyutte.site Misskey via `users/show`, and kept SQLite consistency at
+  `totalDiffs=0`.
 - 2026-05-11 local gateway verification passed: `npm test` 117/117,
   `scan:consistency` total diffs `0`, `check:rollout-artifact` OK, and
   `check:secret-layout` OK.
 
 ## Human Gates
 
-- Browser UI QA for the pilot account and a staging article owned by that
-  account, or an agreed alternate test author/article.
 - Final copy approval.
 - Whether pilot authors can force-enable individual public articles or only
   inherit/disable during the first beta.

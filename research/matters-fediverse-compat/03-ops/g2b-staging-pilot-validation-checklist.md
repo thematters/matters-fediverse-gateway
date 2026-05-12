@@ -1,7 +1,7 @@
 # G2-B Staging Pilot Validation Checklist
 
 Date: 2026-05-12
-Status: API validation passed; browser UI QA still pending
+Status: API validation passed; browser UI QA passed for pilot-owned public article
 
 ## Purpose
 
@@ -31,6 +31,12 @@ This checklist is the shortest path from the merged G2-B code to a real
   paywalled Article.
 - Gateway bundle ingestion, WebFinger, actor, outbox, NodeInfo, and SQLite
   consistency checks passed against the G2-B strict-gate bundle.
+- Pilot-owned public article `23525` (`ckl5le599uwc`) was created through the
+  `matters.icu` browser UI and passed the strict federation gate in Lambda run
+  <https://github.com/thematters/lambda-handlers/actions/runs/25713858021>.
+- Public `staging-gateway.matters.town` now serves
+  `mashbeanmatters@staging-gateway.matters.town`; WebFinger, actor, outbox, and
+  NodeInfo probes passed.
 - No production setting, production data export, or canonical
   `acct:user@matters.town` rollout is enabled.
 
@@ -49,12 +55,13 @@ Completed staging changes:
 ## Validation Steps After Permission Is Ready
 
 1. Log in to `https://matters.icu` as `mashbean@matters.town`. Completed by API.
-2. Open account settings and confirm the Fediverse row is visible. Pending
+2. Open account settings and confirm the Fediverse row is visible. Completed in
    browser QA.
 3. Toggle account-level federation setting to enabled. Completed by API.
-4. Open an owned public article edit settings page. Pending browser QA; the
-   current pilot account has no owned staging articles.
-5. Confirm the article-level Fediverse control is visible. Pending browser QA.
+4. Open an owned public article edit settings page. Completed for article
+   `23525`.
+5. Confirm the article-level Fediverse control is visible. Completed; the
+   control defaults to `Follow author setting`.
 6. Set the article control to `inherit`. Completed for staging article `23520`
    through the admin mutation path; the server stores `inherit` as the effective
    default when no article override row is needed.
@@ -73,7 +80,8 @@ Completed staging changes:
     - outbox
     - NodeInfo discovery
     - NodeInfo 2.1
-   Completed for `zeckagent3@staging-gateway.matters.town`.
+   Completed for `zeckagent3@staging-gateway.matters.town` and
+   `mashbeanmatters@staging-gateway.matters.town`.
 11. Run SQLite consistency scan and require `totalDiffs=0`. Completed.
 12. Run Misskey read-only probe first; send a public staging Article only if the
     test plan explicitly requires an externally visible delivery.

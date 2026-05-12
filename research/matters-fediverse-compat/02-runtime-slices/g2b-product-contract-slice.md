@@ -1,7 +1,7 @@
 # G2-B Product Contract Slice
 
 Date: 2026-05-12
-Status: develop integration merged; staging API validation passed; browser UI QA pending; no production rollout
+Status: develop integration merged; staging API and browser UI validation passed; no production rollout
 
 ## Goal
 
@@ -117,15 +117,19 @@ As of 2026-05-11, `matters-server` PR #4773 has merged this contract to
 `server.matters.icu`. `matters-web` PR #5883 has also merged the pilot UI
 controls to `develop`.
 
-As of 2026-05-12, the staging pilot/admin API gate is cleared:
+As of 2026-05-12, the staging pilot/admin API and browser UI gates are cleared:
 `mashbean@matters.town` is a staging admin test account, has `fediverseBeta`,
 and account-level federation is `enabled`. Public article `23520` is eligible
 after author opt-in, while paywalled article `23522` remains blocked as
 `article_not_public`. Deployed-Lambda strict-gate dry-run
 <https://github.com/thematters/lambda-handlers/actions/runs/25712528545>
 passed with one exported public Article and one skipped paywalled Article.
-Browser UI QA remains pending because the current pilot account has no owned
-staging articles.
+The pilot-owned public article `23525` (`ckl5le599uwc`) was created through
+`matters.icu`; the account settings Fediverse row is visible/enabled, the
+article edit settings show `Follow author setting`, and deployed-Lambda
+strict-gate dry-run
+<https://github.com/thematters/lambda-handlers/actions/runs/25713858021>
+exported it as `mashbeanmatters@staging-gateway.matters.town`.
 
 ## Export Trigger Boundary
 
@@ -185,6 +189,7 @@ Beta warning:
    Done in PR #5883.
 5. Grant staging pilot/admin permission to `mashbean@matters.town`, add
    `fediverseBeta`, and run UI validation on `matters.icu`.
+   Done for the account settings row and pilot-owned article `23525`.
 6. Add export-trigger dry-run and decision audit in `matters-server` or
    `lambda-handlers`.
 7. Re-run `matters.icu` staging public-only and strict-gate checks.
@@ -202,11 +207,12 @@ Recommended defaults:
 - Existing article backlog: do not auto-export on opt-in until a separate pilot
   action is approved.
 
-Still needs staging permission before UI validation:
+Staging validation completed:
 
-- `mashbean@matters.town` must be granted the required staging admin / pilot
-  permission.
-- `fediverseBeta` must be assigned to the pilot account.
+- `mashbean@matters.town` has the required staging admin / pilot permission.
+- `fediverseBeta` is assigned to the pilot account.
+- The account-level and article-level Fediverse controls are visible on
+  `matters.icu` for the pilot path.
 
 Still needs human approval before production:
 

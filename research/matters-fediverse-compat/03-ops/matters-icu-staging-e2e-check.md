@@ -1,7 +1,7 @@
 # matters.icu Staging E2E Check
 
 Date: 2026-05-11
-Status: server, web, generator, and lambda staging pieces are merged to their develop/main tracks; `matters.icu` server/web develop deploys passed; `federation-export-dev` is updated to `lambda-handlers` `v0.14.1`; real deployed-Lambda staging bundles have passed gateway, NodeInfo, SQLite consistency, and Misskey verification without admin mutations. G2-B UI validation is waiting for staging pilot/admin permission.
+Status: server, web, generator, and lambda staging pieces are merged to their develop/main tracks; `matters.icu` server/web develop deploys passed; `federation-export-dev` is updated to `lambda-handlers` `v0.14.1`; real deployed-Lambda staging bundles have passed gateway, NodeInfo, SQLite consistency, and Misskey verification. G2-B pilot API and browser UI validation passed for `mashbean@matters.town`; production remains disabled.
 
 ## Goal
 
@@ -154,6 +154,30 @@ node src/server.mjs --config ./runtime/matters-icu-staging/gateway.instance.json
   NodeInfo probes passed, and SQLite consistency scan returned `totalDiffs=0`.
 - Public `https://staging-gateway.matters.town` probes also passed for
   `acct:zeckagent3@staging-gateway.matters.town`.
-- Remaining G2-B gap: browser UI QA for the settings row and article edit
-  override. The current pilot account has no owned staging articles, so
-  article-control UI QA needs a test article or an agreed alternate test author.
+## 2026-05-12 G2-B Pilot-Owned Article Validation
+
+- Created pilot-owned public staging article `23525` (`ckl5le599uwc`) through
+  the `matters.icu` browser UI under `mashbean@matters.town`.
+- Browser UI QA passed for the account settings Fediverse row: the row is
+  visible and account federation is enabled.
+- Browser UI QA passed for the article edit settings panel: the Fediverse
+  control is visible and defaults to `Follow author setting`; the panel copy
+  states that only public articles can be exported while private or paywalled
+  articles stay blocked by the server.
+- GraphQL gate check returned `eligible=true`, reason `eligible`,
+  author setting `enabled`, public access, and effective article setting
+  `inherit`.
+- Deployed-Lambda strict-gate run
+  <https://github.com/thematters/lambda-handlers/actions/runs/25713858021>
+  passed with `selected=1`, `eligible=1`, and `skipped=0`.
+- The returned bundle exports actor
+  `acct:mashbeanmatters@staging-gateway.matters.town` and contains the expected
+  seven files.
+- `gateway-core` ingested the bundle into
+  `runtime/matters-icu-staging-g2b-25713858021`; `npm test` passed 117/117,
+  `scan-consistency` returned `totalDiffs=0`, and `check-secret-layout` passed.
+- Public `https://staging-gateway.matters.town` probes passed for encoded
+  WebFinger, actor, outbox, NodeInfo discovery, and NodeInfo 2.1.
+- gyutte.site Misskey read-side probe resolved
+  `mashbeanmatters@staging-gateway.matters.town` through `users/show`; no public
+  Misskey `Create` was sent in this pass.
