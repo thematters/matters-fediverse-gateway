@@ -198,7 +198,28 @@ node src/server.mjs --config ./runtime/matters-icu-staging/gateway.instance.json
   configured with `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only`.
 - Next staging action: set `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only`
   on `matters.icu` develop, redeploy or restart the server environment, publish
-  and edit pilot public article `23525`, then query `federation_export_event`
-  for `publish_article` and `revise_article` audit rows. Expected result:
-  strict eligibility is recorded, normal publish/edit remains unblocked, and no
-  Lambda, S3, IPNS, or ActivityPub delivery is invoked from `matters-server`.
+  a fresh pilot public article, edit the same article, then query
+  `federation_export_event` for `publish_article` and `revise_article` audit
+  rows. Existing article `23525` can be used for a revise-only check, but not
+  for the publish trigger because it was published before `record_only` was
+  enabled. Expected result: strict eligibility is recorded, normal publish/edit
+  remains unblocked, and no Lambda, S3, IPNS, or ActivityPub delivery is invoked
+  from `matters-server`.
+
+## 2026-05-13 Pre-EB-Access Regression
+
+- Prepared
+  [`record-only-trigger-validation-runbook.md`](record-only-trigger-validation-runbook.md)
+  and `gateway-core/scripts/check-record-only-trigger-report.mjs` so the
+  publish/edit audit-row evidence can be checked immediately after the develop
+  EB environment variable is enabled.
+- Local sample check for the record-only evidence checker passed with both
+  `publish_article` and `revise_article` rows.
+- `gateway-core` automated tests passed: 117/117.
+- Existing `mashbeanmatters` staging runtime consistency scan passed with
+  `totalDiffs=0`.
+- Existing `mashbeanmatters` staging secret layout check passed.
+- Public `https://staging-gateway.matters.town` read-side probes still pass for
+  WebFinger, actor, outbox, NodeInfo discovery, and NodeInfo 2.1.
+- This pass does not invoke Lambda, change EB settings, write S3, publish IPNS,
+  send ActivityPub delivery, or touch production.
