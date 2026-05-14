@@ -3200,6 +3200,20 @@ test("outbox Create normalizes public Article before fanout", async () => {
   assert.equal(object.name, "Normalized Create");
   assert.doesNotMatch(object.content, /javascript:|<\/a>bad link/);
   assert.match(object.content, /Original Matters link:/);
+
+  const objectResponse = await app.handle(
+    new Request("https://matters.example/articles/normalized-create", {
+      headers: {
+        accept: "application/activity+json",
+      },
+    }),
+  );
+  assert.equal(objectResponse.status, 200);
+  assert.equal(objectResponse.headers.get("cache-control"), "no-store");
+  const resolvedObject = await objectResponse.json();
+  assert.equal(resolvedObject.id, "https://matters.example/articles/normalized-create");
+  assert.equal(resolvedObject.type, "Article");
+  assert.equal(resolvedObject.name, "Normalized Create");
 });
 
 test("outbox Create reply fans out to followers, explicit targets, and mention recipients", async () => {
