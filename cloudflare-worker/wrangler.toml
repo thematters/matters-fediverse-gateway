@@ -13,6 +13,10 @@ pattern = "gateway-probe.matters.town"
 custom_domain = true
 
 [[routes]]
+pattern = "fediverse-gateway.matters.town/*"
+zone_name = "matters.town"
+
+[[routes]]
 pattern = "matters.town/.well-known/webfinger*"
 zone_name = "matters.town"
 
