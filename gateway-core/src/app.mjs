@@ -2076,6 +2076,22 @@ export function createGatewayApp({
     };
   }
 
+  function resolveOutboundObjectById(objectId) {
+    if (!objectId) {
+      return null;
+    }
+
+    const items = store.getOutboundItems?.({}) ?? [];
+    for (const item of items) {
+      const object = item?.activity?.object;
+      if (object && typeof object === "object" && object.id === objectId) {
+        return object;
+      }
+    }
+
+    return null;
+  }
+
   function buildContentDeliveryOpsSnapshot({
     actorHandle = null,
     limit = 20,
@@ -5287,6 +5303,13 @@ export function createGatewayApp({
           }),
         );
         return jsonResponse(remoteActor, 200);
+      }
+
+      if (isReadMethod(request.method)) {
+        const object = resolveOutboundObjectById(`${url.origin}${pathname}`);
+        if (object) {
+          return activityResponse(object, 200, DISCOVERY_RESPONSE_HEADERS);
+        }
       }
 
       return jsonResponse({ error: "Not found" }, 404);
