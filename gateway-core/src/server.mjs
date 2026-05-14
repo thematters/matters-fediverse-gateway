@@ -82,6 +82,10 @@ const server = createServer(async (req, res) => {
       const response = await app.handle(request);
 
       res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+      if (req.method === "HEAD") {
+        res.end();
+        return;
+      }
       const responseBody = await response.text();
       res.end(responseBody);
     } catch (error) {

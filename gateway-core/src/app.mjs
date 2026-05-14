@@ -42,27 +42,36 @@ import { verifyHttpSignature } from "./security/http-signatures.mjs";
 
 const PUBLIC_AUDIENCE = "https://www.w3.org/ns/activitystreams#Public";
 const DEFAULT_MENTION_FAILURE_RETRY_MS = 5 * 60 * 1000;
+const DISCOVERY_RESPONSE_HEADERS = {
+  "cache-control": "no-store",
+};
 
-function jsonResponse(body, status = 200, contentType = "application/json") {
+function jsonResponse(body, status = 200, contentType = "application/json", headers = {}) {
   return new Response(JSON.stringify(body, null, 2), {
     status,
     headers: {
       "content-type": `${contentType}; charset=utf-8`,
+      ...headers,
     },
   });
 }
 
-function activityResponse(body, status = 200) {
-  return jsonResponse(body, status, "application/activity+json");
+function activityResponse(body, status = 200, headers = {}) {
+  return jsonResponse(body, status, "application/activity+json", headers);
 }
 
-function textResponse(body, status, contentType) {
+function textResponse(body, status, contentType, headers = {}) {
   return new Response(body, {
     status,
     headers: {
       "content-type": `${contentType}; charset=utf-8`,
+      ...headers,
     },
   });
+}
+
+function isReadMethod(method) {
+  return method === "GET" || method === "HEAD";
 }
 
 function extractHandle(pathname) {
@@ -3124,7 +3133,7 @@ export function createGatewayApp({
       const handle = extractHandle(pathname);
       const actor = handle ? config.actors[handle] : null;
 
-      if (request.method === "GET" && pathname === "/.well-known/webfinger") {
+      if (isReadMethod(request.method) && pathname === "/.well-known/webfinger") {
         const resource = url.searchParams.get("resource") ?? "";
         const expectedPrefix = "acct:";
         if (!resource.startsWith(expectedPrefix)) {
@@ -3137,37 +3146,42 @@ export function createGatewayApp({
           return jsonResponse({ error: "Unknown actor" }, 404);
         }
 
-        return jsonResponse(buildWebFinger({ instance: config.instance, actor: actorForResource }), 200, "application/jrd+json");
+        return jsonResponse(
+          buildWebFinger({ instance: config.instance, actor: actorForResource }),
+          200,
+          "application/jrd+json",
+          DISCOVERY_RESPONSE_HEADERS,
+        );
       }
 
-      if (request.method === "GET" && pathname === "/.well-known/host-meta") {
-        return textResponse(buildHostMeta({ instance: config.instance }), 200, "application/xrd+xml");
+      if (isReadMethod(request.method) && pathname === "/.well-known/host-meta") {
+        return textResponse(buildHostMeta({ instance: config.instance }), 200, "application/xrd+xml", DISCOVERY_RESPONSE_HEADERS);
       }
 
-      if (request.method === "GET" && pathname === "/.well-known/nodeinfo") {
-        return jsonResponse(buildNodeInfoDirectory({ instance: config.instance }));
+      if (isReadMethod(request.method) && pathname === "/.well-known/nodeinfo") {
+        return jsonResponse(buildNodeInfoDirectory({ instance: config.instance }), 200, "application/json", DISCOVERY_RESPONSE_HEADERS);
       }
 
-      if (request.method === "GET" && pathname === "/nodeinfo/2.1") {
-        return jsonResponse(buildNodeInfo({ instance: config.instance, actors: config.actors }));
+      if (isReadMethod(request.method) && pathname === "/nodeinfo/2.1") {
+        return jsonResponse(buildNodeInfo({ instance: config.instance, actors: config.actors }), 200, "application/json", DISCOVERY_RESPONSE_HEADERS);
       }
 
-      if (request.method === "GET" && handle && pathname === `/users/${handle}` && actor) {
-        return activityResponse(buildActorDocument({ instance: config.instance, actor }));
+      if (isReadMethod(request.method) && handle && pathname === `/users/${handle}` && actor) {
+        return activityResponse(buildActorDocument({ instance: config.instance, actor }), 200, DISCOVERY_RESPONSE_HEADERS);
       }
 
-      if (request.method === "GET" && handle && pathname === `/users/${handle}/outbox` && actor) {
+      if (isReadMethod(request.method) && handle && pathname === `/users/${handle}/outbox` && actor) {
         const outbox = await effectiveOutboxBridge.getOutbox(actor);
-        return activityResponse(outbox);
+        return activityResponse(outbox, 200, DISCOVERY_RESPONSE_HEADERS);
       }
 
-      if (request.method === "GET" && handle && pathname === `/users/${handle}/followers` && actor) {
+      if (isReadMethod(request.method) && handle && pathname === `/users/${handle}/followers` && actor) {
         const followers = store.getFollowers(handle).map((entry) => entry.remoteActorId);
-        return activityResponse(buildOrderedCollection({ id: actor.followersUrl, items: followers }));
+        return activityResponse(buildOrderedCollection({ id: actor.followersUrl, items: followers }), 200, DISCOVERY_RESPONSE_HEADERS);
       }
 
-      if (request.method === "GET" && handle && pathname === `/users/${handle}/following` && actor) {
-        return activityResponse(buildOrderedCollection({ id: actor.followingUrl, items: [] }));
+      if (isReadMethod(request.method) && handle && pathname === `/users/${handle}/following` && actor) {
+        return activityResponse(buildOrderedCollection({ id: actor.followingUrl, items: [] }), 200, DISCOVERY_RESPONSE_HEADERS);
       }
 
       if (request.method === "POST" && handle && pathname === `/users/${handle}/inbox` && actor) {

@@ -605,6 +605,26 @@ test("webfinger resolves a single canonical actor", async () => {
   assert.equal(payload.links[0].href, "https://matters.example/users/alice");
 });
 
+test("federation discovery endpoints support HEAD probes", async () => {
+  const { app } = await createHarness();
+  const requests = [
+    new Request("https://matters.example/.well-known/webfinger?resource=acct:alice@matters.example", { method: "HEAD" }),
+    new Request("https://matters.example/.well-known/host-meta", { method: "HEAD" }),
+    new Request("https://matters.example/.well-known/nodeinfo", { method: "HEAD" }),
+    new Request("https://matters.example/nodeinfo/2.1", { method: "HEAD" }),
+    new Request("https://matters.example/users/alice", { method: "HEAD" }),
+    new Request("https://matters.example/users/alice/outbox", { method: "HEAD" }),
+    new Request("https://matters.example/users/alice/followers", { method: "HEAD" }),
+    new Request("https://matters.example/users/alice/following", { method: "HEAD" }),
+  ];
+
+  for (const request of requests) {
+    const response = await app.handle(request);
+    assert.equal(response.status, 200, `${request.url} should support HEAD`);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+  }
+});
+
 test("actor document exposes previous public key during rotation overlap", async () => {
   const { app, config } = await createHarness();
   const previousKeys = pemPair();
