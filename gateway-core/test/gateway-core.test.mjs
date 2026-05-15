@@ -630,6 +630,21 @@ test("federation discovery endpoints support HEAD probes", async () => {
   }
 });
 
+test("actor document exposes profile discovery hints", async () => {
+  const { app } = await createHarness();
+  const response = await app.handle(new Request("https://matters.example/users/alice"));
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.discoverable, true);
+  assert.equal(payload.indexable, true);
+  assert.deepEqual(payload["@context"][2], {
+    toot: "http://joinmastodon.org/ns#",
+    discoverable: "toot:discoverable",
+    indexable: "toot:indexable",
+  });
+});
+
 test("actor document exposes previous public key during rotation overlap", async () => {
   const { app, config } = await createHarness();
   const previousKeys = pemPair();
