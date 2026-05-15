@@ -41,12 +41,19 @@ Updated: 2026-05-15
   records. The route now requires a configured scheduler bearer token, and
   `npm run run:inbound-reconciliation` validates an explicit bounded source of
   public `https` Activity URLs before posting to the job endpoint.
+- After PR #30 was merged, the Mac-hosted staging gateway was restarted on the
+  merged code, configured with `inboundReconciliation.schedulerBearerTokenFile`,
+  and connected to a 15-minute bounded reconciliation loop. The loop writes a
+  no-op report when the operator-approved source file is empty.
+- The scheduler path was exercised with the public g0v.social reply Activity
+  `https://g0v.social/users/mashbean/statuses/116575631875488289/activity`.
+  The activity was already present in SQLite from the earlier inbound reconcile
+  pass, and a post-run consistency scan returned `totalDiffs=0`.
 
 ## Immediate Engineering Work
 
-1. Wire `POST /jobs/inbound-reconciliation` to a staging scheduler with
-   `inboundReconciliation.schedulerBearerTokenFile`. Use only bounded source
-   files of known public Activity URLs; do not use crawler-style discovery or
+1. Keep the staging reconciliation source file bounded and operator-curated.
+   Add only known public Activity URLs; do not use crawler-style discovery or
    expose the job route without an internal token, Access, mTLS, or equivalent
    operator boundary.
 2. Keep Threads as a separate compatibility investigation around platform
