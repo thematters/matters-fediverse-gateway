@@ -3,6 +3,7 @@ import { normalizeArticleObject } from "./article-normalization.mjs";
 const ACTIVITY_STREAMS = "https://www.w3.org/ns/activitystreams";
 const SECURITY_V1 = "https://w3id.org/security/v1";
 const PUBLIC_AUDIENCE = `${ACTIVITY_STREAMS}#Public`;
+const MASTODON_NS = "http://joinmastodon.org/ns#";
 
 export function buildWebFinger({ instance, actor }) {
   return {
@@ -25,7 +26,15 @@ export function buildWebFinger({ instance, actor }) {
 
 export function buildActorDocument({ instance, actor }) {
   const document = {
-    "@context": [ACTIVITY_STREAMS, SECURITY_V1],
+    "@context": [
+      ACTIVITY_STREAMS,
+      SECURITY_V1,
+      {
+        toot: MASTODON_NS,
+        discoverable: "toot:discoverable",
+        indexable: "toot:indexable",
+      },
+    ],
     id: actor.actorUrl,
     type: "Person",
     preferredUsername: actor.handle,
@@ -37,6 +46,8 @@ export function buildActorDocument({ instance, actor }) {
     followers: actor.followersUrl,
     following: actor.followingUrl,
     alsoKnownAs: actor.aliases,
+    discoverable: true,
+    indexable: true,
     manuallyApprovesFollowers: actor.autoAcceptFollows === false,
     endpoints: {
       sharedInbox: `${instance.baseUrl}/inbox`,
