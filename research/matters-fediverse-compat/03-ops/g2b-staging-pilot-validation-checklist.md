@@ -1,7 +1,7 @@
 # G2-B Staging Pilot Validation Checklist
 
-Date: 2026-05-12
-Status: API validation passed; browser UI QA passed for pilot-owned public article
+Date: 2026-05-15
+Status: API validation, browser UI QA, strict-gate Lambda bundle, public gateway probes, and staging outbound Update delivery passed for the pilot-owned public article
 
 ## Purpose
 
@@ -37,6 +37,15 @@ This checklist is the shortest path from the merged G2-B code to a real
 - Public `staging-gateway.matters.town` now serves
   `mashbeanmatters@staging-gateway.matters.town`; WebFinger, actor, outbox, and
   NodeInfo probes passed.
+- PR #29 added actor discovery hints for Mastodon-compatible discovery. The
+  public staging actor now includes `discoverable`, `indexable`, and the
+  Mastodon `toot` JSON-LD context.
+- A staging `Update` for article `23525` was sent through
+  `mashbeanmatters@staging-gateway.matters.town` and delivered to the accepted
+  g0v.social and gyutte.site followers. Queue status after delivery was 0
+  pending, 0 processing, and 0 dead letters.
+- SQLite remains the runtime source of truth; the post-delivery consistency
+  scan returned `totalDiffs=0`.
 - No production setting, production data export, or canonical
   `acct:user@matters.town` rollout is enabled.
 
@@ -84,7 +93,11 @@ Completed staging changes:
    `mashbeanmatters@staging-gateway.matters.town`.
 11. Run SQLite consistency scan and require `totalDiffs=0`. Completed.
 12. Run Misskey read-only probe first; send a public staging Article only if the
-    test plan explicitly requires an externally visible delivery.
+    test plan explicitly requires an externally visible delivery. Completed for
+    earlier Misskey Article probes.
+13. Send one bounded staging `Update` for the pilot-owned public Article to
+    accepted followers and require delivery queue health to return to 0 pending
+    and 0 dead letters. Completed on 2026-05-15 for g0v.social and gyutte.site.
 
 ## Pass Criteria
 
@@ -95,6 +108,8 @@ Completed staging changes:
 - Paywalled/private/non-public articles remain blocked.
 - Gateway probes pass.
 - SQLite consistency scan returns `0` diffs.
+- Bounded staging outbound delivery can deliver to accepted followers and leave
+  no queue backlog or dead letters.
 - No production export, production storage write, or production ActivityPub
   delivery occurs.
 
@@ -107,5 +122,23 @@ Stop and record the blocker if:
 - the UI row is hidden after `fediverseBeta` is present;
 - paywalled/private content becomes eligible;
 - strict-gate dry-run attempts a production write;
+- delivery queue retains unexplained pending, processing, or dead-letter items
+  after a bounded staging outbound delivery;
 - a test requires production credentials, production branch rollout, or legal /
   privacy approval.
+
+## Remaining Validation Gaps
+
+- Local AWS CLI is not yet configured on this Mac, so local re-invocation of
+  `federation-export-dev` is blocked until profile, region, and credentials are
+  available. The existing GitHub Actions Lambda run remains valid evidence.
+- Mastodon can receive delivered activities through g0v.social, but there is no
+  local Mastodon API token yet for automated read-back verification.
+- Threads still cannot discover the staging actor. Keep this as a separate
+  compatibility investigation and avoid blocking Mastodon/Misskey staging signoff
+  on Threads until canonical `acct:user@matters.town` or production-like
+  discovery is ready to test.
+- Threads diagnostic now shows a concrete Cloudflare edge blocker:
+  `meta-externalagent/1.1` gets 403 on staging WebFinger, actor, outbox, and
+  NodeInfo. Add a narrow staging federation-path bypass before the next Threads
+  UI retry.

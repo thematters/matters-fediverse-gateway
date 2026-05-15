@@ -194,17 +194,19 @@ node src/server.mjs --config ./runtime/matters-icu-staging/gateway.instance.json
 - Production deploy, production Lambda deploy, and production DB migration jobs
   were skipped in that run.
 - `server.matters.icu` GraphQL responded after deploy.
-- The scaffold remains default-off until the develop server environment is
-  configured with `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only`.
-- Next staging action: set `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only`
-  on `matters.icu` develop, redeploy or restart the server environment, publish
-  a fresh pilot public article, edit the same article, then query
-  `federation_export_event` for `publish_article` and `revise_article` audit
-  rows. Existing article `23525` can be used for a revise-only check, but not
-  for the publish trigger because it was published before `record_only` was
-  enabled. Expected result: strict eligibility is recorded, normal publish/edit
-  remains unblocked, and no Lambda, S3, IPNS, or ActivityPub delivery is invoked
-  from `matters-server`.
+- `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only` is now configured on
+  `matters.icu` develop.
+- Fresh pilot public article `23534`
+  (`https://matters.icu/a/hwj8ajpbc048`) was published and then revised on
+  2026-05-15. The staging database recorded both `publish_article` and
+  `revise_article` rows in `federation_export_event`.
+- Both rows have `mode=record_only`, `status=recorded`, `eligible=true`, and
+  `reason=eligible`. Both rows use `effective_article_setting=inherit`, which
+  is valid for the current product rule because the author has explicitly opted
+  in and the article follows the author default.
+- Expected result is now confirmed: strict eligibility is recorded, normal
+  publish/edit remains unblocked, and no Lambda, S3, IPNS, or ActivityPub
+  delivery is invoked from `matters-server`.
 
 ## 2026-05-13 Pre-EB-Access Regression
 
@@ -223,3 +225,183 @@ node src/server.mjs --config ./runtime/matters-icu-staging/gateway.instance.json
   WebFinger, actor, outbox, NodeInfo discovery, and NodeInfo 2.1.
 - This pass does not invoke Lambda, change EB settings, write S3, publish IPNS,
   send ActivityPub delivery, or touch production.
+
+## 2026-05-15 Post-PR29 Staging Outbound Delivery
+
+- `matters-fediverse-gateway` PR
+  [#29](https://github.com/thematters/matters-fediverse-gateway/pull/29)
+  merged to `main` and was applied to the local staging gateway runtime.
+- Public actor
+  `https://staging-gateway.matters.town/users/mashbeanmatters` now serves
+  ActivityPub discovery hints including `discoverable: true`, `indexable: true`,
+  and the Mastodon `toot` JSON-LD context.
+- Public actor and WebFinger checks remain uncached at the Cloudflare edge:
+  `cache-control: no-store` and `cf-cache-status: DYNAMIC`.
+- Staging `Update` delivery was sent for existing pilot article `23525` through
+  `https://staging-gateway.matters.town/users/mashbeanmatters/outbox/update`.
+- Delivery result: 2 recipients, both delivered:
+  - `https://g0v.social/users/mashbean`
+  - `https://gyutte.site/users/819de678273e9b120fd654b5`
+- Delivery queue after the run: `outboundPending=0`, `outboundProcessing=0`,
+  `deadLetters=0`.
+- Content delivery summary after the run: 11 activities delivered, 20
+  recipient deliveries delivered, 0 pending, 0 dead letters.
+- SQLite / file mirror consistency scan returned `totalDiffs=0` after the
+  outbound update.
+- Evidence files:
+  - `gateway-core/runtime/interop/staging-outbound-update-post-pr29-20260515T084502Z.json`
+  - `gateway-core/runtime/matters-icu-staging-g2b-25713858021/consistency-scans/consistency-scan-2026-05-15-084520550Z-post-outbound-update.json`
+- Misskey API can still resolve
+  `mashbeanmatters@staging-gateway.matters.town`; the latest visible notes in
+  gyutte.site remain previous staging `Article` / reply probes, so the delivered
+  `Update` is counted as delivery-level proof rather than a fresh UI display
+  proof.
+- Threads still cannot discover
+  `@mashbeanmatters@staging-gateway.matters.town` after the WebFinger cache
+  bypass and PR #29 actor hints. Current assessment: treat Threads as a
+  staging-domain / indexing / canonical-identity compatibility issue, not a
+  blocker for Mastodon or Misskey staging validation.
+- Local AWS CLI is not configured with a usable profile, region, or credentials
+  on this Mac, so fresh `federation-export-dev` invocation from the local
+  staging script is blocked until AWS CLI access is configured. Existing
+  deployed-Lambda run `25713858021` remains the current valid bundle source for
+  article `23525`.
+
+## 2026-05-15 Mastodon Read-Back Token
+
+- Created a g0v.social developer application named `Matters Fediverse Gateway
+  Staging Readback`.
+- Scopes are read-only: `read:accounts`, `read:search`, `read:statuses`, and
+  `profile`. No write or admin scopes were granted.
+- The access token is stored only in ignored local runtime secrets:
+  `gateway-core/runtime/secrets/g0v-mastodon-readback-token`.
+- API verification passed:
+  - `verify_credentials` returns the logged-in g0v.social account.
+  - authenticated search resolves
+    `mashbeanmatters@staging-gateway.matters.town`.
+  - status read-back returns recent staging gateway objects.
+- Evidence files:
+  - `gateway-core/runtime/interop/g0v-verify-credentials-20260515T093401Z.json`
+  - `gateway-core/runtime/interop/g0v-search-staging-actor-20260515T093401Z.json`
+  - `gateway-core/runtime/interop/g0v-staging-actor-statuses-20260515T093401Z.json`
+
+## 2026-05-15 Repeatable Mastodon Read-Back And Delete Proof
+
+Added `gateway-core/scripts/run-mastodon-readback.mjs` and npm script
+`check:mastodon-readback` so staging delivery can be verified through the
+read-only g0v.social API token without manual UI inspection.
+
+Validation:
+
+- `npm test` passed: 122/122.
+- `node scripts/run-mastodon-readback.mjs --token-file
+  ./runtime/secrets/g0v-mastodon-readback-token --acct
+  mashbeanmatters@staging-gateway.matters.town` returned `ok: true`.
+- Evidence:
+  `gateway-core/runtime/interop/g0v-readback-20260515T120449Z.json`.
+
+Bounded staging Delete proof:
+
+- Created staging-only object:
+  `https://staging-gateway.matters.town/articles/staging-delete-proof-20260515T120541Z`.
+- `outbox/create` delivered to both accepted followers:
+  `https://g0v.social/users/mashbean` and
+  `https://gyutte.site/users/819de678273e9b120fd654b5`.
+- Mastodon read-back found g0v.social status `116578500092043130`.
+- `outbox/delete` delivered to both accepted followers.
+- g0v.social `GET /api/v1/statuses/116578500092043130` returned `404` after
+  the Delete, which is the expected bounded deletion result.
+- Evidence files:
+  - `gateway-core/runtime/interop/staging-delete-proof-create-20260515T120541Z.json`
+  - `gateway-core/runtime/interop/g0v-delete-proof-readback-20260515T120541Z.json`
+  - `gateway-core/runtime/interop/staging-delete-proof-delete-20260515T120541Z.json`
+  - `gateway-core/runtime/interop/g0v-delete-proof-status-after-delete-20260515T120541Z.json`
+
+## 2026-05-15 AWS Access Attempt
+
+- AWS CLI is installed, but no local profile, access key, secret key, or region
+  is configured for this Mac.
+- ChatGPT Atlas can reach AWS Console and showed account `Matters
+  (903380195283)`, but Computer Use could not keep the Atlas window stable long
+  enough to safely change Elastic Beanstalk settings.
+- Safari can open the AWS Elastic Beanstalk URL but reaches AWS Sign-In instead
+  of an authenticated console session.
+- No Elastic Beanstalk setting was changed. Production was not touched.
+- Next safe path: open an authenticated AWS Console window directly on the
+  `ap-southeast-1` Elastic Beanstalk environment list, or configure a local
+  least-privilege AWS profile, then set
+  `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only` only on the
+  `matters.icu` develop environment.
+
+## 2026-05-15 Threads Discovery Diagnostic
+
+Added `gateway-core/scripts/run-threads-discovery-diagnostics.mjs` and npm
+script `check:threads-discovery` to separate gateway correctness from Threads
+indexing behavior.
+
+Latest command:
+
+```bash
+node scripts/run-threads-discovery-diagnostics.mjs \
+  --base-url https://staging-gateway.matters.town \
+  --handle mashbeanmatters \
+  --canonical-domain matters.town \
+  --output-file runtime/interop/threads-discovery-diagnostics-20260515T091300Z.json
+```
+
+Latest rerun:
+
+```bash
+node scripts/run-threads-discovery-diagnostics.mjs \
+  --output-file runtime/interop/threads-discovery-diagnostics-20260515T120607Z.json
+```
+
+Result:
+
+- default user-agent, `facebookexternalua`, and `facebookexternalhit` all
+  received 200 for staging WebFinger, actor, outbox, and NodeInfo discovery.
+- `meta-externalagent/1.1` still receives Cloudflare 403 HTML responses for staging
+  WebFinger, actor, outbox, NodeInfo discovery, and the canonical-resource probe.
+- `acct:mashbeanmatters@matters.town` is not yet exposed from the staging
+  surface; staging tests must use
+  `acct:mashbeanmatters@staging-gateway.matters.town` until canonical identity
+  cutover.
+
+Current Threads hypothesis:
+
+1. `meta-externalagent` is likely blocked by Cloudflare bot/WAF rules on the
+   staging hostname.
+2. Threads may require a production-like canonical identity surface, or may
+   cache the earlier failed discovery result.
+3. This does not invalidate Mastodon/Misskey evidence because those paths
+   already pass discovery and delivery.
+
+Next Threads action: add a narrow Cloudflare bypass/skip rule for
+`staging-gateway.matters.town` federation discovery paths and Meta crawler user
+agents, then rerun `npm run check:threads-discovery` before trying Threads UI
+again.
+
+Follow-up permission check:
+
+- The available Cloudflare token verifies successfully and can read cache rules.
+- The same token cannot read WAF/custom firewall entrypoints; Cloudflare API
+  returns `request is not authorized` for `http_request_firewall_custom`,
+  `http_request_firewall_managed`, and `http_ratelimit`.
+- Required next credential: a temporary token scoped to the `matters.town` zone
+  with Rulesets/WAF edit permission, or a dashboard user session that can create
+  the staging-only custom rule.
+
+Dashboard attempt:
+
+- A staging-only custom rule form was prepared with rule name
+  `skip-staging-fediverse-meta-crawlers`, action `Skip`, the Meta crawler
+  expression listed in the Cloudflare tunnel runbook, and skip components for
+  remaining custom rules, managed rules, and Super Bot Fight Mode.
+- The rule was not deployed in that attempt: the Atlas Cloudflare window became
+  hidden/unavailable to Computer Use before the placement and Deploy steps could
+  be completed. Safari also showed only an empty Cloudflare dashboard shell for
+  the same route.
+- A fresh `npm run check:threads-discovery` after the attempt still failed with
+  Cloudflare 403 for `meta-externalagent` on staging WebFinger, actor, outbox,
+  NodeInfo, and canonical-resource probes. Treat the Cloudflare skip rule as
+  pending, not applied.
