@@ -1472,6 +1472,7 @@ export function createGatewayApp({
     cacheTtlMs: config.remoteDiscovery?.cacheTtlMs ?? 60 * 60 * 1000,
   }),
   outboxBridge = null,
+  fetchImpl = fetch,
   clock = () => new Date(),
 }) {
   const deliveryProcessor = createDeliveryProcessor({
@@ -2090,6 +2091,275 @@ export function createGatewayApp({
     }
 
     return null;
+  }
+
+  async function fetchActivityDocument(activityUrl) {
+    let response;
+
+    try {
+      response = await fetchImpl(activityUrl, {
+        headers: {
+          accept: [
+            "application/activity+json",
+            'application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
+          ].join(", "),
+        },
+      });
+    } catch (error) {
+      return {
+        error: `Failed to fetch activity: ${error.message}`,
+        statusCode: 502,
+      };
+    }
+
+    if (!response.ok) {
+      return {
+        error: `Failed to fetch activity with status ${response.status}`,
+        statusCode: 502,
+      };
+    }
+
+    try {
+      return {
+        activity: await response.json(),
+      };
+    } catch {
+      return {
+        error: "Fetched activity is not valid JSON",
+        statusCode: 422,
+      };
+    }
+  }
+
+  async function reconcileInboundCreateActivity({ actorHandle, activityUrl, dryRun = false }) {
+    if (!actorHandle || !config.actors[actorHandle]) {
+      return {
+        error: "Known actorHandle is required",
+        statusCode: 422,
+      };
+    }
+
+    let parsedActivityUrl;
+    try {
+      parsedActivityUrl = new URL(activityUrl);
+    } catch {
+      return {
+        error: "activityUrl must be a valid URL",
+        statusCode: 422,
+      };
+    }
+
+    const actorSuspension = await enforceActorSuspensionIfNeeded(actorHandle, "inbound-reconcile");
+    if (actorSuspension) {
+      return {
+        error: "Local actor is suspended",
+        statusCode: 403,
+        payload: {
+          actorHandle,
+          reason: actorSuspension.reason,
+        },
+      };
+    }
+
+    const fetchResult = await fetchActivityDocument(parsedActivityUrl.href);
+    if (fetchResult.error) {
+      return fetchResult;
+    }
+
+    const { activity } = fetchResult;
+    if (activity.type !== "Create") {
+      return {
+        error: "Only Create activities can be reconciled",
+        statusCode: 422,
+      };
+    }
+    if (!activity.object || typeof activity.object !== "object" || Array.isArray(activity.object)) {
+      return {
+        error: "Create.object must be an object",
+        statusCode: 422,
+      };
+    }
+
+    const object = activity.object;
+    const remoteActorId = getActivityActorId(activity);
+    if (!remoteActorId) {
+      return {
+        error: "Create.actor is required",
+        statusCode: 422,
+      };
+    }
+    if (object.attributedTo && object.attributedTo !== remoteActorId) {
+      return {
+        error: "Create.actor must match object.attributedTo",
+        statusCode: 422,
+      };
+    }
+
+    const remoteDomain = getDomainFromUri(remoteActorId);
+    const activityDomain = parsedActivityUrl.hostname.toLowerCase();
+    if (remoteDomain && remoteDomain !== activityDomain) {
+      return {
+        error: "activityUrl host must match the remote actor host",
+        statusCode: 422,
+      };
+    }
+
+    if (!isPublicCreate(activity, object)) {
+      return {
+        error: "Only public Create activities can be reconciled",
+        statusCode: 422,
+      };
+    }
+
+    if (!object.id?.trim()) {
+      return {
+        error: "Create.object.id is required",
+        statusCode: 422,
+      };
+    }
+    if (store.hasProcessed(activity.id) || store.getInboundObject?.(actorHandle, object.id)) {
+      return {
+        status: "duplicate",
+        statusCode: 202,
+        payload: {
+          activityId: activity.id ?? null,
+          objectId: object.id,
+        },
+      };
+    }
+
+    const inReplyTo = normalizeOptionalString(object.inReplyTo);
+    const parentObject = resolveOutboundObjectById(inReplyTo);
+    if (!inReplyTo || !parentObject) {
+      return {
+        error: "Reconciled Create must reply to a known outbound local object",
+        statusCode: 422,
+      };
+    }
+
+    const domainBlockMatch = await enforceDomainBlockIfNeeded({
+      activity,
+      actorHandle,
+    });
+    if (domainBlockMatch) {
+      return {
+        error: "Remote domain is blocked",
+        statusCode: 403,
+        payload: {
+          domain: domainBlockMatch.remoteDomain,
+          reason: domainBlockMatch.domainBlock.reason,
+          abuseCaseId: domainBlockMatch.abuseCase.id,
+        },
+      };
+    }
+
+    const remoteActorPolicyMatch = await enforceRemoteActorPolicyIfNeeded({
+      activity,
+      actorHandle,
+      surface: "inbound-reconcile",
+    });
+    if (remoteActorPolicyMatch) {
+      return {
+        error: "Remote actor is denied by policy",
+        statusCode: remoteActorPolicyMatch.action === "review" ? 202 : 403,
+        payload: {
+          status: remoteActorPolicyMatch.action === "review" ? "queued-review" : "denied",
+          remoteActorId: remoteActorPolicyMatch.remoteActorId,
+          reason: remoteActorPolicyMatch.policy.reason,
+          abuseCaseId: remoteActorPolicyMatch.abuseCase.id,
+        },
+      };
+    }
+
+    let remoteActor;
+    try {
+      remoteActor = await remoteActorDirectory.resolve(remoteActorId);
+    } catch (error) {
+      await store.recordTrace(
+        makeTrace(clock, {
+          direction: "inbound",
+          event: "inbound-reconcile.remote-actor-rejected",
+          actorHandle,
+          activityId: activity.id ?? null,
+          remoteActorId,
+          reason: error.message,
+        }),
+      );
+      return {
+        error: error.message,
+        statusCode: 422,
+      };
+    }
+
+    const inboundRecord = buildInboundObjectRecord({
+      config,
+      store,
+      activity,
+      object,
+      remoteActorId: remoteActor.actorId,
+      actorHandle,
+      clock,
+    });
+
+    await store.recordTrace(
+      makeTrace(clock, {
+        direction: "inbound",
+        event: "inbound-reconcile.fetched",
+        actorHandle,
+        activityId: activity.id ?? null,
+        remoteActorId: remoteActor.actorId,
+        objectId: inboundRecord.objectId,
+        inReplyTo: inboundRecord.inReplyTo,
+        dryRun,
+      }),
+    );
+
+    if (!dryRun) {
+      await store.upsertInboundObject(actorHandle, inboundRecord);
+      await syncLocalDomainProjection(actorHandle);
+      await store.recordProcessed(activity.id, {
+        handledAt: clock().toISOString(),
+        localActor: config.actors[actorHandle].actorUrl,
+        resultObjectId: inboundRecord.objectId,
+        disposition: inboundRecord.mapping,
+        source: "inbound-reconcile",
+      });
+      await store.recordTrace(
+        makeTrace(clock, {
+          direction: "inbound",
+          event: inboundRecord.mapping === "reply" ? "reply.reconciled" : "create.reconciled",
+          actorHandle,
+          activityId: activity.id ?? null,
+          remoteActorId: remoteActor.actorId,
+          objectId: inboundRecord.objectId,
+          inReplyTo: inboundRecord.inReplyTo,
+        }),
+      );
+      await recordAuditEvent({
+        timestamp: clock().toISOString(),
+        event: "inbound-create.reconciled",
+        actorHandle,
+        activityUrl: parsedActivityUrl.href,
+        activityId: activity.id ?? null,
+        objectId: inboundRecord.objectId,
+        remoteActorId: remoteActor.actorId,
+      });
+    }
+
+    return {
+      status: dryRun ? "preview" : "stored",
+      statusCode: dryRun ? 200 : 202,
+      payload: {
+        status: dryRun ? "preview" : "stored",
+        activityId: activity.id ?? null,
+        objectId: inboundRecord.objectId,
+        mapping: inboundRecord.mapping,
+        inReplyTo: inboundRecord.inReplyTo,
+        remoteActorId: remoteActor.actorId,
+        source: "inbound-reconcile",
+        dryRun,
+      },
+    };
   }
 
   function buildContentDeliveryOpsSnapshot({
@@ -3742,6 +4012,35 @@ export function createGatewayApp({
         return jsonResponse({
           items: store.getDomainBlocks?.() ?? [],
         });
+      }
+
+      if (request.method === "POST" && pathname === "/admin/inbound/reconcile-activity") {
+        const bodyText = await request.text();
+        let payload;
+
+        try {
+          payload = parseJsonBody(bodyText);
+        } catch {
+          return jsonResponse({ error: "Invalid JSON body" }, 400);
+        }
+
+        const result = await reconcileInboundCreateActivity({
+          actorHandle: payload.actorHandle?.trim(),
+          activityUrl: payload.activityUrl?.trim(),
+          dryRun: payload.dryRun === true,
+        });
+
+        if (result.error) {
+          return jsonResponse(
+            {
+              error: result.error,
+              ...(result.payload ?? {}),
+            },
+            result.statusCode ?? 500,
+          );
+        }
+
+        return jsonResponse(result.payload, result.statusCode);
       }
 
       if (request.method === "GET" && pathname === "/admin/actor-suspensions") {
