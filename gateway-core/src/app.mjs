@@ -2362,6 +2362,114 @@ export function createGatewayApp({
     };
   }
 
+  function normalizeInboundReconciliationItems(payload) {
+    const items = [];
+    const defaultActorHandle = payload.actorHandle?.trim();
+
+    if (Array.isArray(payload.items)) {
+      for (const item of payload.items) {
+        items.push({
+          actorHandle: item?.actorHandle?.trim() || defaultActorHandle,
+          activityUrl: item?.activityUrl?.trim(),
+        });
+      }
+    }
+
+    if (Array.isArray(payload.activityUrls)) {
+      for (const activityUrl of payload.activityUrls) {
+        items.push({
+          actorHandle: defaultActorHandle,
+          activityUrl: typeof activityUrl === "string" ? activityUrl.trim() : "",
+        });
+      }
+    }
+
+    if (payload.activityUrl?.trim()) {
+      items.push({
+        actorHandle: defaultActorHandle,
+        activityUrl: payload.activityUrl.trim(),
+      });
+    }
+
+    const seen = new Set();
+    return items.filter((item) => {
+      if (!item.actorHandle || !item.activityUrl) {
+        return false;
+      }
+      const key = `${item.actorHandle}\n${item.activityUrl}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }
+
+  async function runInboundReconciliationJob(payload) {
+    const items = normalizeInboundReconciliationItems(payload);
+    const configuredMax = config.inboundReconciliation?.maxItemsPerRun ?? 20;
+    const requestedMax =
+      Number.isFinite(payload.maxItems) && payload.maxItems > 0 ? Math.floor(payload.maxItems) : configuredMax;
+    const maxItems = Math.min(requestedMax, configuredMax);
+    const selectedItems = items.slice(0, maxItems);
+    const skipped = Math.max(items.length - selectedItems.length, 0);
+    const results = [];
+
+    for (const item of selectedItems) {
+      const result = await reconcileInboundCreateActivity({
+        actorHandle: item.actorHandle,
+        activityUrl: item.activityUrl,
+        dryRun: payload.dryRun === true,
+      });
+      results.push({
+        actorHandle: item.actorHandle,
+        activityUrl: item.activityUrl,
+        statusCode: result.statusCode ?? 500,
+        ...(result.error
+          ? { status: "failed", error: result.error, ...(result.payload ?? {}) }
+          : result.payload),
+      });
+    }
+
+    const summary = {
+      total: items.length,
+      processed: selectedItems.length,
+      skipped,
+      stored: results.filter((item) => item.status === "stored").length,
+      preview: results.filter((item) => item.status === "preview").length,
+      duplicate: results.filter((item) => item.status === "duplicate").length,
+      failed: results.filter((item) => item.status === "failed").length,
+      dryRun: payload.dryRun === true,
+    };
+    const timestamp = clock().toISOString();
+
+    await store.recordTrace(
+      makeTrace(clock, {
+        direction: "internal",
+        event: "inbound-reconcile.job-run",
+        total: summary.total,
+        processed: summary.processed,
+        skipped: summary.skipped,
+        stored: summary.stored,
+        preview: summary.preview,
+        duplicate: summary.duplicate,
+        failed: summary.failed,
+        dryRun: summary.dryRun,
+      }),
+    );
+    await recordAuditEvent({
+      timestamp,
+      event: "inbound-reconcile.job-run",
+      ...summary,
+    });
+
+    return {
+      status: summary.failed ? "partial" : "ok",
+      summary,
+      items: results,
+    };
+  }
+
   function buildContentDeliveryOpsSnapshot({
     actorHandle = null,
     limit = 20,
@@ -4041,6 +4149,23 @@ export function createGatewayApp({
         }
 
         return jsonResponse(result.payload, result.statusCode);
+      }
+
+      if (request.method === "POST" && pathname === "/jobs/inbound-reconciliation") {
+        const bodyText = await request.text();
+        let payload;
+
+        try {
+          payload = parseJsonBody(bodyText);
+        } catch {
+          return jsonResponse({ error: "Invalid JSON body" }, 400);
+        }
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+          return jsonResponse({ error: "JSON body must be an object" }, 400);
+        }
+
+        const result = await runInboundReconciliationJob(payload);
+        return jsonResponse(result, result.status === "partial" ? 207 : 200);
       }
 
       if (request.method === "GET" && pathname === "/admin/actor-suspensions") {

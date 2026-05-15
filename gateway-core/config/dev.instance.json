@@ -30,6 +30,9 @@
     "userAgent": "MattersGatewayCore/0.1.0",
     "processingLeaseTimeoutMs": 900000
   },
+  "inboundReconciliation": {
+    "maxItemsPerRun": 20
+  },
   "moderation": {
     "domainBlocks": [],
     "actorSuspensions": [],

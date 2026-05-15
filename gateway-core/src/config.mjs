@@ -252,6 +252,12 @@ export async function loadGatewayConfig(configPath) {
           ? Math.floor(raw.delivery.processingLeaseTimeoutMs)
           : 15 * 60 * 1000,
     },
+    inboundReconciliation: {
+      maxItemsPerRun:
+        Number.isFinite(raw.inboundReconciliation?.maxItemsPerRun) && raw.inboundReconciliation.maxItemsPerRun > 0
+          ? Math.floor(raw.inboundReconciliation.maxItemsPerRun)
+          : 20,
+    },
     moderation: {
       domainBlocks: (raw.moderation?.domainBlocks ?? []).map((entry) => {
         if (typeof entry === "string") {

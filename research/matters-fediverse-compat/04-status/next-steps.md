@@ -31,26 +31,38 @@ Updated: 2026-05-15
   now returns `ok: true` for default, `facebookexternalua`,
   `facebookexternalhit`, and `meta-externalagent` probes against staging
   WebFinger, actor, outbox, and NodeInfo.
+- Logged-in Threads UI search still returns no profile result for
+  `mashbeanmatters@staging-gateway.matters.town`; this is now tracked as
+  Threads indexing or canonical identity compatibility, not as a Cloudflare
+  403 or gateway WebFinger failure.
+- `POST /jobs/inbound-reconciliation` is implemented for scheduled
+  reconciliation of known public remote Activity URLs. It reuses the manual
+  `POST /admin/inbound/reconcile-activity` policy checks and writes trace/audit
+  records.
 
 ## Immediate Engineering Work
 
-1. Retry exact Threads profile search for
-   `mashbeanmatters@staging-gateway.matters.town`. If it still fails, keep
-   Threads as a separate compatibility investigation around platform indexing,
-   federation-sharing account settings, and canonical identity. Do not block
-   Mastodon/Misskey staging signoff on the current Threads UI discovery result.
-2. Retest Threads again after canonical identity or a production-like domain is
+1. Connect `POST /jobs/inbound-reconciliation` to a protected scheduler and a
+   bounded remote-reply discovery source. Do not expose this job route publicly
+   without an internal token, Access, mTLS, or equivalent operator boundary.
+2. Keep Threads as a separate compatibility investigation around platform
+   indexing, federation-sharing account settings, and canonical identity. Do
+   not block Mastodon/Misskey staging signoff on the current Threads UI
+   discovery result.
+3. Retest Threads again after canonical identity or a production-like domain is
    available.
-3. Keep using `check:mastodon-readback` after each staging `Create`, `Update`,
+4. Keep using `check:mastodon-readback` after each staging `Create`, `Update`,
    `Reply`, or `Delete` delivery run.
 
 ## Human Gates Before Production
 
 1. Approve canonical identity cutover from
    `acct:user@staging-gateway.matters.town` to `acct:user@matters.town`.
-2. Confirm production storage owner and S3 bucket/prefix policy.
-3. Confirm production outbound delivery mode and rollback window.
-4. Confirm legal takedown owner, privacy notice text, and key
+2. Confirm production gateway hosting, SQLite backup/restore path, scheduler
+   boundary, monitoring, and direct-origin fallback outside Cloudflare.
+3. Confirm production storage owner and S3 bucket/prefix policy.
+4. Confirm production outbound delivery mode and rollback window.
+5. Confirm legal takedown owner, privacy notice text, and key
    exposure/rotation owner.
-5. Confirm launch copy and whether the first rollout is silent beta,
+6. Confirm launch copy and whether the first rollout is silent beta,
    limited pilot, or public announcement.

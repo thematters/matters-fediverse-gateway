@@ -2849,6 +2849,97 @@ test("admin inbound reconcile imports public remote reply to known local object"
   assert.equal(store.hasProcessed("https://remote.example/activities/reconcile-1"), true);
 });
 
+test("inbound reconciliation job imports configured remote replies on a scheduleable endpoint", async () => {
+  const remoteActivities = {
+    "https://remote.example/activities/reconcile-job-1": {
+      "@context": "https://www.w3.org/ns/activitystreams",
+      id: "https://remote.example/activities/reconcile-job-1",
+      type: "Create",
+      actor: "https://remote.example/users/zoe",
+      to: ["https://www.w3.org/ns/activitystreams#Public"],
+      cc: ["https://matters.example/users/alice"],
+      object: {
+        id: "https://remote.example/notes/reconcile-job-reply-1",
+        type: "Note",
+        attributedTo: "https://remote.example/users/zoe",
+        published: "2026-03-21T00:02:00.000Z",
+        content: "Scheduled reconcile reply",
+        inReplyTo: "https://matters.example/articles/reconcile-job-parent",
+        to: ["https://www.w3.org/ns/activitystreams#Public"],
+        cc: ["https://matters.example/users/alice"],
+      },
+    },
+  };
+  const { app, store } = await createHarness({
+    async fetchImpl(url) {
+      const activity = remoteActivities[url];
+      assert.ok(activity, `unexpected fetch ${url}`);
+      return new Response(JSON.stringify(activity), {
+        status: 200,
+        headers: {
+          "content-type": "application/activity+json",
+        },
+      });
+    },
+  });
+
+  await store.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    inbox: "https://remote.example/users/zoe/inbox",
+    sharedInbox: "https://remote.example/inbox",
+    status: "accepted",
+    followedAt: "2026-03-21T00:00:00.000Z",
+    lastActivityId: "https://remote.example/activities/follow-1",
+  });
+  const createResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: "https://matters.example/articles/reconcile-job-parent",
+          type: "Article",
+          name: "Reconcile job parent",
+          content: "Parent article for scheduled reconcile",
+        },
+      }),
+    }),
+  );
+  assert.equal(createResponse.status, 202);
+
+  const response = await app.handle(
+    new Request("https://matters.example/jobs/inbound-reconciliation", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        actorHandle: "alice",
+        activityUrls: [
+          "https://remote.example/activities/reconcile-job-1",
+          "https://remote.example/activities/reconcile-job-1",
+        ],
+      }),
+    }),
+  );
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "ok");
+  assert.equal(payload.summary.total, 1);
+  assert.equal(payload.summary.processed, 1);
+  assert.equal(payload.summary.stored, 1);
+  assert.equal(payload.summary.failed, 0);
+  assert.equal(payload.items[0].source, "inbound-reconcile");
+
+  const snapshot = store.getSnapshot();
+  assert.equal(snapshot.actors.alice.inboundObjects["https://remote.example/notes/reconcile-job-reply-1"].mapping, "reply");
+  assert.equal(store.hasProcessed("https://remote.example/activities/reconcile-job-1"), true);
+  assert.equal(store.getTraces({ eventPrefix: "inbound-reconcile.job-run" }).at(-1).stored, 1);
+});
+
 test("non-public Create is ignored by public-only boundary", async () => {
   const { app, store, remoteKeys } = await createHarness();
   const activity = {
