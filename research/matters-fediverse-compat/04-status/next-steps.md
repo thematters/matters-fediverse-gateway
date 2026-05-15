@@ -38,13 +38,17 @@ Updated: 2026-05-15
 - `POST /jobs/inbound-reconciliation` is implemented for scheduled
   reconciliation of known public remote Activity URLs. It reuses the manual
   `POST /admin/inbound/reconcile-activity` policy checks and writes trace/audit
-  records.
+  records. The route now requires a configured scheduler bearer token, and
+  `npm run run:inbound-reconciliation` validates an explicit bounded source of
+  public `https` Activity URLs before posting to the job endpoint.
 
 ## Immediate Engineering Work
 
-1. Connect `POST /jobs/inbound-reconciliation` to a protected scheduler and a
-   bounded remote-reply discovery source. Do not expose this job route publicly
-   without an internal token, Access, mTLS, or equivalent operator boundary.
+1. Wire `POST /jobs/inbound-reconciliation` to a staging scheduler with
+   `inboundReconciliation.schedulerBearerTokenFile`. Use only bounded source
+   files of known public Activity URLs; do not use crawler-style discovery or
+   expose the job route without an internal token, Access, mTLS, or equivalent
+   operator boundary.
 2. Keep Threads as a separate compatibility investigation around platform
    indexing, federation-sharing account settings, and canonical identity. Do
    not block Mastodon/Misskey staging signoff on the current Threads UI

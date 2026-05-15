@@ -18,7 +18,7 @@ scheduled inbound reconciliation endpoint.
 | Mastodon read-back | Cleared on staging | `check:mastodon-readback` can resolve the staging actor and read matching remote status visibility through a read-only token. |
 | Cloudflare Meta crawler bypass | Cleared on staging | `skip-staging-fediverse-meta-crawlers` is active for `staging-gateway.matters.town`; `check:threads-discovery` returns `ok: true`. |
 | Manual inbound reconcile | Cleared on staging | `POST /admin/inbound/reconcile-activity` can import a public remote reply to a known local object and preserve SQLite consistency. |
-| Periodic inbound reconcile baseline | Implemented for review | `POST /jobs/inbound-reconciliation` batches known public Activity URLs through the same policy-checked reconcile path. |
+| Periodic inbound reconcile baseline | Cleared for staging wiring | `POST /jobs/inbound-reconciliation` batches known public Activity URLs through the same policy-checked reconcile path, requires a configured scheduler bearer token, and has a bounded source runner for explicit public `https` Activity URLs. |
 
 ## Still Open Before Production
 

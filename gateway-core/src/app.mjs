@@ -2470,6 +2470,34 @@ export function createGatewayApp({
     };
   }
 
+  function getBearerToken(request) {
+    const header = request.headers.get("authorization") ?? "";
+    const match = header.match(/^Bearer\s+(.+)$/i);
+    return match ? match[1].trim() : "";
+  }
+
+  function authorizeInboundReconciliationJob(request) {
+    const expectedToken = config.inboundReconciliation?.schedulerBearerToken?.trim() ?? "";
+
+    if (!expectedToken) {
+      return {
+        ok: false,
+        statusCode: 503,
+        error: "Inbound reconciliation scheduler token is not configured",
+      };
+    }
+
+    if (getBearerToken(request) !== expectedToken) {
+      return {
+        ok: false,
+        statusCode: 401,
+        error: "Unauthorized scheduler request",
+      };
+    }
+
+    return { ok: true };
+  }
+
   function buildContentDeliveryOpsSnapshot({
     actorHandle = null,
     limit = 20,
@@ -4152,6 +4180,11 @@ export function createGatewayApp({
       }
 
       if (request.method === "POST" && pathname === "/jobs/inbound-reconciliation") {
+        const authorization = authorizeInboundReconciliationJob(request);
+        if (!authorization.ok) {
+          return jsonResponse({ error: authorization.error }, authorization.statusCode);
+        }
+
         const bodyText = await request.text();
         let payload;
 

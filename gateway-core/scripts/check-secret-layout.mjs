@@ -40,6 +40,7 @@ function collectFileRefs(rawConfig) {
   }
 
   const dispatchRefs = [
+    ["inboundReconciliation.schedulerBearerTokenFile", rawConfig.inboundReconciliation?.schedulerBearerTokenFile],
     ["runtime.alerting.dispatch.webhookBearerTokenFile", rawConfig.runtime?.alerting?.dispatch?.webhookBearerTokenFile],
     ["runtime.metrics.dispatch.webhookBearerTokenFile", rawConfig.runtime?.metrics?.dispatch?.webhookBearerTokenFile],
     ["runtime.logs.dispatch.webhookBearerTokenFile", rawConfig.runtime?.logs?.dispatch?.webhookBearerTokenFile],

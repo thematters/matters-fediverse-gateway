@@ -168,6 +168,7 @@ known public Activity URLs:
 
 ```bash
 curl -X POST http://127.0.0.1:8787/jobs/inbound-reconciliation \
+  -H 'authorization: Bearer dev-only-inbound-reconciliation-token' \
   -H 'content-type: application/json' \
   -d '{
     "actorHandle": "alice",
@@ -176,11 +177,30 @@ curl -X POST http://127.0.0.1:8787/jobs/inbound-reconciliation \
   }'
 ```
 
+The same job can be called through a bounded source file runner:
+
+```bash
+npm run run:inbound-reconciliation -- \
+  --dry-run \
+  --source-file ./runtime/inbound-reconciliation-source.json
+```
+
+The source file should list only operator-approved public `https` Activity URLs:
+
+```json
+{
+  "actorHandle": "alice",
+  "activityUrls": ["https://remote.example/activities/1"]
+}
+```
+
 The job reuses the same policy checks as the manual endpoint: known local actor,
 public `Create`, known local parent object, domain block policy, remote actor
 policy, duplicate protection, audit log, and trace records. Protect this route
-with an internal scheduler binding, Cloudflare Access, mTLS, or equivalent
-operator authentication before exposing it outside a private staging network.
+with `inboundReconciliation.schedulerBearerTokenFile` plus an internal scheduler
+binding, Cloudflare Access, mTLS, or equivalent operator authentication before
+exposing it outside a private staging network. If no scheduler bearer token is
+configured, the job endpoint returns `503` and will not run.
 
 ## Runtime Alerts
 

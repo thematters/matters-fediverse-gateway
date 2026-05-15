@@ -31,7 +31,8 @@
     "processingLeaseTimeoutMs": 900000
   },
   "inboundReconciliation": {
-    "maxItemsPerRun": 20
+    "maxItemsPerRun": 20,
+    "schedulerBearerToken": "dev-only-inbound-reconciliation-token"
   },
   "moderation": {
     "domainBlocks": [],

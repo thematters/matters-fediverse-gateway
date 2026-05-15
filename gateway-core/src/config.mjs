@@ -229,6 +229,14 @@ export async function loadGatewayConfig(configPath) {
     };
   }
 
+  const inboundReconciliationSchedulerBearerToken = (
+    await readMaybeFile(
+      configDir,
+      raw.inboundReconciliation?.schedulerBearerToken,
+      raw.inboundReconciliation?.schedulerBearerTokenFile,
+    )
+  ).trim();
+
   return {
     instance: {
       domain,
@@ -257,6 +265,7 @@ export async function loadGatewayConfig(configPath) {
         Number.isFinite(raw.inboundReconciliation?.maxItemsPerRun) && raw.inboundReconciliation.maxItemsPerRun > 0
           ? Math.floor(raw.inboundReconciliation.maxItemsPerRun)
           : 20,
+      schedulerBearerToken: inboundReconciliationSchedulerBearerToken || null,
     },
     moderation: {
       domainBlocks: (raw.moderation?.domainBlocks ?? []).map((entry) => {
