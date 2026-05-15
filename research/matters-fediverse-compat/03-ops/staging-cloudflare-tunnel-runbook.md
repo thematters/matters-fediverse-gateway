@@ -127,8 +127,8 @@ Cloudflare Access policy:
 
 Cloudflare WAF / bot rule for staging federation discovery:
 
-- Add a narrow skip or allow rule for `staging-gateway.matters.town` only.
-- Suggested rule name: `skip-staging-fediverse-meta-crawlers`.
+- A narrow skip rule is active for `staging-gateway.matters.town` only.
+- Rule name: `skip-staging-fediverse-meta-crawlers`.
 - Match public federation paths: `/.well-known/webfinger*`,
   `/.well-known/nodeinfo`, `/nodeinfo/*`, `/users/*`, `/articles/*`, `/inbox`,
   and `/outbox`.
@@ -138,7 +138,7 @@ Cloudflare WAF / bot rule for staging federation discovery:
 - WAF components to skip: `All remaining custom rules`, `All managed rules`,
   and `All Super Bot Fight Mode Rules`. Add Browser Integrity Check if it is
   exposed under "More components to skip".
-- Place the rule before managed challenge/block rules. Do not leave it at the
+- The rule is placed first in custom-rule order. Do not move it to the
   end if `Block AI Scrapers and Crawlers rule` remains earlier in the custom
   rule order.
 - Do not bypass rate limits or security checks for `staging-admin.matters.town`
@@ -156,7 +156,9 @@ npm run check:threads-discovery
 
 The diagnostic should return 200 for default, `facebookexternalua`,
 `facebookexternalhit`, and `meta-externalagent` probes on staging WebFinger,
-actor, outbox, and NodeInfo.
+actor, outbox, and NodeInfo. On 2026-05-15 this passed with output
+`runtime/interop/threads-discovery-after-cf-bypass-20260515T142954Z.json` and
+`ok: true`.
 
 Minimum Cloudflare permission needed:
 

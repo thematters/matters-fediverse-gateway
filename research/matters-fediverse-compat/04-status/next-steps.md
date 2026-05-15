@@ -26,20 +26,21 @@ Updated: 2026-05-15
   `revise_article` audit rows with `record_only`, `recorded`, and
   `eligible=true`. Both rows used article setting `inherit`, which is valid for
   the current author opt-in default.
+- Cloudflare custom rule `skip-staging-fediverse-meta-crawlers` is enabled for
+  `staging-gateway.matters.town` federation paths only. `check:threads-discovery`
+  now returns `ok: true` for default, `facebookexternalua`,
+  `facebookexternalhit`, and `meta-externalagent` probes against staging
+  WebFinger, actor, outbox, and NodeInfo.
 
 ## Immediate Engineering Work
 
-1. Get a temporary `matters.town` Cloudflare token or dashboard session with
-   zone-level Rulesets/WAF edit permission, add a narrow bypass for Meta crawler
-   user agents on the staging federation paths, then rerun
-   `npm run check:threads-discovery`. The current cache-only token is not
-   authorized for WAF entrypoints. The 2026-05-15 dashboard attempt prepared
-   the rule but did not deploy it because the Cloudflare window became
-   unavailable before placement and Deploy.
-2. Keep Threads as a separate compatibility investigation after the Cloudflare
-   blocker is cleared. Retest again after canonical identity or a production-like
-   domain is available; do not block Mastodon/Misskey staging signoff on the
-   current Threads discovery failure.
+1. Retry exact Threads profile search for
+   `mashbeanmatters@staging-gateway.matters.town`. If it still fails, keep
+   Threads as a separate compatibility investigation around platform indexing,
+   federation-sharing account settings, and canonical identity. Do not block
+   Mastodon/Misskey staging signoff on the current Threads UI discovery result.
+2. Retest Threads again after canonical identity or a production-like domain is
+   available.
 3. Keep using `check:mastodon-readback` after each staging `Create`, `Update`,
    `Reply`, or `Delete` delivery run.
 

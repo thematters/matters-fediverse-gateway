@@ -356,12 +356,25 @@ node scripts/run-threads-discovery-diagnostics.mjs \
   --output-file runtime/interop/threads-discovery-diagnostics-20260515T120607Z.json
 ```
 
+Post-Cloudflare-rule rerun:
+
+```bash
+npm run check:threads-discovery -- \
+  --output-file ./runtime/interop/threads-discovery-after-cf-bypass-20260515T142954Z.json
+```
+
 Result:
 
 - default user-agent, `facebookexternalua`, and `facebookexternalhit` all
   received 200 for staging WebFinger, actor, outbox, and NodeInfo discovery.
-- `meta-externalagent/1.1` still receives Cloudflare 403 HTML responses for staging
-  WebFinger, actor, outbox, NodeInfo discovery, and the canonical-resource probe.
+- Before the Cloudflare rule was added, `meta-externalagent/1.1` received
+  Cloudflare 403 HTML responses for staging WebFinger, actor, outbox, NodeInfo
+  discovery, and the canonical-resource probe.
+- After adding the staging-only Cloudflare custom rule
+  `skip-staging-fediverse-meta-crawlers`, default user-agent,
+  `facebookexternalua`, `facebookexternalhit`, and `meta-externalagent/1.1`
+  all receive 200 for staging WebFinger, actor, outbox, and NodeInfo
+  discovery. The diagnostic now returns `ok: true`.
 - `acct:mashbeanmatters@matters.town` is not yet exposed from the staging
   surface; staging tests must use
   `acct:mashbeanmatters@staging-gateway.matters.town` until canonical identity
@@ -369,17 +382,17 @@ Result:
 
 Current Threads hypothesis:
 
-1. `meta-externalagent` is likely blocked by Cloudflare bot/WAF rules on the
-   staging hostname.
+1. Cloudflare WAF/Bot blocking for `meta-externalagent` on staging federation
+   paths is cleared.
 2. Threads may require a production-like canonical identity surface, or may
    cache the earlier failed discovery result.
 3. This does not invalidate Mastodon/Misskey evidence because those paths
    already pass discovery and delivery.
 
-Next Threads action: add a narrow Cloudflare bypass/skip rule for
-`staging-gateway.matters.town` federation discovery paths and Meta crawler user
-agents, then rerun `npm run check:threads-discovery` before trying Threads UI
-again.
+Next Threads action: retry exact Threads profile search for
+`mashbeanmatters@staging-gateway.matters.town`, and if Threads still cannot
+discover the actor, continue it as a Threads indexing/canonical-identity
+compatibility track rather than a gateway WebFinger or Cloudflare blocker.
 
 Follow-up permission check:
 
@@ -391,17 +404,15 @@ Follow-up permission check:
   with Rulesets/WAF edit permission, or a dashboard user session that can create
   the staging-only custom rule.
 
-Dashboard attempt:
+Dashboard rule status:
 
-- A staging-only custom rule form was prepared with rule name
-  `skip-staging-fediverse-meta-crawlers`, action `Skip`, the Meta crawler
-  expression listed in the Cloudflare tunnel runbook, and skip components for
-  remaining custom rules, managed rules, and Super Bot Fight Mode.
-- The rule was not deployed in that attempt: the Atlas Cloudflare window became
-  hidden/unavailable to Computer Use before the placement and Deploy steps could
-  be completed. Safari also showed only an empty Cloudflare dashboard shell for
-  the same route.
-- A fresh `npm run check:threads-discovery` after the attempt still failed with
-  Cloudflare 403 for `meta-externalagent` on staging WebFinger, actor, outbox,
-  NodeInfo, and canonical-resource probes. Treat the Cloudflare skip rule as
-  pending, not applied.
+- The staging-only custom rule is now deployed in Cloudflare dashboard with
+  rule name `skip-staging-fediverse-meta-crawlers`, action `Skip`, and the Meta
+  crawler expression listed in the Cloudflare tunnel runbook.
+- The rule is first in custom-rule order and only matches
+  `staging-gateway.matters.town` federation paths. It does not cover
+  `matters.town` production backend routes, `staging-admin.matters.town`, or
+  `staging-hooks.matters.town`.
+- The verification rerun
+  `threads-discovery-after-cf-bypass-20260515T142954Z.json` passed with
+  `ok: true`.
