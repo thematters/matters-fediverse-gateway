@@ -15,7 +15,9 @@
 
 ## Federation Core
 
-- gateway 可完成 follow、accept、公開內容 delivery
+- gateway 可完成 follow、accept、公開內容 delivery；2026-05-15 staging
+  `Update` 已送達 g0v.social 與 gyutte.site，queue 回到 0 pending / 0
+  dead letter
 - HTTP Signatures 驗章與簽發可觀測
 - retry 與 dead letter 可運作
 - launch runbook 已定義 pre-flight、cutover、post-cutover smoke、go/no-go 與 evidence archive
@@ -23,7 +25,8 @@
 ## Social Loop
 
 - 外部 reply、like、announce 可進入 Matters 事件流
-- Matters 的 update、delete 可正確對外傳播
+- Matters 的 update 已在 staging outbound delivery 驗證；delete 仍需在
+  production rollout 前做 bounded staging proof
 
 ## Moderation
 
@@ -40,8 +43,24 @@
 
 ## Handoff
 
-- `docs/handoff/current.md` 已更新
-- task note 與 active run 狀態一致
-- 下一輪工程 task 已列出 verify command
+- staging E2E、G2-B pilot checklist、demo page 與 implementation progress 需
+  持續同步最新 evidence
+- task note 與 active run 狀態需保持一致
+- 下一輪工程 task 需列出 verify command
 - rollback plan 已定義 routing、runtime、data restore 與 key rollback path
 - W8 tabletop record template 已建立；正式 2+ participant tabletop 尚未執行，完成紀錄應放內部文件
+
+## Current Pre-Production Gaps
+
+- `matters.icu` fresh export trigger still needs a live `record_only`
+  publish/edit audit-row validation after develop server environment settings
+  are confirmed.
+- Local AWS CLI needs profile, region, and credentials before this Mac can rerun
+  `federation-export-dev` directly.
+- Mastodon read-back automation needs a test token; delivery-level proof exists
+  for g0v.social, but API/UI read-back is still manual.
+- Threads actor discovery remains unresolved for the staging domain. Treat this
+  as compatibility work, not as proof that the gateway ActivityPub core failed.
+- Production canonical identity `acct:user@matters.town`, production storage,
+  production outbound delivery, legal/privacy text, and launch communication
+  remain explicit human rollout gates.

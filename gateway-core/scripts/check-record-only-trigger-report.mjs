@@ -91,8 +91,9 @@ function assertEvent(row, { trigger, requireEligible }) {
   if (row.status !== "recorded") errors.push("status must be recorded");
   if (requireEligible && row.eligible !== true) errors.push("eligible must be true");
   if (requireEligible && row.reason !== "eligible") errors.push("reason must be eligible");
-  if (row.effectiveArticleSetting !== "enabled") {
-    errors.push("effectiveArticleSetting must be enabled");
+  const allowedEffectiveSettings = new Set(["enabled", "inherit"]);
+  if (!allowedEffectiveSettings.has(row.effectiveArticleSetting)) {
+    errors.push("effectiveArticleSetting must be enabled or inherit");
   }
   if (!row.decisionReport || !Array.isArray(row.decisionReport.decisions)) {
     errors.push("decisionReport.decisions[] is required");

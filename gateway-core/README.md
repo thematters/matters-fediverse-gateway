@@ -52,6 +52,7 @@ The default runtime reads `./config/dev.instance.json` and writes state to `./ru
 - `POST /users/<handle>/outbox/delete`
 - `POST /inbox`
 - `POST /jobs/delivery`
+- `POST /jobs/inbound-reconciliation`
 - `POST /jobs/remote-actors/refresh`
 
 Admin and operator endpoints:
@@ -76,6 +77,7 @@ Admin and operator endpoints:
 - `GET /admin/dead-letters`
 - `POST /admin/dead-letters/replay`
 - `GET /admin/threads`
+- `POST /admin/inbound/reconcile-activity`
 - `GET /admin/local-domain`
 - `POST /admin/local-domain/reconcile`
 - `GET /admin/runtime/storage`
@@ -129,7 +131,7 @@ cd gateway-core
 npm test
 ```
 
-The latest recorded local verification snapshot had 107 tests passing.
+The latest recorded local verification snapshot had 123 tests passing.
 
 ## SQLite Backup
 
@@ -148,6 +150,57 @@ npm run restore:sqlite -- --input-file ./runtime/backups/dev-state-<timestamp>.s
 ```
 
 This restores a selected backup into a target SQLite runtime. By default it creates a pre-restore backup of the existing target first.
+
+## Periodic Inbound Reconciliation
+
+Some remote servers may create public reply objects that reference a Matters
+Article but do not deliver the activity to the gateway inbox during the
+verification window. The manual operator endpoint remains available:
+
+```bash
+curl -X POST http://127.0.0.1:8787/admin/inbound/reconcile-activity \
+  -H 'content-type: application/json' \
+  -d '{"actorHandle":"alice","activityUrl":"https://remote.example/activities/1"}'
+```
+
+For scheduler or cron use, call the batch job endpoint with a bounded list of
+known public Activity URLs:
+
+```bash
+curl -X POST http://127.0.0.1:8787/jobs/inbound-reconciliation \
+  -H 'authorization: Bearer dev-only-inbound-reconciliation-token' \
+  -H 'content-type: application/json' \
+  -d '{
+    "actorHandle": "alice",
+    "activityUrls": ["https://remote.example/activities/1"],
+    "maxItems": 20
+  }'
+```
+
+The same job can be called through a bounded source file runner:
+
+```bash
+npm run run:inbound-reconciliation -- \
+  --dry-run \
+  --source-file ./runtime/inbound-reconciliation-source.json
+```
+
+The source file should list only operator-approved public `https` Activity URLs:
+
+```json
+{
+  "actorHandle": "alice",
+  "activityUrls": ["https://remote.example/activities/1"]
+}
+```
+
+The job reuses the same policy checks as the manual endpoint: known local actor,
+public `Create`, known local parent object, domain block policy, remote actor
+policy, duplicate protection, audit log, and trace records. Protect this route
+with `inboundReconciliation.schedulerBearerTokenFile` plus an internal scheduler
+binding, Cloudflare Access, mTLS, or equivalent operator authentication before
+exposing it outside a private staging network. If no scheduler bearer token is
+configured, the job endpoint returns `503` and will not run.
 
 ## Runtime Alerts
 

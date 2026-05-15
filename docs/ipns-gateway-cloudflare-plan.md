@@ -180,6 +180,7 @@ Dynamic endpoints:
 - `POST /users/:handle/inbox`
 - `POST /inbox`
 - `POST /jobs/delivery` only if protected by an internal token or scheduler binding
+- `POST /jobs/inbound-reconciliation` only if protected by `inboundReconciliation.schedulerBearerTokenFile` plus an internal token, Access, mTLS, or scheduler binding
 - `POST /jobs/remote-actors/refresh` only if protected by an internal token or scheduler binding
 
 Operator endpoints:

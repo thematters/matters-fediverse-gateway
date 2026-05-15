@@ -125,6 +125,48 @@ Cloudflare Access policy:
 - Keep `staging-hooks.matters.town` public + bearer-token protected unless the receiver is only for internal drills.
 - Do not enable Access for `staging-gateway.matters.town` federation paths.
 
+Cloudflare WAF / bot rule for staging federation discovery:
+
+- A narrow skip rule is active for `staging-gateway.matters.town` only.
+- Rule name: `skip-staging-fediverse-meta-crawlers`.
+- Match public federation paths: `/.well-known/webfinger*`,
+  `/.well-known/nodeinfo`, `/nodeinfo/*`, `/users/*`, `/articles/*`, `/inbox`,
+  and `/outbox`.
+- Match known Meta crawler user agents used by Threads discovery and preview:
+  `facebookexternalua`, `facebookexternalhit`, and `meta-externalagent`.
+- Action: `Skip`.
+- WAF components to skip: `All remaining custom rules`, `All managed rules`,
+  and `All Super Bot Fight Mode Rules`. Add Browser Integrity Check if it is
+  exposed under "More components to skip".
+- The rule is placed first in custom-rule order. Do not move it to the
+  end if `Block AI Scrapers and Crawlers rule` remains earlier in the custom
+  rule order.
+- Do not bypass rate limits or security checks for `staging-admin.matters.town`
+  or `staging-hooks.matters.town`.
+- Expression:
+
+```text
+(http.host eq "staging-gateway.matters.town" and (lower(http.user_agent) contains "meta-externalagent" or lower(http.user_agent) contains "facebookexternalua" or lower(http.user_agent) contains "facebookexternalhit") and (starts_with(http.request.uri.path, "/.well-known/webfinger") or http.request.uri.path eq "/.well-known/nodeinfo" or starts_with(http.request.uri.path, "/nodeinfo/") or starts_with(http.request.uri.path, "/users/") or starts_with(http.request.uri.path, "/articles/") or http.request.uri.path eq "/outbox" or http.request.uri.path eq "/inbox"))
+```
+- Verify with:
+
+```bash
+npm run check:threads-discovery
+```
+
+The diagnostic should return 200 for default, `facebookexternalua`,
+`facebookexternalhit`, and `meta-externalagent` probes on staging WebFinger,
+actor, outbox, and NodeInfo. On 2026-05-15 this passed with output
+`runtime/interop/threads-discovery-after-cf-bypass-20260515T142954Z.json` and
+`ok: true`.
+
+Minimum Cloudflare permission needed:
+
+- Zone resource: `matters.town`
+- Permission: Rulesets/WAF edit for zone-level custom firewall rules
+- Existing cache-only tokens are not enough; they can verify and read cache
+  settings but cannot read or edit WAF entrypoints.
+
 Temporary no-Zero-Trust mode:
 
 - Keep the Cloudflare Tunnel routes as-is.

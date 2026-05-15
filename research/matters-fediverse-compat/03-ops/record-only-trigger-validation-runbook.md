@@ -101,7 +101,7 @@ Save the result as JSON, for example:
     "status": "recorded",
     "eligible": true,
     "reason": "eligible",
-    "effective_article_setting": "enabled",
+    "effective_article_setting": "inherit",
     "decision_report": {
       "decisions": [
         {
@@ -146,6 +146,9 @@ node scripts/check-record-only-trigger-report.mjs \
 - Each row has `mode = record_only`.
 - Each row has `status = recorded`.
 - Each row has `eligible = true` and `reason = eligible`.
+- `effective_article_setting` may be `inherit` or `enabled`; `inherit` is valid
+  when the author has explicitly opted in and the article follows the author
+  default. `disabled` must still fail.
 - `decision_report.decisions[0]` is present and agrees with the stored row.
 - Normal publish/edit remains successful even if audit recording is non-critical.
 - No Lambda, S3, IPNS, or ActivityPub delivery is invoked by `matters-server`.

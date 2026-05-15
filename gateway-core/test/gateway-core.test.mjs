@@ -14,6 +14,7 @@ import { normalizeContentDeliveryReviewSnapshot } from "../src/lib/content-deliv
 import { signHttpRequest } from "../src/security/http-signatures.mjs";
 import { FileStateStore } from "../src/store/file-state-store.mjs";
 import { SqliteStateStore } from "../src/store/sqlite-state-store.mjs";
+import { run as runInboundReconciliationJobScript } from "../scripts/run-inbound-reconciliation-job.mjs";
 import { createStagingLocalProxy } from "../scripts/run-staging-local-proxy.mjs";
 
 const execFile = promisify(execFileCallback);
@@ -100,6 +101,10 @@ async function createHarness({ fetchImpl = null } = {}) {
     delivery: {
       maxAttempts: 2,
       userAgent: "MattersGatewayCore/Test",
+    },
+    inboundReconciliation: {
+      maxItemsPerRun: 20,
+      schedulerBearerToken: "test-scheduler-token",
     },
   };
 
@@ -2847,6 +2852,246 @@ test("admin inbound reconcile imports public remote reply to known local object"
   assert.equal(inboundObject.inReplyTo, "https://matters.example/articles/reconcile-parent");
   assert.equal(inboundObject.remoteActorId, "https://remote.example/users/zoe");
   assert.equal(store.hasProcessed("https://remote.example/activities/reconcile-1"), true);
+});
+
+test("inbound reconciliation job imports configured remote replies on a scheduleable endpoint", async () => {
+  const remoteActivities = {
+    "https://remote.example/activities/reconcile-job-1": {
+      "@context": "https://www.w3.org/ns/activitystreams",
+      id: "https://remote.example/activities/reconcile-job-1",
+      type: "Create",
+      actor: "https://remote.example/users/zoe",
+      to: ["https://www.w3.org/ns/activitystreams#Public"],
+      cc: ["https://matters.example/users/alice"],
+      object: {
+        id: "https://remote.example/notes/reconcile-job-reply-1",
+        type: "Note",
+        attributedTo: "https://remote.example/users/zoe",
+        published: "2026-03-21T00:02:00.000Z",
+        content: "Scheduled reconcile reply",
+        inReplyTo: "https://matters.example/articles/reconcile-job-parent",
+        to: ["https://www.w3.org/ns/activitystreams#Public"],
+        cc: ["https://matters.example/users/alice"],
+      },
+    },
+  };
+  const { app, store } = await createHarness({
+    async fetchImpl(url) {
+      const activity = remoteActivities[url];
+      assert.ok(activity, `unexpected fetch ${url}`);
+      return new Response(JSON.stringify(activity), {
+        status: 200,
+        headers: {
+          "content-type": "application/activity+json",
+        },
+      });
+    },
+  });
+
+  await store.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    inbox: "https://remote.example/users/zoe/inbox",
+    sharedInbox: "https://remote.example/inbox",
+    status: "accepted",
+    followedAt: "2026-03-21T00:00:00.000Z",
+    lastActivityId: "https://remote.example/activities/follow-1",
+  });
+  const createResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: "https://matters.example/articles/reconcile-job-parent",
+          type: "Article",
+          name: "Reconcile job parent",
+          content: "Parent article for scheduled reconcile",
+        },
+      }),
+    }),
+  );
+  assert.equal(createResponse.status, 202);
+
+  const response = await app.handle(
+    new Request("https://matters.example/jobs/inbound-reconciliation", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer test-scheduler-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        actorHandle: "alice",
+        activityUrls: [
+          "https://remote.example/activities/reconcile-job-1",
+          "https://remote.example/activities/reconcile-job-1",
+        ],
+      }),
+    }),
+  );
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "ok");
+  assert.equal(payload.summary.total, 1);
+  assert.equal(payload.summary.processed, 1);
+  assert.equal(payload.summary.stored, 1);
+  assert.equal(payload.summary.failed, 0);
+  assert.equal(payload.items[0].source, "inbound-reconcile");
+
+  const snapshot = store.getSnapshot();
+  assert.equal(snapshot.actors.alice.inboundObjects["https://remote.example/notes/reconcile-job-reply-1"].mapping, "reply");
+  assert.equal(store.hasProcessed("https://remote.example/activities/reconcile-job-1"), true);
+  assert.equal(store.getTraces({ eventPrefix: "inbound-reconcile.job-run" }).at(-1).stored, 1);
+});
+
+test("inbound reconciliation job rejects scheduler calls without the configured bearer token", async () => {
+  const { app } = await createHarness();
+
+  const response = await app.handle(
+    new Request("https://matters.example/jobs/inbound-reconciliation", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        actorHandle: "alice",
+        activityUrls: ["https://remote.example/activities/reconcile-job-1"],
+      }),
+    }),
+  );
+
+  assert.equal(response.status, 401);
+  assert.equal((await response.json()).error, "Unauthorized scheduler request");
+});
+
+test("inbound reconciliation job stays disabled when scheduler bearer token is not configured", async () => {
+  const { app, config } = await createHarness();
+  config.inboundReconciliation.schedulerBearerToken = null;
+
+  const response = await app.handle(
+    new Request("https://matters.example/jobs/inbound-reconciliation", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer test-scheduler-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        actorHandle: "alice",
+        activityUrls: ["https://remote.example/activities/reconcile-job-1"],
+      }),
+    }),
+  );
+
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).error, "Inbound reconciliation scheduler token is not configured");
+});
+
+test("inbound reconciliation job script validates a bounded public source in dry-run", async () => {
+  const tmpDir = path.join(os.tmpdir(), `matters-gateway-inbound-job-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(tmpDir, { recursive: true });
+  const sourceFile = path.join(tmpDir, "source.json");
+  await writeFile(
+    sourceFile,
+    JSON.stringify({
+      actorHandle: "alice",
+      activityUrls: [
+        "https://remote.example/activities/reply-1",
+        "https://remote.example/activities/reply-1",
+      ],
+    }),
+  );
+
+  const report = await runInboundReconciliationJobScript({
+    gatewayUrl: "http://127.0.0.1:8787",
+    actorHandle: null,
+    activityUrls: [],
+    sourceFile,
+    maxItems: 20,
+    dryRun: true,
+    schedulerToken: null,
+    schedulerTokenFile: null,
+    outputFile: null,
+  });
+
+  assert.equal(report.ok, true);
+  assert.equal(report.itemCount, 1);
+  assert.deepEqual(report.payload.items, [
+    {
+      actorHandle: "alice",
+      activityUrl: "https://remote.example/activities/reply-1",
+    },
+  ]);
+});
+
+test("inbound reconciliation job script rejects non-public activity URLs", async () => {
+  await assert.rejects(
+    runInboundReconciliationJobScript({
+      gatewayUrl: "http://127.0.0.1:8787",
+      actorHandle: "alice",
+      activityUrls: ["http://127.0.0.1/activities/reply-1"],
+      sourceFile: null,
+      maxItems: null,
+      dryRun: true,
+      schedulerToken: null,
+      schedulerTokenFile: null,
+      outputFile: null,
+    }),
+    /Activity URL must use https/,
+  );
+});
+
+test("inbound reconciliation job script posts bounded source with bearer token", async () => {
+  const requests = [];
+  const server = createServer(async (request, response) => {
+    let body = "";
+    request.on("data", (chunk) => {
+      body += chunk.toString("utf8");
+    });
+    request.on("end", () => {
+      requests.push({
+        method: request.method,
+        url: request.url,
+        authorization: request.headers.authorization,
+        body: JSON.parse(body),
+      });
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ status: "ok" }));
+    });
+  });
+
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const { port } = server.address();
+    const report = await runInboundReconciliationJobScript({
+      gatewayUrl: `http://127.0.0.1:${port}`,
+      actorHandle: "alice",
+      activityUrls: ["https://remote.example/activities/reply-2"],
+      sourceFile: null,
+      maxItems: 1,
+      dryRun: false,
+      schedulerToken: "script-scheduler-secret",
+      schedulerTokenFile: null,
+      outputFile: null,
+    });
+
+    assert.equal(report.ok, true);
+    assert.equal(report.statusCode, 200);
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].method, "POST");
+    assert.equal(requests[0].url, "/jobs/inbound-reconciliation");
+    assert.equal(requests[0].authorization, "Bearer script-scheduler-secret");
+    assert.equal(requests[0].body.maxItems, 1);
+    assert.deepEqual(requests[0].body.items, [
+      {
+        actorHandle: "alice",
+        activityUrl: "https://remote.example/activities/reply-2",
+      },
+    ]);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
 });
 
 test("non-public Create is ignored by public-only boundary", async () => {
@@ -7438,12 +7683,14 @@ test("secret layout check script reports configured file references", async () =
   const configPath = path.join(tmpDir, "instance.json");
   const publicKeyFile = path.join(tmpDir, "actor-public.pem");
   const privateKeyFile = path.join(tmpDir, "actor-private.pem");
+  const schedulerTokenFile = path.join(tmpDir, "scheduler.token");
   const alertTokenFile = path.join(tmpDir, "alert.token");
   const metricsTokenFile = path.join(tmpDir, "metrics.token");
   const logsTokenFile = path.join(tmpDir, "logs.token");
 
   await writeFile(publicKeyFile, "public\n");
   await writeFile(privateKeyFile, "private\n");
+  await writeFile(schedulerTokenFile, "scheduler-secret\n");
   await writeFile(alertTokenFile, "alert-secret\n");
   await writeFile(metricsTokenFile, "metrics-secret\n");
   await writeFile(logsTokenFile, "logs-secret\n");
@@ -7459,6 +7706,9 @@ test("secret layout check script reports configured file references", async () =
             publicKeyPemFile: "./actor-public.pem",
             privateKeyPemFile: "./actor-private.pem",
           },
+        },
+        inboundReconciliation: {
+          schedulerBearerTokenFile: "./scheduler.token",
         },
         runtime: {
           alerting: {
@@ -7492,13 +7742,14 @@ test("secret layout check script reports configured file references", async () =
 
   const payload = JSON.parse(stdout);
   assert.equal(payload.status, "ok");
-  assert.equal(payload.checkedFiles, 5);
+  assert.equal(payload.checkedFiles, 6);
   assert.equal(payload.missingFiles, 0);
   assert.deepEqual(
     payload.files.map((entry) => entry.key).sort(),
     [
       "actors.alice.privateKeyPemFile",
       "actors.alice.publicKeyPemFile",
+      "inboundReconciliation.schedulerBearerTokenFile",
       "runtime.alerting.dispatch.webhookBearerTokenFile",
       "runtime.logs.dispatch.webhookBearerTokenFile",
       "runtime.metrics.dispatch.webhookBearerTokenFile",
