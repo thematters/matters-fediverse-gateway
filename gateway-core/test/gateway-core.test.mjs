@@ -30,7 +30,7 @@ function pemPair() {
   };
 }
 
-async function createHarness() {
+async function createHarness({ fetchImpl = null } = {}) {
   const localKeys = pemPair();
   const remoteKeys = pemPair();
   const tmpDir = path.join(os.tmpdir(), `matters-gateway-core-${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -121,7 +121,12 @@ async function createHarness() {
     store,
     deliveries,
     remoteKeys,
-    app: createGatewayApp({ config, store, deliveryClient }),
+    app: createGatewayApp({
+      config,
+      store,
+      deliveryClient,
+      ...(fetchImpl ? { fetchImpl } : {}),
+    }),
   };
 }
 
@@ -2743,6 +2748,90 @@ test("public Create reply is stored as inbound reply state", async () => {
   assert.equal(inboundObject.threadRootId, "https://matters.example/articles/hello-fediverse");
   assert.equal(inboundObject.threadResolved, false);
   assert.equal(inboundObject.replyDepth, 1);
+});
+
+test("admin inbound reconcile imports public remote reply to known local object", async () => {
+  const remoteActivity = {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    id: "https://remote.example/activities/reconcile-1",
+    type: "Create",
+    actor: "https://remote.example/users/zoe",
+    to: ["https://www.w3.org/ns/activitystreams#Public"],
+    cc: ["https://matters.example/users/alice"],
+    object: {
+      id: "https://remote.example/notes/reconcile-reply-1",
+      type: "Note",
+      attributedTo: "https://remote.example/users/zoe",
+      published: "2026-03-21T00:01:00.000Z",
+      content: "Pulled public reply from remote outbox",
+      inReplyTo: "https://matters.example/articles/reconcile-parent",
+      to: ["https://www.w3.org/ns/activitystreams#Public"],
+      cc: ["https://matters.example/users/alice"],
+    },
+  };
+  const { app, store } = await createHarness({
+    async fetchImpl(url) {
+      assert.equal(url, "https://remote.example/activities/reconcile-1");
+      return new Response(JSON.stringify(remoteActivity), {
+        status: 200,
+        headers: {
+          "content-type": "application/activity+json",
+        },
+      });
+    },
+  });
+
+  await store.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    inbox: "https://remote.example/users/zoe/inbox",
+    sharedInbox: "https://remote.example/inbox",
+    status: "accepted",
+    followedAt: "2026-03-21T00:00:00.000Z",
+    lastActivityId: "https://remote.example/activities/follow-1",
+  });
+  const createResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: "https://matters.example/articles/reconcile-parent",
+          type: "Article",
+          name: "Reconcile parent",
+          content: "Parent article",
+        },
+      }),
+    }),
+  );
+  assert.equal(createResponse.status, 202);
+
+  const response = await app.handle(
+    new Request("https://matters.example/admin/inbound/reconcile-activity", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        actorHandle: "alice",
+        activityUrl: "https://remote.example/activities/reconcile-1",
+      }),
+    }),
+  );
+
+  assert.equal(response.status, 202);
+  const payload = await response.json();
+  assert.equal(payload.status, "stored");
+  assert.equal(payload.mapping, "reply");
+  assert.equal(payload.source, "inbound-reconcile");
+
+  const snapshot = store.getSnapshot();
+  const inboundObject = snapshot.actors.alice.inboundObjects["https://remote.example/notes/reconcile-reply-1"];
+  assert.equal(inboundObject.mapping, "reply");
+  assert.equal(inboundObject.inReplyTo, "https://matters.example/articles/reconcile-parent");
+  assert.equal(inboundObject.remoteActorId, "https://remote.example/users/zoe");
+  assert.equal(store.hasProcessed("https://remote.example/activities/reconcile-1"), true);
 });
 
 test("non-public Create is ignored by public-only boundary", async () => {
