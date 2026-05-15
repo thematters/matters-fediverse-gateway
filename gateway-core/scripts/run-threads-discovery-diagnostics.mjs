@@ -25,6 +25,7 @@ function parseArgs(argv) {
     baseUrl: "https://staging-gateway.matters.town",
     handle: "mashbeanmatters",
     canonicalDomain: "matters.town",
+    canonicalBaseUrl: null,
     outputFile: null,
   };
 
@@ -36,6 +37,8 @@ function parseArgs(argv) {
       options.handle = argv[++index];
     } else if (arg === "--canonical-domain") {
       options.canonicalDomain = argv[++index];
+    } else if (arg === "--canonical-base-url") {
+      options.canonicalBaseUrl = argv[++index];
     } else if (arg === "--output-file") {
       options.outputFile = argv[++index];
     } else {
@@ -44,6 +47,7 @@ function parseArgs(argv) {
   }
 
   options.baseUrl = options.baseUrl.replace(/\/+$/u, "");
+  options.canonicalBaseUrl = options.canonicalBaseUrl?.replace(/\/+$/u, "") || null;
   options.handle = options.handle.trim();
   options.canonicalDomain = options.canonicalDomain?.trim() || null;
 
@@ -185,7 +189,7 @@ function evaluate({ probes, stagingAcct, canonicalAcct, actorUrl, canonicalDomai
 
   if (canonicalDomain && canonicalWebfinger?.status !== 200) {
     warnings.push(
-      `${canonicalAcct} is not currently discoverable from this surface; Threads tests should use ${stagingAcct} until canonical identity cutover is implemented`,
+      `${canonicalAcct} is not currently discoverable from the configured canonical surface; Threads tests should use ${stagingAcct} until canonical identity cutover is implemented`,
     );
   }
 
@@ -229,10 +233,18 @@ async function main() {
 
   if (canonicalAcct) {
     endpoints.push({
-      name: "webfinger-canonical",
+      name: options.canonicalBaseUrl ? "webfinger-canonical-on-staging" : "webfinger-canonical",
       url: buildUrl(options.baseUrl, "/.well-known/webfinger", { resource: canonicalAcct }),
       accept: "application/jrd+json, application/json",
     });
+
+    if (options.canonicalBaseUrl) {
+      endpoints.push({
+        name: "webfinger-canonical",
+        url: buildUrl(options.canonicalBaseUrl, "/.well-known/webfinger", { resource: canonicalAcct }),
+        accept: "application/jrd+json, application/json",
+      });
+    }
   }
 
   const probes = [];
@@ -266,6 +278,7 @@ async function main() {
       handle: options.handle,
       stagingAcct,
       canonicalAcct,
+      canonicalBaseUrl: options.canonicalBaseUrl,
       actorUrl,
       note: "This diagnoses public discovery preconditions only; it does not query Threads private APIs or prove Threads indexing.",
     },
