@@ -74,3 +74,30 @@ test("pilot handle list ignores malformed handles", async () => {
     "acct:also_ok@matters.town",
   ]);
 });
+
+test("canonical healthz reports edge demo follow readiness when gateway-core origin is absent", async () => {
+  const response = await fetchWorker("/ap/healthz");
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(body.runtime, {
+    mode: "edge-demo",
+    inboxMode: "accepted-not-persistent",
+    followReadiness: "blocked",
+  });
+});
+
+test("canonical healthz reports gateway-core follow readiness when origin is configured", async () => {
+  const response = await fetchWorker("/ap/healthz", {
+    ...canonicalEnv,
+    GATEWAY_CORE_ORIGIN: "https://gateway-origin.example.test/",
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(body.runtime, {
+    mode: "gateway-core-proxy",
+    inboxMode: "persistent",
+    followReadiness: "ready",
+  });
+});

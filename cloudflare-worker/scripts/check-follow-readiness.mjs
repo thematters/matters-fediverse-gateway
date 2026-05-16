@@ -1,0 +1,114 @@
+function parseArgs(argv) {
+  const options = {
+    baseUrl: "https://matters.town",
+    handle: "mashbeanmatters",
+  };
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--base-url") {
+      options.baseUrl = argv[++index];
+    } else if (arg === "--handle") {
+      options.handle = argv[++index];
+    } else {
+      throw new Error(`Unknown argument: ${arg}`);
+    }
+  }
+
+  options.baseUrl = options.baseUrl.replace(/\/+$/u, "");
+  options.handle = options.handle.replace(/^@/u, "").trim().toLowerCase();
+
+  if (!options.baseUrl || !options.handle) {
+    throw new Error("--base-url and --handle are required");
+  }
+
+  return options;
+}
+
+function activityPrefix(baseUrl) {
+  return new URL(baseUrl).host === "matters.town" ? "/ap" : "";
+}
+
+async function fetchJson(url, headers = {}) {
+  const response = await fetch(url, { headers });
+  const text = await response.text();
+  let body;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    body = { raw: text.slice(0, 500) };
+  }
+
+  return {
+    status: response.status,
+    ok: response.ok,
+    headers: Object.fromEntries(response.headers.entries()),
+    body,
+  };
+}
+
+async function main() {
+  const options = parseArgs(process.argv.slice(2));
+  const prefix = activityPrefix(options.baseUrl);
+  const host = new URL(options.baseUrl).host;
+  const acct = `acct:${options.handle}@${host}`;
+  const actorUrl = `${options.baseUrl}${prefix}/users/${options.handle}`;
+
+  const health = await fetchJson(`${options.baseUrl}${prefix}/healthz`);
+  const webfinger = await fetchJson(
+    `${options.baseUrl}/.well-known/webfinger?resource=${encodeURIComponent(acct)}`,
+  );
+  const actor = await fetchJson(actorUrl, {
+    accept: "application/activity+json",
+  });
+
+  const failures = [];
+  if (!health.ok) {
+    failures.push(`healthz returned ${health.status}`);
+  }
+  if (health.body?.runtime?.followReadiness !== "ready") {
+    failures.push(
+      `follow readiness is ${health.body?.runtime?.followReadiness ?? "unknown"}; GATEWAY_CORE_ORIGIN is not active`,
+    );
+  }
+  if (!webfinger.ok || webfinger.body?.subject !== acct) {
+    failures.push("canonical WebFinger is not ready");
+  }
+  if (!actor.ok || actor.body?.id !== actorUrl || actor.body?.inbox !== `${actorUrl}/inbox`) {
+    failures.push("canonical actor is not ready");
+  }
+
+  const report = {
+    ok: failures.length === 0,
+    generatedAt: new Date().toISOString(),
+    scope: {
+      baseUrl: options.baseUrl,
+      handle: options.handle,
+      acct,
+      actorUrl,
+      note: "Read-only follow readiness check. It does not send a Follow activity.",
+    },
+    failures,
+    health: {
+      status: health.status,
+      runtime: health.body?.runtime ?? null,
+    },
+    webfinger: {
+      status: webfinger.status,
+      subject: webfinger.body?.subject ?? null,
+    },
+    actor: {
+      status: actor.status,
+      id: actor.body?.id ?? null,
+      inbox: actor.body?.inbox ?? null,
+    },
+  };
+
+  console.log(JSON.stringify(report, null, 2));
+  process.exitCode = report.ok ? 0 : 1;
+}
+
+main().catch((error) => {
+  console.error(error.stack ?? error.message);
+  process.exitCode = 1;
+});
