@@ -2738,6 +2738,7 @@ test("signed Follow is accepted, persisted, and queued for delivery", async () =
   assert.equal(payload.status, "accepted");
   assert.equal(deliveries.length, 1);
   assert.equal(deliveries[0].activity.type, "Accept");
+  assert.equal(deliveries[0].activity.object, "https://remote.example/activities/follow-1");
   assert.deepEqual(deliveries[0].activity.to, ["https://remote.example/users/zoe"]);
   assert.equal(deliveries[0].targetInbox, "https://remote.example/users/zoe/inbox");
 
@@ -5978,6 +5979,7 @@ test("manual approval actor returns Reject and does not persist follower", async
   assert.equal(payload.status, "rejected");
   assert.equal(deliveries.length, 1);
   assert.equal(deliveries[0].activity.type, "Reject");
+  assert.equal(deliveries[0].activity.object, "https://remote.example/activities/follow-2");
   assert.deepEqual(deliveries[0].activity.to, ["https://remote.example/users/zoe"]);
   assert.equal(deliveries[0].targetInbox, "https://remote.example/users/zoe/inbox");
 
