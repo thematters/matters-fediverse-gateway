@@ -2,6 +2,7 @@ function parseArgs(argv) {
   const options = {
     baseUrl: "https://matters.town",
     handle: "mashbeanmatters",
+    probeInbox: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -10,6 +11,8 @@ function parseArgs(argv) {
       options.baseUrl = argv[++index];
     } else if (arg === "--handle") {
       options.handle = argv[++index];
+    } else if (arg === "--probe-inbox") {
+      options.probeInbox = true;
     } else {
       throw new Error(`Unknown argument: ${arg}`);
     }
@@ -77,6 +80,35 @@ async function main() {
   if (!actor.ok || actor.body?.id !== actorUrl || actor.body?.inbox !== `${actorUrl}/inbox`) {
     failures.push("canonical actor is not ready");
   }
+  let inboxProbe = null;
+  if (options.probeInbox) {
+    const response = await fetch(`${actorUrl}/inbox`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/activity+json",
+        "x-triad-readiness-probe": "invalid-follow-no-side-effect",
+      },
+      body: JSON.stringify({
+        id: `urn:matters-fediverse-readiness:${Date.now()}`,
+        type: "Follow",
+        actor: "https://readiness-probe.invalid/actor",
+        object: actorUrl,
+      }),
+    });
+    const text = await response.text();
+    inboxProbe = {
+      status: response.status,
+      ok: response.ok,
+      contentType: response.headers.get("content-type"),
+      bodyPreview: text.slice(0, 300),
+    };
+
+    if (response.status === 202 && inboxProbe.bodyPreview.includes("edge-demo")) {
+      failures.push("inbox probe was accepted by edge-demo instead of gateway-core");
+    } else if (![400, 401, 403, 422].includes(response.status)) {
+      failures.push(`inbox probe returned unexpected status ${response.status}`);
+    }
+  }
 
   const report = {
     ok: failures.length === 0,
@@ -86,7 +118,10 @@ async function main() {
       handle: options.handle,
       acct,
       actorUrl,
-      note: "Read-only follow readiness check. It does not send a Follow activity.",
+      note: options.probeInbox
+        ? "Follow readiness check with an intentionally invalid inbox POST. It must be rejected by gateway-core and must not create follower state."
+        : "Read-only follow readiness check. It does not send a Follow activity.",
+      probeInbox: options.probeInbox,
     },
     failures,
     health: {
@@ -102,6 +137,7 @@ async function main() {
       id: actor.body?.id ?? null,
       inbox: actor.body?.inbox ?? null,
     },
+    inboxProbe,
   };
 
   console.log(JSON.stringify(report, null, 2));

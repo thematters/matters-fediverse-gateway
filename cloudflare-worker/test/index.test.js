@@ -101,3 +101,45 @@ test("canonical healthz reports gateway-core follow readiness when origin is con
     followReadiness: "ready",
   });
 });
+
+test("canonical inbox proxy strips /ap prefix before forwarding to gateway-core", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init });
+    return new Response(JSON.stringify({ status: "proxied" }), {
+      status: 401,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  try {
+    const response = await worker.fetch(
+      new Request("https://matters.town/ap/users/mashbeanmatters/inbox?probe=1", {
+        method: "POST",
+        headers: { "content-type": "application/activity+json" },
+        body: JSON.stringify({ type: "Follow" }),
+      }),
+      {
+        ...canonicalEnv,
+        CANONICAL_PILOT_HANDLES: "mashbeanmatters",
+        GATEWAY_CORE_ORIGIN: "https://gateway-origin.example.test/",
+      },
+    );
+
+    assert.equal(response.status, 401);
+    assert.equal(calls.length, 1);
+    assert.equal(
+      calls[0].url,
+      "https://gateway-origin.example.test/users/mashbeanmatters/inbox?probe=1",
+    );
+    assert.equal(calls[0].init.headers.get("x-forwarded-prefix"), "/ap");
+    assert.equal(
+      calls[0].init.headers.get("x-original-url"),
+      "https://matters.town/ap/users/mashbeanmatters/inbox?probe=1",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
