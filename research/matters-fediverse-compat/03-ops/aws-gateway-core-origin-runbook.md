@@ -11,18 +11,36 @@
 - `systemd` keeps `gateway-core` alive.
 - Cloudflare remains the public edge for `matters.town/.well-known/*` and `matters.town/ap/*`.
 - Cloudflare Worker forwards canonical pilot actor reads and inbox writes to the AWS origin when `GATEWAY_CORE_ORIGIN` is configured.
-- The origin should not expose public inbound ports directly. Prefer Cloudflare Tunnel or a locked-down origin hostname.
+- The origin should sit in the existing Matters `dev-vpc` private subnet and should not receive a public IPv4 address. Use Cloudflare Tunnel for ingress.
+- The origin should not expose public inbound ports directly.
 
 Do not host this inside `matters-server-develop` or `matters-server-prod-new`; federation delivery, inbox persistence, retry, moderation, and SQLite recovery should fail independently from the main Matters backend.
+
+## Current AWS Cost Fit
+
+The Matters AWS account already has a `dev-vpc` with private subnets and an existing NAT Gateway. The cheapest no-rewrite placement is therefore:
+
+- VPC: existing `dev-vpc`
+- Subnet: private subnet such as `dev-private-sub-2`
+- Public IPv4: disabled
+- Load balancer: none
+- NAT Gateway: reuse the existing dev NAT Gateway
+- Storage: 20 GB gp3 EBS on the instance
+- Backups: write to an existing private S3 bucket or prefix; do not create a new bucket unless access policy separation requires it
+
+This avoids new fixed charges for public IPv4, NAT Gateway, and ALB. The expected incremental fixed cost for a `t3a.micro` origin is roughly the EC2 instance plus 20 GB gp3 EBS. Do not place this process inside an Elastic Beanstalk environment just to save the VM cost: EB deploys and instance replacement are allowed to delete local process state, and `gateway-core` owns SQLite, key material, inbox state, delivery queue, moderation, and recovery independently from `matters-server`.
 
 ## Instance Baseline
 
 Recommended first VM:
 
 - Region: `ap-southeast-1`
+- VPC: existing `dev-vpc`, or pass `VPC_ID=...`
+- Subnet: existing private subnet, or pass `SUBNET_ID=...`
 - Runtime: Amazon Linux 2023, x86_64
 - Size: `t3a.micro` or `t3a.small`
 - Disk: 20 GB gp3
+- Public IPv4: disabled
 - Inbound security group: no public inbound rules for the Tunnel path
 - Access: AWS Systems Manager Session Manager, not public SSH
 - IAM role: `AmazonSSMManagedInstanceCore`

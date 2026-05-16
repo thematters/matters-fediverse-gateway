@@ -8,6 +8,8 @@ REPO_URL="${REPO_URL:-https://github.com/thematters/matters-fediverse-gateway.gi
 REPO_REF="${REPO_REF:-main}"
 VPC_ID="${VPC_ID:-}"
 SUBNET_ID="${SUBNET_ID:-}"
+PREFERRED_VPC_NAME="${PREFERRED_VPC_NAME:-dev-vpc}"
+PREFERRED_PRIVATE_SUBNET_NAME="${PREFERRED_PRIVATE_SUBNET_NAME:-dev-private-sub-2}"
 
 ROLE_NAME="${NAME}-ssm-role"
 INSTANCE_PROFILE_NAME="${NAME}-profile"
@@ -22,14 +24,14 @@ if [[ -z "$VPC_ID" ]]; then
   VPC_ID="$(
     aws ec2 describe-vpcs \
       --region "$REGION" \
-      --filters Name=is-default,Values=true \
+      --filters "Name=tag:Name,Values=$PREFERRED_VPC_NAME" \
       --query 'Vpcs[0].VpcId' \
       --output text
   )"
 fi
 
 if [[ -z "$VPC_ID" || "$VPC_ID" == "None" ]]; then
-  echo "No default VPC found. Re-run with VPC_ID=vpc-... and SUBNET_ID=subnet-..." >&2
+  echo "No VPC named $PREFERRED_VPC_NAME found. Re-run with VPC_ID=vpc-... and SUBNET_ID=subnet-..." >&2
   exit 1
 fi
 
@@ -37,14 +39,24 @@ if [[ -z "$SUBNET_ID" ]]; then
   SUBNET_ID="$(
     aws ec2 describe-subnets \
       --region "$REGION" \
-      --filters "Name=vpc-id,Values=$VPC_ID" Name=default-for-az,Values=true \
+      --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=$PREFERRED_PRIVATE_SUBNET_NAME" \
       --query 'Subnets[0].SubnetId' \
       --output text
   )"
 fi
 
 if [[ -z "$SUBNET_ID" || "$SUBNET_ID" == "None" ]]; then
-  echo "No default subnet found. Re-run with SUBNET_ID=subnet-..." >&2
+  SUBNET_ID="$(
+    aws ec2 describe-subnets \
+      --region "$REGION" \
+      --filters "Name=vpc-id,Values=$VPC_ID" Name=map-public-ip-on-launch,Values=false \
+      --query 'Subnets | sort_by(@, &AvailableIpAddressCount)[-1].SubnetId' \
+      --output text
+  )"
+fi
+
+if [[ -z "$SUBNET_ID" || "$SUBNET_ID" == "None" ]]; then
+  echo "No private subnet found. Re-run with SUBNET_ID=subnet-..." >&2
   exit 1
 fi
 
@@ -256,8 +268,7 @@ INSTANCE_ID="$(
     --region "$REGION" \
     --image-id "$AMI_ID" \
     --instance-type "$INSTANCE_TYPE" \
-    --subnet-id "$SUBNET_ID" \
-    --security-group-ids "$SECURITY_GROUP_ID" \
+    --network-interfaces "DeviceIndex=0,SubnetId=$SUBNET_ID,Groups=[$SECURITY_GROUP_ID],AssociatePublicIpAddress=false" \
     --iam-instance-profile "Name=$INSTANCE_PROFILE_NAME" \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$NAME},{Key=Project,Value=matters-fediverse-gateway},{Key=Role,Value=gateway-core-origin},{Key=Environment,Value=dev}]" \
     --metadata-options "HttpTokens=required,HttpEndpoint=enabled" \
@@ -269,5 +280,8 @@ INSTANCE_ID="$(
 
 echo "Created $INSTANCE_ID in $REGION"
 echo "Name: $NAME"
+echo "VPC: $VPC_ID"
+echo "Subnet: $SUBNET_ID"
 echo "Security group: $SECURITY_GROUP_ID"
+echo "Public IPv4: disabled"
 echo "Next: wait for status checks, then use SSM Session Manager to provision actor key files and start the service."
