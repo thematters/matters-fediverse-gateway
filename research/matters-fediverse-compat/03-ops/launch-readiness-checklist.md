@@ -56,8 +56,10 @@
   `acct:mashbeanmatters@matters.town` WebFinger and Meta crawler probes return
   200. Treat this as compatibility/indexing work, not as proof that the gateway
   ActivityPub core failed.
-- Canonical Mastodon/Misskey resolve/follow for
-  `mashbeanmatters@matters.town` still needs real remote UI/API evidence.
+- Canonical Mastodon/Misskey read-only resolve for
+  `mashbeanmatters@matters.town` has API evidence. Canonical follow proof is
+  still open and should be treated as a visible social action because it
+  creates pilot follower state.
 - Production gateway hosting, private S3 bundle storage, production secrets
   ownership, legal takedown owner, privacy notice, key exposure/rotation owner,
   rollback rehearsal, and launch communication remain explicit human rollout

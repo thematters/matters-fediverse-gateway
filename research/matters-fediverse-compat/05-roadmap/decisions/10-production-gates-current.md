@@ -21,13 +21,14 @@ reconciliation endpoint.
 | Manual inbound reconcile | Cleared on staging | `POST /admin/inbound/reconcile-activity` can import a public remote reply to a known local object and preserve SQLite consistency. |
 | Periodic inbound reconcile baseline | Cleared on staging | `POST /jobs/inbound-reconciliation` batches known public Activity URLs through the same policy-checked reconcile path, requires a configured scheduler bearer token, has a bounded source runner for explicit public `https` Activity URLs, and is wired on the Mac-hosted staging gateway as a 15-minute no-op-safe loop. |
 | Canonical cutover read surface | Cleared for pilot discovery only | Worker deploy `c48024e3-c249-4402-824b-7d199ace5a7f` exposes `acct:mashbeanmatters@matters.town` on WebFinger / actor / NodeInfo / `/ap/*`; production outbound delivery remains disabled. |
+| Canonical Mastodon/Misskey read-only discovery | Cleared | g0v.social resolves `mashbeanmatters@matters.town` to `https://matters.town/ap/users/mashbeanmatters`; gyutte.site resolves the same actor through `users/show`. |
 
 ## Still Open Before Production
 
 | Gate | Required decision or proof | Owner |
 | --- | --- | --- |
 | Threads UI discovery | Threads still does not show the canonical profile in web UI search after WebFinger and Meta crawler probes return 200; continue compatibility/indexing investigation without treating it as a backend regression. | Product + gateway operator |
-| Canonical social discovery | Verify Mastodon and Misskey can resolve/follow `mashbeanmatters@matters.town` from their real UIs, then record read-back evidence. | Gateway operator |
+| Canonical follow proof | When ready, verify Mastodon and Misskey can follow `mashbeanmatters@matters.town`; this creates canonical pilot followers and should be treated as a visible social action. | Gateway operator |
 | Production gateway hosting | Confirm long-running gateway host, SQLite backup path, restore drill, monitoring, and direct-origin fallback outside Cloudflare. | Infra + gateway operator |
 | Production private S3 | Create/confirm bucket, prefix, IAM role, lifecycle, access logs, and retention for generated bundles. | Infra + security/legal input |
 | Production Lambda secrets | Confirm owner and rotation path for Lambda credentials and gateway ingestion credentials. | CTO / infra |

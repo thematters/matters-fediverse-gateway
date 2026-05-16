@@ -25,6 +25,8 @@ identity `acct:mashbeanmatters@matters.town`.
 - Threads web UI search still does not show the profile as of the first
   post-bypass retest. Treat this as a Threads indexing/UI compatibility item,
   not a WebFinger or Cloudflare challenge failure.
+- Read-only remote discovery also works from g0v.social Mastodon and
+  gyutte.site Misskey for `mashbeanmatters@matters.town`.
 - This cutover did not change production DNS, production backend settings,
   production delivery, or formal Matters article/user data.
 
@@ -81,7 +83,8 @@ actors for the same author.
    - Search `mashbeanmatters@matters.town` from Mastodon and Misskey.
    - Search from Threads after the canonical surface is visible and no longer
      challenged by Cloudflare.
-   - Status: machine probes pass; Threads UI search is still unresolved.
+   - Status: machine probes pass; Mastodon and Misskey read-only discovery
+     pass; Threads UI search is still unresolved.
 
 5. **Staging follower boundary**
    - Treat existing `staging-gateway.matters.town` followers as test-only.
@@ -149,8 +152,10 @@ ActivityPub behavior second.
 - `https://matters.town/ap/users/mashbeanmatters` returns a `Person` whose
   actor id, inbox, outbox, followers, following, and public key owner all use
   the canonical `matters.town` actor path.
-- Mastodon resolves and follows `mashbeanmatters@matters.town`.
-- Misskey resolves and follows `mashbeanmatters@matters.town`.
+- Mastodon resolves `mashbeanmatters@matters.town` through read-only API.
+- Misskey resolves `mashbeanmatters@matters.town` through read-only API.
+- Mastodon/Misskey follow should be tested only when the team is ready to
+  create canonical pilot followers.
 - Threads has been retested after the canonical route became visible; search
   still has no profile result / can hang in loading state. Record it as
   platform indexing or compatibility evidence, not as a gateway WebFinger
