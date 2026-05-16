@@ -6004,6 +6004,42 @@ test("invalid signature is rejected", async () => {
   assert.equal(response.status, 401);
 });
 
+test("proxied inbox signature verification uses original public URL metadata", async () => {
+  const { app, store, remoteKeys } = await createHarness();
+  const activity = {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    id: "https://remote.example/activities/follow-proxied",
+    type: "Follow",
+    actor: "https://remote.example/users/zoe",
+    object: "https://matters.example/users/alice",
+  };
+  const body = JSON.stringify(activity);
+  const signatureHeaders = signHttpRequest({
+    method: "POST",
+    url: "https://matters.example/ap/users/alice/inbox",
+    body,
+    keyId: "https://remote.example/users/zoe#main-key",
+    privateKeyPem: remoteKeys.privateKeyPem,
+  });
+  const response = await app.handle(
+    new Request("https://gateway-core-origin.example/users/alice/inbox", {
+      method: "POST",
+      headers: {
+        "content-type": "application/activity+json",
+        ...signatureHeaders,
+        host: "gateway-core-origin.example",
+        "x-forwarded-host": "matters.example",
+        "x-original-url": "https://matters.example/ap/users/alice/inbox",
+      },
+      body,
+    }),
+  );
+
+  assert.equal(response.status, 202);
+  const snapshot = store.getSnapshot();
+  assert.equal(snapshot.actors.alice.followers["https://remote.example/users/zoe"].status, "accepted");
+});
+
 test("remote actor can be discovered and cached without static seed data", async () => {
   const localKeys = pemPair();
   const remoteKeys = pemPair();
