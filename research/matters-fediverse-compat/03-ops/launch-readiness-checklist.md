@@ -60,6 +60,9 @@
   `mashbeanmatters@matters.town` has API evidence. Canonical follow proof is
   still open and should be treated as a visible social action because it
   creates pilot follower state.
+- Canonical follow proof is blocked until `GATEWAY_CORE_ORIGIN` is active and
+  `check:follow-readiness` returns `ok: true`; current live mode is
+  `edge-demo`, which accepts inbox POSTs without persistence.
 - Production gateway hosting, private S3 bundle storage, production secrets
   ownership, legal takedown owner, privacy notice, key exposure/rotation owner,
   rollback rehearsal, and launch communication remain explicit human rollout
