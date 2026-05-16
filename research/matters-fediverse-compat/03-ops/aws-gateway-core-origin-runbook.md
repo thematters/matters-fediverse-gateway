@@ -47,6 +47,30 @@ Recommended first VM:
 
 Use `t3a.small` if repeated native `better-sqlite3` rebuilds or interop tests feel tight on memory. Keep it isolated either way.
 
+## Current Staging Origin
+
+As of 2026-05-16, the staging AWS origin exists but is not yet serving
+gateway-core:
+
+- EC2 instance: `i-0a5bca704b0a14b53`
+- Name: `matters-gateway-core-origin-dev`
+- Region: `ap-southeast-1`
+- Instance type: `t3a.micro`
+- VPC: `dev-vpc`
+- Subnet: `dev-private-sub-2`
+- Private IP: `10.0.2.160`
+- Public IPv4: disabled
+- Runtime: Node.js `v20.20.2`
+- `cloudflared`: installed and running
+- Cloudflare Tunnel: `matters-gateway-core-origin-dev`
+- Tunnel ID: `3ae25e40-ba43-4d2b-b565-e66744b47284`
+- Origin hostname: `gateway-core-origin.matters.town`
+- `matters-gateway-core.service`: installed but disabled / inactive
+
+`https://gateway-core-origin.matters.town/healthz` currently returns a
+Cloudflare 502 because the tunnel is connected but `gateway-core` is
+intentionally stopped until actor key material is provisioned.
+
 ## Gateway Config
 
 For canonical `matters.town` through the Worker `/ap` route, the origin config must set an ActivityPub path prefix:
