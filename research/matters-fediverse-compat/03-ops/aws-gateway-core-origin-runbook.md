@@ -49,8 +49,8 @@ Use `t3a.small` if repeated native `better-sqlite3` rebuilds or interop tests fe
 
 ## Current Staging Origin
 
-As of 2026-05-16, the staging AWS origin exists but is not yet serving
-gateway-core:
+As of 2026-05-16, the staging AWS origin is serving gateway-core through the
+Cloudflare Worker canonical pilot route:
 
 - EC2 instance: `i-0a5bca704b0a14b53`
 - Name: `matters-gateway-core-origin-dev`
@@ -65,11 +65,17 @@ gateway-core:
 - Cloudflare Tunnel: `matters-gateway-core-origin-dev`
 - Tunnel ID: `3ae25e40-ba43-4d2b-b565-e66744b47284`
 - Origin hostname: `gateway-core-origin.matters.town`
-- `matters-gateway-core.service`: installed but disabled / inactive
+- `matters-gateway-core.service`: enabled / active
+- Worker origin: `GATEWAY_CORE_ORIGIN=https://gateway-core-origin.matters.town`
+- Worker pilot allowlist: `CANONICAL_PILOT_HANDLES=mashbeanmatters`
 
-`https://gateway-core-origin.matters.town/healthz` currently returns a
-Cloudflare 502 because the tunnel is connected but `gateway-core` is
-intentionally stopped until actor key material is provisioned.
+`https://gateway-core-origin.matters.town/healthz` returns
+`component: "gateway-core"`. `https://matters.town/ap/healthz` reports
+`mode: "gateway-core-proxy"`, `inboxMode: "persistent"`, and
+`followReadiness: "ready"`.
+
+The canonical actor key pair was generated on the EC2 instance and the private
+key was not copied back to local workstations or committed to git.
 
 ## Gateway Config
 
@@ -142,7 +148,12 @@ After the AWS origin is healthy:
 3. Set Worker var `GATEWAY_CORE_ORIGIN=https://<origin-host>`.
 4. Redeploy Worker with `CANONICAL_PILOT_HANDLES=mashbeanmatters`.
 5. Run `cloudflare-worker/scripts/check-follow-readiness.mjs`.
-6. Only after readiness passes, run Mastodon and Misskey canonical follow tests.
+6. Run `node cloudflare-worker/scripts/check-follow-readiness.mjs --probe-inbox`.
+7. Only after readiness passes, run Mastodon and Misskey canonical follow tests.
+
+The 2026-05-16 readiness result passed. The invalid inbox probe returned 401
+from gateway-core, confirming that the inbox POST path is no longer accepted by
+the edge demo.
 
 Production outbound `Create`, `Update`, and `Delete` delivery is a separate rollout gate. Enabling the origin only proves persistent inbound follow/reply runtime readiness.
 
