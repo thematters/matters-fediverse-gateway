@@ -64,18 +64,68 @@ function gatewayCoreOrigin(env) {
   return env.GATEWAY_CORE_ORIGIN ? trimTrailingSlash(env.GATEWAY_CORE_ORIGIN) : null;
 }
 
-function runtimeMode(env) {
-  return gatewayCoreOrigin(env)
-    ? {
-        mode: "gateway-core-proxy",
-        inboxMode: "persistent",
-        followReadiness: "ready",
-      }
-    : {
-        mode: "edge-demo",
-        inboxMode: "accepted-not-persistent",
-        followReadiness: "blocked",
-      };
+function runtimeMode(env, originHealth = null) {
+  if (!gatewayCoreOrigin(env)) {
+    return {
+      mode: "edge-demo",
+      inboxMode: "accepted-not-persistent",
+      followReadiness: "blocked",
+      origin: {
+        configured: false,
+        health: null,
+      },
+    };
+  }
+
+  const originReady = originHealth?.ok === true && originHealth?.component === "gateway-core";
+  return {
+    mode: "gateway-core-proxy",
+    inboxMode: originReady ? "persistent" : "origin-unverified",
+    followReadiness: originReady ? "ready" : "blocked",
+    origin: {
+      configured: true,
+      health: originHealth,
+    },
+  };
+}
+
+async function fetchOriginHealth(env) {
+  const origin = gatewayCoreOrigin(env);
+  if (!origin) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(new URL("/healthz", origin), {
+      headers: {
+        accept: "application/json",
+      },
+    });
+    const text = await response.text();
+    let body = null;
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch {
+      body = { raw: text.slice(0, 300) };
+    }
+
+    return {
+      ok: response.ok && body?.component === "gateway-core",
+      status: response.status,
+      component: body?.component ?? null,
+      instanceDomain: body?.instance?.domain ?? null,
+      storeDriver: body?.runtime?.storeDriver ?? null,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: null,
+      component: null,
+      instanceDomain: null,
+      storeDriver: null,
+      error: error.message,
+    };
+  }
 }
 
 function supportedActorHandles(env) {
@@ -568,11 +618,12 @@ export default {
       return respond(landing(request, env));
     }
     if (path === "/healthz" || path === `${prefix}/healthz`) {
+      const originHealth = await fetchOriginHealth(env);
       return respond(
         jsonResponse(
           {
             ok: true,
-            runtime: runtimeMode(env),
+            runtime: runtimeMode(env, originHealth),
           },
           200,
           "application/json; charset=utf-8",

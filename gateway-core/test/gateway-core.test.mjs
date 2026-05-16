@@ -615,9 +615,31 @@ test("webfinger resolves a single canonical actor", async () => {
   assert.equal(payload.links[0].href, "https://matters.example/users/alice");
 });
 
+test("healthz exposes gateway-core origin contract", async () => {
+  const { app } = await createHarness();
+  const response = await app.handle(new Request("https://matters.example/healthz"));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(payload.ok, true);
+  assert.equal(payload.component, "gateway-core");
+  assert.deepEqual(payload.instance, {
+    domain: "matters.example",
+    baseUrl: "https://matters.example",
+  });
+  assert.deepEqual(payload.actors, ["alice", "bob"]);
+  assert.deepEqual(payload.checks, {
+    inboxPersistence: true,
+    deliveryQueue: true,
+    httpSignatureVerification: true,
+  });
+});
+
 test("federation discovery endpoints support HEAD probes", async () => {
   const { app } = await createHarness();
   const requests = [
+    new Request("https://matters.example/healthz", { method: "HEAD" }),
     new Request("https://matters.example/.well-known/webfinger?resource=acct:alice@matters.example", { method: "HEAD" }),
     new Request("https://matters.example/.well-known/host-meta", { method: "HEAD" }),
     new Request("https://matters.example/.well-known/nodeinfo", { method: "HEAD" }),
