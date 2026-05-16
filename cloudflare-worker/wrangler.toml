@@ -35,3 +35,5 @@ zone_name = "matters.town"
 [vars]
 MATTERS_PROFILE_URL = "https://matters.town"
 PROJECT_DOCS_URL = "https://thematters.github.io/matters-fediverse-gateway/"
+CANONICAL_PILOT_HANDLES = "mashbeanmatters"
+GATEWAY_CORE_ORIGIN = "https://gateway-core-origin.matters.town"
