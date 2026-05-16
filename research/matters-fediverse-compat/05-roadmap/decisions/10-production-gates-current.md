@@ -22,13 +22,15 @@ reconciliation endpoint.
 | Periodic inbound reconcile baseline | Cleared on staging | `POST /jobs/inbound-reconciliation` batches known public Activity URLs through the same policy-checked reconcile path, requires a configured scheduler bearer token, has a bounded source runner for explicit public `https` Activity URLs, and is wired on the Mac-hosted staging gateway as a 15-minute no-op-safe loop. |
 | Canonical cutover read surface | Cleared for pilot discovery only | Worker deploy `c48024e3-c249-4402-824b-7d199ace5a7f` exposes `acct:mashbeanmatters@matters.town` on WebFinger / actor / NodeInfo / `/ap/*`; production outbound delivery remains disabled. |
 | Canonical Mastodon/Misskey read-only discovery | Cleared | g0v.social resolves `mashbeanmatters@matters.town` to `https://matters.town/ap/users/mashbeanmatters`; gyutte.site resolves the same actor through `users/show`. |
+| Canonical follow readiness preflight | Cleared as a blocker, not ready for follow | Worker deploy `b002f589-f9d3-4cf3-b389-0e137e36efc9` exposes healthz readiness; live preflight returns `followReadiness=blocked` because `GATEWAY_CORE_ORIGIN` is not active. |
 
 ## Still Open Before Production
 
 | Gate | Required decision or proof | Owner |
 | --- | --- | --- |
 | Threads UI discovery | Threads still does not show the canonical profile in web UI search after WebFinger and Meta crawler probes return 200; continue compatibility/indexing investigation without treating it as a backend regression. | Product + gateway operator |
-| Canonical follow proof | When ready, verify Mastodon and Misskey can follow `mashbeanmatters@matters.town`; this creates canonical pilot followers and should be treated as a visible social action. | Gateway operator |
+| Persistent canonical gateway-core origin | Choose and configure a production-grade origin for canonical inbox POSTs, then set `GATEWAY_CORE_ORIGIN` on the Worker. | CTO / infra + gateway operator |
+| Canonical follow proof | After `check:follow-readiness` returns `ok: true`, verify Mastodon and Misskey can follow `mashbeanmatters@matters.town`; this creates canonical pilot followers and should be treated as a visible social action. | Gateway operator |
 | Production gateway hosting | Confirm long-running gateway host, SQLite backup path, restore drill, monitoring, and direct-origin fallback outside Cloudflare. | Infra + gateway operator |
 | Production private S3 | Create/confirm bucket, prefix, IAM role, lifecycle, access logs, and retention for generated bundles. | Infra + security/legal input |
 | Production Lambda secrets | Confirm owner and rotation path for Lambda credentials and gateway ingestion credentials. | CTO / infra |
@@ -45,3 +47,5 @@ reconciliation endpoint.
 - Do not enable production outbound delivery while legal/privacy/rollback gates are open.
 - Do not expose actor private keys, Lambda secrets, S3 credentials, or Cloudflare production routing changes in repo or chat logs.
 - Do not treat Threads UI failure as a backend regression now that direct crawler diagnostics pass.
+- Do not treat Worker edge-demo inbox 202 responses as successful canonical
+  follows; follow proof requires a persistent gateway-core origin.

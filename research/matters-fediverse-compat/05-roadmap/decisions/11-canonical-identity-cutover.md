@@ -27,6 +27,10 @@ identity `acct:mashbeanmatters@matters.town`.
   not a WebFinger or Cloudflare challenge failure.
 - Read-only remote discovery also works from g0v.social Mastodon and
   gyutte.site Misskey for `mashbeanmatters@matters.town`.
+- Worker deploy `b002f589-f9d3-4cf3-b389-0e137e36efc9` added live follow
+  readiness reporting. `https://matters.town/ap/healthz` currently reports
+  `mode=edge-demo`, `inboxMode=accepted-not-persistent`, and
+  `followReadiness=blocked` because `GATEWAY_CORE_ORIGIN` is not active.
 - This cutover did not change production DNS, production backend settings,
   production delivery, or formal Matters article/user data.
 
@@ -99,6 +103,15 @@ actors for the same author.
    - First production delivery should be a small pilot Create/Update sequence
      with queue, dead-letter, read-back, and remote UI checks.
 
+7. **Canonical follow proof**
+   - Do not send Mastodon/Misskey follow requests while healthz reports
+     `followReadiness=blocked`.
+   - First set a real, persistent `GATEWAY_CORE_ORIGIN` so canonical inbox
+     POSTs are verified, persisted, and can deliver Accept responses.
+   - Then run `npm run check:follow-readiness -- --base-url https://matters.town --handle mashbeanmatters`.
+   - Only after readiness returns `ok: true`, run visible canonical follow
+     tests.
+
 ## Cloudflare Requirements
 
 - The canonical WebFinger route must allow
@@ -112,6 +125,9 @@ actors for the same author.
   Meta crawler user agents.
 - Do not bypass protection for admin or webhook routes.
 - Keep route changes narrow to `/.well-known/*`, `/nodeinfo/*`, and `/ap/*`.
+- Do not treat Worker `edge-demo` inbox 202 responses as production follow
+  success. Production follow proof requires `GATEWAY_CORE_ORIGIN` and
+  `followReadiness=ready`.
 
 ## Main-Site Impact Assessment
 
@@ -156,6 +172,8 @@ ActivityPub behavior second.
 - Misskey resolves `mashbeanmatters@matters.town` through read-only API.
 - Mastodon/Misskey follow should be tested only when the team is ready to
   create canonical pilot followers.
+- `npm run check:follow-readiness -- --base-url https://matters.town --handle mashbeanmatters`
+  returns `ok: true` before any canonical follow proof is attempted.
 - Threads has been retested after the canonical route became visible; search
   still has no profile result / can hang in loading state. Record it as
   platform indexing or compatibility evidence, not as a gateway WebFinger
