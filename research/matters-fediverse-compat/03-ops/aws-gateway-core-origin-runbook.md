@@ -37,7 +37,7 @@ Recommended first VM:
 - Region: `ap-southeast-1`
 - VPC: existing `dev-vpc`, or pass `VPC_ID=...`
 - Subnet: existing private subnet, or pass `SUBNET_ID=...`
-- Runtime: Amazon Linux 2023, x86_64
+- Runtime: Amazon Linux 2023, x86_64, Node.js 20
 - Size: `t3a.micro` or `t3a.small`
 - Disk: 20 GB gp3
 - Public IPv4: disabled
@@ -100,7 +100,7 @@ The script creates:
 - one IAM role and instance profile for SSM
 - one security group with no inbound rules
 - one EC2 instance
-- Node.js, npm, git, build tools, SQLite
+- Node.js 20, npm, git, build tools, SQLite
 - `/opt/matters-gateway/repo`
 - `/etc/matters-gateway/`
 - `/var/lib/matters-gateway/runtime/`
