@@ -25,8 +25,8 @@
 ## Social Loop
 
 - 外部 reply、like、announce 可進入 Matters 事件流
-- Matters 的 update 已在 staging outbound delivery 驗證；delete 仍需在
-  production rollout 前做 bounded staging proof
+- Matters 的 update 已在 staging outbound delivery 驗證；bounded staging
+  delete proof 也已完成，g0v.social 對刪除後 status 回 `404`
 
 ## Moderation
 
@@ -52,15 +52,17 @@
 
 ## Current Pre-Production Gaps
 
-- `matters.icu` fresh export trigger still needs a live `record_only`
-  publish/edit audit-row validation after develop server environment settings
-  are confirmed.
-- Local AWS CLI needs profile, region, and credentials before this Mac can rerun
-  `federation-export-dev` directly.
-- Mastodon read-back automation needs a test token; delivery-level proof exists
-  for g0v.social, but API/UI read-back is still manual.
-- Threads actor discovery remains unresolved for the staging domain. Treat this
-  as compatibility work, not as proof that the gateway ActivityPub core failed.
-- Production canonical identity `acct:user@matters.town`, production storage,
-  production outbound delivery, legal/privacy text, and launch communication
-  remain explicit human rollout gates.
+- Threads actor discovery remains unresolved in the web UI even after canonical
+  `acct:mashbeanmatters@matters.town` WebFinger and Meta crawler probes return
+  200. Treat this as compatibility/indexing work, not as proof that the gateway
+  ActivityPub core failed.
+- Canonical Mastodon/Misskey read-only resolve for
+  `mashbeanmatters@matters.town` has API evidence. Canonical follow proof is
+  still open and should be treated as a visible social action because it
+  creates pilot follower state.
+- Production gateway hosting, private S3 bundle storage, production secrets
+  ownership, legal takedown owner, privacy notice, key exposure/rotation owner,
+  rollback rehearsal, and launch communication remain explicit human rollout
+  gates.
+- Production outbound `Create` / `Update` / `Delete` remains disabled until
+  launch approval is recorded.

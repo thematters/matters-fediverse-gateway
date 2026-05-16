@@ -1,7 +1,7 @@
 # Canonical Identity Cutover Plan
 
 Date: 2026-05-16
-Status: planning only; do not execute production cutover yet
+Status: canonical read surface deployed for pilot; production outbound delivery remains gated
 
 This note plans the cutover from the staging test account
 `acct:mashbeanmatters@staging-gateway.matters.town` to the canonical Matters
@@ -13,15 +13,22 @@ identity `acct:mashbeanmatters@matters.town`.
 - The staging gateway has passed WebFinger, actor, outbox, NodeInfo,
   Mastodon/Misskey delivery, Mastodon read-back, bounded Delete, and scheduled
   inbound reconciliation checks.
-- The canonical `matters.town` Worker surface currently supports only the demo
-  handles `matters` and `mattersprobe02`.
-- A live probe for `acct:mashbeanmatters@matters.town` currently returns `404`
-  with accepted resources limited to the demo handles.
-- A live Meta crawler-style probe against the same canonical WebFinger surface
-  currently receives a Cloudflare challenge response. That must be cleared
-  before Threads discovery can be treated as meaningful.
-- This plan does not change production DNS, production backend settings,
-  production delivery, or formal Matters data.
+- The canonical `matters.town` Worker surface now includes the pilot handle
+  `mashbeanmatters` through `CANONICAL_PILOT_HANDLES`.
+- Worker deploy `c48024e3-c249-4402-824b-7d199ace5a7f` exposed the canonical
+  read surface for WebFinger, actor, NodeInfo, and `/ap/*` paths only.
+- Cloudflare custom rule `skip-fediverse-meta-crawlers` now lets
+  `facebookexternalua`, `facebookexternalhit`, and `meta-externalagent` reach
+  the narrow staging and canonical federation paths.
+- Live probes for `acct:mashbeanmatters@matters.town` now return `200` for
+  default and Meta-style user agents.
+- Threads web UI search still does not show the profile as of the first
+  post-bypass retest. Treat this as a Threads indexing/UI compatibility item,
+  not a WebFinger or Cloudflare challenge failure.
+- Read-only remote discovery also works from g0v.social Mastodon and
+  gyutte.site Misskey for `mashbeanmatters@matters.town`.
+- This cutover did not change production DNS, production backend settings,
+  production delivery, or formal Matters article/user data.
 
 ## Identity Contract
 
@@ -53,12 +60,12 @@ actors for the same author.
    - Run the same diagnostic with `--canonical-base-url https://matters.town`
      and expect failure until the canonical route is intentionally opened.
 
-2. **Implementation PR, no deploy**
+2. **Implementation PR**
    - Add explicit pilot handle support for `mashbeanmatters` on the
      `matters.town` Worker surface through `CANONICAL_PILOT_HANDLES`.
    - Preserve demo handles while avoiding catch-all account discovery.
    - Add config-driven handle allowlisting before adding more authors.
-   - Do not deploy this to production routes until the human gates below pass.
+   - Status: completed and merged.
 
 3. **Record-only canonical read surface**
    - Enable canonical WebFinger, actor, outbox, NodeInfo, and public key reads
@@ -66,6 +73,7 @@ actors for the same author.
    - Keep production outbound `Create`, `Update`, and `Delete` disabled.
    - Keep Matters backend trigger mode in audit-only or disabled state for
      production until rollout approval.
+   - Status: deployed for the pilot handle; outbound delivery remains disabled.
 
 4. **Discovery smoke test**
    - Verify WebFinger returns 200 for default, `facebookexternalua`,
@@ -75,6 +83,8 @@ actors for the same author.
    - Search `mashbeanmatters@matters.town` from Mastodon and Misskey.
    - Search from Threads after the canonical surface is visible and no longer
      challenged by Cloudflare.
+   - Status: machine probes pass; Mastodon and Misskey read-only discovery
+     pass; Threads UI search is still unresolved.
 
 5. **Staging follower boundary**
    - Treat existing `staging-gateway.matters.town` followers as test-only.
@@ -93,8 +103,8 @@ actors for the same author.
 
 - The canonical WebFinger route must allow
   `/.well-known/webfinger?resource=acct:mashbeanmatters@matters.town`.
-- `CANONICAL_PILOT_HANDLES` must be unset by default and set explicitly for
-  the production cutover deployment.
+- `CANONICAL_PILOT_HANDLES` remains unset in the repo default and was set
+  explicitly during deployment for `mashbeanmatters`.
 - The canonical actor, outbox, inbox, followers, and following routes must pass
   through without conflicting with the existing Matters application.
 - Cloudflare cache and WAF rules must not challenge WebFinger, actor, outbox,
@@ -134,7 +144,7 @@ ActivityPub behavior second.
 
 - `npm run check:threads-discovery` passes against staging.
 - `npm run check:threads-discovery -- --canonical-base-url https://matters.town`
-  passes after canonical exposure is approved and deployed.
+  passes after canonical exposure and Cloudflare crawler bypass.
 - `curl https://matters.town/.well-known/webfinger?resource=acct:mashbeanmatters@matters.town`
   returns `200` and subject `acct:mashbeanmatters@matters.town`.
 - The same WebFinger URL returns `200` for `facebookexternalua`,
@@ -142,11 +152,14 @@ ActivityPub behavior second.
 - `https://matters.town/ap/users/mashbeanmatters` returns a `Person` whose
   actor id, inbox, outbox, followers, following, and public key owner all use
   the canonical `matters.town` actor path.
-- Mastodon resolves and follows `mashbeanmatters@matters.town`.
-- Misskey resolves and follows `mashbeanmatters@matters.town`.
-- Threads is retested after the canonical route is visible; if search still
-  fails, record it as platform indexing or compatibility evidence, not as a
-  gateway WebFinger failure.
+- Mastodon resolves `mashbeanmatters@matters.town` through read-only API.
+- Misskey resolves `mashbeanmatters@matters.town` through read-only API.
+- Mastodon/Misskey follow should be tested only when the team is ready to
+  create canonical pilot followers.
+- Threads has been retested after the canonical route became visible; search
+  still has no profile result / can hang in loading state. Record it as
+  platform indexing or compatibility evidence, not as a gateway WebFinger
+  failure.
 - SQLite consistency scan returns `totalDiffs=0`.
 - Delivery queue returns to zero pending and zero dead letters after the first
   approved pilot delivery.
@@ -185,6 +198,6 @@ After outbound delivery:
 
 ## Next Engineering Step
 
-Open an implementation PR that adds config-driven canonical pilot handle support
-and tests, but keep deployment blocked until the gates above are recorded. The
-PR should be reviewable independently of production cutover.
+Keep the canonical read surface in pilot mode and continue Mastodon/Misskey
+canonical discovery checks. Do not enable production outbound delivery until
+the remaining production gates are closed and launch approval is recorded.
