@@ -18,6 +18,10 @@
 - gateway 可完成 follow、accept、公開內容 delivery；2026-05-15 staging
   `Update` 已送達 g0v.social 與 gyutte.site，queue 回到 0 pending / 0
   dead letter
+- 2026-05-16 canonical `acct:mashbeanmatters@matters.town` Mastodon follow
+  proof passed through the AWS gateway-core origin: g0v.social Follow reached
+  the inbox, signature verification passed, SQLite recorded one accepted
+  follower, and the signed Accept delivery returned HTTP 202
 - HTTP Signatures 驗章與簽發可觀測
 - retry 與 dead letter 可運作
 - launch runbook 已定義 pre-flight、cutover、post-cutover smoke、go/no-go 與 evidence archive
@@ -56,21 +60,21 @@
   `acct:mashbeanmatters@matters.town` WebFinger and Meta crawler probes return
   200. Treat this as compatibility/indexing work, not as proof that the gateway
   ActivityPub core failed.
-- Canonical Mastodon/Misskey read-only resolve for
-  `mashbeanmatters@matters.town` has API evidence. Canonical follow proof is
-  still open and should be treated as a visible social action because it
-  creates pilot follower state.
-- Canonical follow proof is blocked until `GATEWAY_CORE_ORIGIN` is active and
-  `check:follow-readiness` returns `ok: true`; current live mode is
-  `edge-demo`, which accepts inbox POSTs without persistence.
-- The origin must expose gateway-core `/healthz`; Worker healthz will not mark
-  follow readiness ready unless origin health identifies as
-  `component=gateway-core`. The AWS origin runbook is
+- Canonical Mastodon follow proof for `mashbeanmatters@matters.town` has passed
+  on g0v.social. Misskey canonical follow is still open: gyutte.site resolves
+  the actor and can enter a processing state, but no gyutte.site Follow activity
+  reached gateway-core traces during the first canonical attempt.
+- `GATEWAY_CORE_ORIGIN` is active for the narrow canonical pilot path and
+  `check:follow-readiness` returns `ok: true`; live mode is
+  `gateway-core-proxy`, not `edge-demo`.
+- The origin exposes gateway-core `/healthz`; Worker healthz reports
+  `component=gateway-core`, `storeDriver=sqlite`, `inboxMode=persistent`, and
+  `followReadiness=ready`. The AWS origin runbook is
   `aws-gateway-core-origin-runbook.md`, and the CloudShell bootstrap script is
   `gateway-core/deploy/aws-gateway-core-origin-cloudshell.sh`.
-- Canonical actor GET and inbox POST must come from the same key owner once
-  `GATEWAY_CORE_ORIGIN` is enabled. The Worker now proxies configured pilot
-  actor reads to `gateway-core`; the origin config must set
+- Canonical actor GET and inbox POST now come from the same key owner for the
+  configured pilot actor. The Worker proxies configured pilot actor reads and
+  inbox writes to `gateway-core`; the origin config sets
   `instance.activityPathPrefix` to `/ap`.
 - Production gateway hosting, private S3 bundle storage, production secrets
   ownership, legal takedown owner, privacy notice, key exposure/rotation owner,

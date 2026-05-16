@@ -155,6 +155,23 @@ The 2026-05-16 readiness result passed. The invalid inbox probe returned 401
 from gateway-core, confirming that the inbox POST path is no longer accepted by
 the edge demo.
 
+The 2026-05-16 canonical Mastodon follow proof passed for
+`acct:mashbeanmatters@matters.town`:
+
+- g0v.social sent a signed `Follow` to
+  `https://matters.town/ap/users/mashbeanmatters/inbox`.
+- gateway-core verified the HTTP Signature after the Worker proxied the request
+  with original host and URL metadata.
+- SQLite recorded one accepted follower:
+  `https://g0v.social/users/mashbean`.
+- gateway-core delivered the signed `Accept` to g0v.social with HTTP 202.
+
+Misskey canonical follow is still open. gyutte.site resolves the canonical
+profile and the UI can enter a processing state, but no gyutte.site `Follow`
+activity reached the gateway-core inbox during the first canonical attempt.
+Treat that as a Misskey compatibility/debugging item, not as a failed
+gateway-core signature proof.
+
 Production outbound `Create`, `Update`, and `Delete` delivery is a separate rollout gate. Enabling the origin only proves persistent inbound follow/reply runtime readiness.
 
 ## Rollback

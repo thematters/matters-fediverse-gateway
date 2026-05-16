@@ -1,7 +1,7 @@
 # G2-B Staging Pilot Validation Checklist
 
 Date: 2026-05-15
-Status: API validation, browser UI QA, strict-gate Lambda bundle, public gateway probes, and staging outbound Update delivery passed for the pilot-owned public article
+Status: API validation, browser UI QA, strict-gate Lambda bundle, public gateway probes, staging outbound Update delivery, and canonical Mastodon follow proof passed for the pilot-owned public article path
 
 ## Purpose
 
@@ -48,6 +48,12 @@ This checklist is the shortest path from the merged G2-B code to a real
   scan returned `totalDiffs=0`.
 - No production setting, production data export, or canonical
   `acct:user@matters.town` rollout is enabled.
+- The canonical pilot actor `acct:mashbeanmatters@matters.town` is routed
+  through the AWS `gateway-core` origin for configured Worker federation paths.
+  g0v.social Mastodon follow proof passed and created persistent SQLite follower
+  state. gyutte.site Misskey canonical follow remains open because the Misskey
+  UI entered a processing state without sending a Follow activity to the
+  gateway-core inbox.
 
 ## Permission Setup Needed
 
@@ -132,8 +138,12 @@ Stop and record the blocker if:
 - Local AWS CLI is not yet configured on this Mac, so local re-invocation of
   `federation-export-dev` is blocked until profile, region, and credentials are
   available. The existing GitHub Actions Lambda run remains valid evidence.
-- Mastodon can receive delivered activities through g0v.social, but there is no
-  local Mastodon API token yet for automated read-back verification.
+- Mastodon can receive delivered activities through g0v.social and canonical
+  follow proof now persists one accepted follower for
+  `acct:mashbeanmatters@matters.town`.
+- Misskey canonical follow still needs a focused compatibility pass. gyutte.site
+  resolves the actor, but the first visible follow attempt did not reach the
+  gateway-core inbox.
 - Threads still cannot discover the staging actor. Keep this as a separate
   compatibility investigation and avoid blocking Mastodon/Misskey staging signoff
   on Threads until canonical `acct:user@matters.town` or production-like
