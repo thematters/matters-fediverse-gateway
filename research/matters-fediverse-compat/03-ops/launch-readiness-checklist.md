@@ -64,9 +64,10 @@
   200. Treat this as compatibility/indexing work, not as proof that the gateway
   ActivityPub core failed.
 - Canonical Mastodon follow proof for `mashbeanmatters@matters.town` has passed
-  on g0v.social. Misskey canonical follow is still open: gyutte.site resolves
-  the actor and can enter a processing state, but no gyutte.site Follow activity
-  reached gateway-core traces during the first canonical attempt.
+  on g0v.social. Misskey canonical Follow reaches gateway-core and Accept
+  delivery returns HTTP 202, but gyutte.site still reports
+  `hasPendingFollowRequestFromYou=true`; relationship convergence now needs
+  Misskey-side inbox job logs or admin error visibility.
 - `GATEWAY_CORE_ORIGIN` is active for the narrow canonical pilot path and
   `check:follow-readiness` returns `ok: true`; live mode is
   `gateway-core-proxy`, not `edge-demo`.

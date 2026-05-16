@@ -166,11 +166,16 @@ The 2026-05-16 canonical Mastodon follow proof passed for
   `https://g0v.social/users/mashbean`.
 - gateway-core delivered the signed `Accept` to g0v.social with HTTP 202.
 
-Misskey canonical follow is still open. gyutte.site resolves the canonical
-profile and the UI can enter a processing state, but no gyutte.site `Follow`
-activity reached the gateway-core inbox during the first canonical attempt.
-Treat that as a Misskey compatibility/debugging item, not as a failed
-gateway-core signature proof.
+Misskey canonical follow is still open at the relationship-convergence layer.
+gyutte.site resolves the canonical profile and now sends signed `Follow`
+activities to gateway-core. gateway-core verifies the request, records accepted
+SQLite follower state, and delivers a signed `Accept` with HTTP 202. Interop
+hardening PRs #50, #51, and #52 made the response more explicit by adding a
+direct `to` audience, sending Follow responses to the actor inbox, and
+referencing the inbound Follow id. After redeploying those changes, gyutte.site
+still reports `hasPendingFollowRequestFromYou=true` instead of
+`isFollowing=true`. The remaining diagnosis needs gyutte.site/Misskey inbox job
+logs or admin-side error visibility.
 
 The 2026-05-16 backup/restore drill also passed without overwriting the live
 database:
