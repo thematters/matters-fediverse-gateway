@@ -38,6 +38,16 @@ function inboxUrl(base, prefix = "") {
   return `${base}${prefix}/inbox`;
 }
 
+function stripActivityPrefix(pathname, prefix = "") {
+  if (!prefix) {
+    return pathname;
+  }
+  if (pathname === prefix) {
+    return "/";
+  }
+  return pathname.startsWith(`${prefix}/`) ? pathname.slice(prefix.length) : pathname;
+}
+
 function subjectFor(request, env, handle = DEFAULT_ACTOR_HANDLE) {
   const host = new URL(publicBase(request, env)).host;
   return `acct:${handle}@${host}`;
@@ -442,10 +452,15 @@ async function proxyToGatewayCore(request, env) {
   }
 
   const sourceUrl = new URL(request.url);
-  const targetUrl = new URL(`${origin}${sourceUrl.pathname}${sourceUrl.search}`);
+  const prefix = activityPrefix(request, env);
+  const targetPathname = stripActivityPrefix(sourceUrl.pathname, prefix);
+  const targetUrl = new URL(`${origin}${targetPathname}${sourceUrl.search}`);
   const headers = new Headers(request.headers);
   headers.set("x-forwarded-host", sourceUrl.host);
   headers.set("x-forwarded-proto", sourceUrl.protocol.replace(":", ""));
+  if (prefix) {
+    headers.set("x-forwarded-prefix", prefix);
+  }
   headers.set("x-original-url", request.url);
 
   return fetch(targetUrl, {
