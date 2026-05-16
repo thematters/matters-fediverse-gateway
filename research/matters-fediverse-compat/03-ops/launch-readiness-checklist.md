@@ -52,6 +52,9 @@
 - task note 與 active run 狀態需保持一致
 - 下一輪工程 task 需列出 verify command
 - rollback plan 已定義 routing、runtime、data restore 與 key rollback path
+- AWS origin offline backup/restore proof passed on 2026-05-16 without
+  overwriting live SQLite: restored database integrity returned `ok` and
+  preserved 1 follower row, 32 trace rows, and 6 runtime metadata rows
 - W8 tabletop record template 已建立；正式 2+ participant tabletop 尚未執行，完成紀錄應放內部文件
 
 ## Current Pre-Production Gaps
@@ -78,7 +81,7 @@
   `instance.activityPathPrefix` to `/ap`.
 - Production gateway hosting, private S3 bundle storage, production secrets
   ownership, legal takedown owner, privacy notice, key exposure/rotation owner,
-  rollback rehearsal, and launch communication remain explicit human rollout
-  gates.
+  live rollback rehearsal, and launch communication remain explicit human
+  rollout gates. Offline AWS origin backup/restore proof has passed.
 - Production outbound `Create` / `Update` / `Delete` remains disabled until
   launch approval is recorded.
