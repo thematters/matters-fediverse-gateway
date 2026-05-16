@@ -172,6 +172,18 @@ activity reached the gateway-core inbox during the first canonical attempt.
 Treat that as a Misskey compatibility/debugging item, not as a failed
 gateway-core signature proof.
 
+The 2026-05-16 backup/restore drill also passed without overwriting the live
+database:
+
+- Backup source:
+  `/var/lib/matters-gateway/runtime/matters-gateway.sqlite`
+- Backup file:
+  `/var/lib/matters-gateway/runtime/backups/matters-gateway-2026-05-16-151854429Z-canonical-follow-proof-20260516T151854Z.sqlite`
+- Offline restore target:
+  `/var/lib/matters-gateway/runtime/restore-drills/restored-20260516T151927Z.sqlite`
+- `PRAGMA integrity_check` returned `ok`.
+- Restored counts: 1 follower row, 32 trace rows, and 6 runtime metadata rows.
+
 Production outbound `Create`, `Update`, and `Delete` delivery is a separate rollout gate. Enabling the origin only proves persistent inbound follow/reply runtime readiness.
 
 ## Rollback
