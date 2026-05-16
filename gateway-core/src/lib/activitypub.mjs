@@ -133,13 +133,14 @@ export function buildNodeInfo({ instance, actors }) {
 export function buildAcceptActivity({ actor, follow, now, instance }) {
   const baseUrl = activityBaseUrl(instance);
   const followActor = typeof follow.actor === "string" ? follow.actor : follow.actor?.id;
+  const followObject = typeof follow.id === "string" ? follow.id : follow;
 
   const activity = {
     "@context": ACTIVITY_STREAMS,
     id: `${baseUrl}/activities/${now.getTime()}-accept-${actor.handle}`,
     type: "Accept",
     actor: actor.actorUrl,
-    object: follow,
+    object: followObject,
   };
 
   if (followActor) {
@@ -152,13 +153,14 @@ export function buildAcceptActivity({ actor, follow, now, instance }) {
 export function buildRejectActivity({ actor, follow, now, instance }) {
   const baseUrl = activityBaseUrl(instance);
   const followActor = typeof follow.actor === "string" ? follow.actor : follow.actor?.id;
+  const followObject = typeof follow.id === "string" ? follow.id : follow;
 
   const activity = {
     "@context": ACTIVITY_STREAMS,
     id: `${baseUrl}/activities/${now.getTime()}-reject-${actor.handle}`,
     type: "Reject",
     actor: actor.actorUrl,
-    object: follow,
+    object: followObject,
   };
 
   if (followActor) {
