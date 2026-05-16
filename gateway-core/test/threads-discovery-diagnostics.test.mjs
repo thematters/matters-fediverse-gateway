@@ -28,14 +28,15 @@ async function closeServer(server) {
   });
 }
 
-function createDiscoveryServer({ handle = "alice" } = {}) {
+function createDiscoveryServer({ handle = "alice", acceptedHost = null } = {}) {
   const requests = [];
   const server = createServer(async (request, response) => {
     const requestUrl = new URL(request.url ?? "/", "http://127.0.0.1");
     const host = request.headers.host;
     const baseUrl = `http://${host}`;
     const actorUrl = `${baseUrl}/users/${handle}`;
-    const stagingAcct = `acct:${handle}@${host}`;
+    const accountHost = acceptedHost ?? host;
+    const stagingAcct = `acct:${handle}@${accountHost}`;
 
     requests.push({
       url: request.url,
@@ -148,5 +149,48 @@ test("threads discovery diagnostics passes staging surface and warns on canonica
     assert.equal(discovery.requests.some((entry) => entry.userAgent === "facebookexternalua"), true);
   } finally {
     await closeServer(discovery.server);
+  }
+});
+
+test("threads discovery diagnostics can probe the real canonical base separately", async () => {
+  const staging = createDiscoveryServer();
+  const canonical = createDiscoveryServer({ acceptedHost: "matters.town" });
+  const stagingBaseUrl = await listen(staging.server);
+  const canonicalBaseUrl = await listen(canonical.server);
+
+  try {
+    const { stdout } = await execFile(
+      nodeBin,
+      [
+        "scripts/run-threads-discovery-diagnostics.mjs",
+        "--base-url",
+        stagingBaseUrl,
+        "--handle",
+        "alice",
+        "--canonical-domain",
+        "matters.town",
+        "--canonical-base-url",
+        canonicalBaseUrl,
+      ],
+      {
+        cwd: path.resolve(process.cwd()),
+      },
+    );
+
+    const report = JSON.parse(stdout);
+    assert.equal(report.ok, true);
+    assert.equal(report.scope.canonicalBaseUrl, canonicalBaseUrl);
+    assert.equal(
+      report.probes.some((probe) => probe.name === "webfinger-canonical" && probe.status === 200),
+      true,
+    );
+    assert.equal(
+      report.probes.some((probe) => probe.name === "webfinger-canonical-on-staging" && probe.status === 404),
+      true,
+    );
+    assert.equal(canonical.requests.some((entry) => entry.url.includes("acct%3Aalice%40matters.town")), true);
+  } finally {
+    await closeServer(staging.server);
+    await closeServer(canonical.server);
   }
 });

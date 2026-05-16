@@ -1,0 +1,161 @@
+# Canonical Identity Cutover Plan
+
+Date: 2026-05-16
+Status: planning only; do not execute production cutover yet
+
+This note plans the cutover from the staging test account
+`acct:mashbeanmatters@staging-gateway.matters.town` to the canonical Matters
+identity `acct:mashbeanmatters@matters.town`.
+
+## Current State
+
+- Staging identity is active as `acct:mashbeanmatters@staging-gateway.matters.town`.
+- The staging gateway has passed WebFinger, actor, outbox, NodeInfo,
+  Mastodon/Misskey delivery, Mastodon read-back, bounded Delete, and scheduled
+  inbound reconciliation checks.
+- The canonical `matters.town` Worker surface currently supports only the demo
+  handles `matters` and `mattersprobe02`.
+- A live probe for `acct:mashbeanmatters@matters.town` currently returns `404`
+  with accepted resources limited to the demo handles.
+- A live Meta crawler-style probe against the same canonical WebFinger surface
+  currently receives a Cloudflare challenge response. That must be cleared
+  before Threads discovery can be treated as meaningful.
+- This plan does not change production DNS, production backend settings,
+  production delivery, or formal Matters data.
+
+## Identity Contract
+
+The cutover should expose exactly one primary public ActivityPub identity for
+the pilot author.
+
+| Field | Planned value |
+| --- | --- |
+| WebFinger subject | `acct:mashbeanmatters@matters.town` |
+| Primary actor id | `https://matters.town/ap/users/mashbeanmatters` |
+| Human profile alias | `https://matters.town/@mashbeanmatters` |
+| Inbox | `https://matters.town/ap/users/mashbeanmatters/inbox` |
+| Outbox | `https://matters.town/ap/users/mashbeanmatters/outbox` |
+| Followers | `https://matters.town/ap/users/mashbeanmatters/followers` |
+| Following | `https://matters.town/ap/users/mashbeanmatters/following` |
+| Public key id | `https://matters.town/ap/users/mashbeanmatters#main-key` |
+
+Use the `/ap/users/<handle>` actor path for the first cutover because the
+current `matters.town` Worker route already owns the narrow `/ap/*` namespace.
+Keep `https://matters.town/@mashbeanmatters` and the old staging actor as
+aliases or historical references only. Do not expose two followable primary
+actors for the same author.
+
+## Cutover Phases
+
+1. **Planning and read-only diagnostics**
+   - Keep using staging for real delivery.
+   - Run `npm run check:threads-discovery` against staging.
+   - Run the same diagnostic with `--canonical-base-url https://matters.town`
+     and expect failure until the canonical route is intentionally opened.
+
+2. **Implementation PR, no deploy**
+   - Add explicit pilot handle support for `mashbeanmatters` on the
+     `matters.town` Worker surface.
+   - Preserve demo handles while avoiding catch-all account discovery.
+   - Add config-driven handle allowlisting before adding more authors.
+   - Do not deploy this to production routes until the human gates below pass.
+
+3. **Record-only canonical read surface**
+   - Enable canonical WebFinger, actor, outbox, NodeInfo, and public key reads
+     for the pilot handle.
+   - Keep production outbound `Create`, `Update`, and `Delete` disabled.
+   - Keep Matters backend trigger mode in audit-only or disabled state for
+     production until rollout approval.
+
+4. **Discovery smoke test**
+   - Verify WebFinger returns 200 for default, `facebookexternalua`,
+     `facebookexternalhit`, and `meta-externalagent` user agents.
+   - Verify actor JSON has `id`, `inbox`, `outbox`, `followers`, and
+     `publicKey.owner` matching the canonical actor id.
+   - Search `mashbeanmatters@matters.town` from Mastodon and Misskey.
+   - Search from Threads after the canonical surface is visible and no longer
+     challenged by Cloudflare.
+
+5. **Staging follower boundary**
+   - Treat existing `staging-gateway.matters.town` followers as test-only.
+   - Do not attempt automatic cross-instance follower migration for staging
+     followers.
+   - Keep staging identity reachable for diagnostics, but stop describing it as
+     the production identity.
+
+6. **Production delivery cutover**
+   - Enable production outbound delivery only after legal/privacy, rollback,
+     key owner, storage, monitoring, and launch-owner approvals are recorded.
+   - First production delivery should be a small pilot Create/Update sequence
+     with queue, dead-letter, read-back, and remote UI checks.
+
+## Cloudflare Requirements
+
+- The canonical WebFinger route must allow
+  `/.well-known/webfinger?resource=acct:mashbeanmatters@matters.town`.
+- The canonical actor, outbox, inbox, followers, and following routes must pass
+  through without conflicting with the existing Matters application.
+- Cloudflare cache and WAF rules must not challenge WebFinger, actor, outbox,
+  NodeInfo, or public Article reads for known federation crawlers, including
+  Meta crawler user agents.
+- Do not bypass protection for admin or webhook routes.
+- Keep route changes narrow to `/.well-known/*`, `/nodeinfo/*`, and `/ap/*`.
+
+## Verification Checklist
+
+- `npm run check:threads-discovery` passes against staging.
+- `npm run check:threads-discovery -- --canonical-base-url https://matters.town`
+  passes after canonical exposure is approved and deployed.
+- `curl https://matters.town/.well-known/webfinger?resource=acct:mashbeanmatters@matters.town`
+  returns `200` and subject `acct:mashbeanmatters@matters.town`.
+- The same WebFinger URL returns `200` for `facebookexternalua`,
+  `facebookexternalhit`, and `meta-externalagent`.
+- `https://matters.town/ap/users/mashbeanmatters` returns a `Person` whose
+  actor id, inbox, outbox, followers, following, and public key owner all use
+  the canonical `matters.town` actor path.
+- Mastodon resolves and follows `mashbeanmatters@matters.town`.
+- Misskey resolves and follows `mashbeanmatters@matters.town`.
+- Threads is retested after the canonical route is visible; if search still
+  fails, record it as platform indexing or compatibility evidence, not as a
+  gateway WebFinger failure.
+- SQLite consistency scan returns `totalDiffs=0`.
+- Delivery queue returns to zero pending and zero dead letters after the first
+  approved pilot delivery.
+
+## Rollback Strategy
+
+Before public discovery:
+
+- Remove or disable the pilot handle from the canonical Worker allowlist.
+- Keep staging gateway untouched.
+- Re-run the canonical diagnostic and confirm it fails closed.
+
+After public discovery but before outbound delivery:
+
+- Keep canonical WebFinger and actor reads stable to avoid identity churn.
+- Pause outbound delivery and disable new follows if needed.
+- Preserve audit evidence and explain that the pilot identity is paused.
+
+After outbound delivery:
+
+- Do not delete the canonical actor or rotate the actor id as the first move.
+- Disable author opt-in or production trigger.
+- Stop delivery workers.
+- Keep actor reads and public key available while investigating.
+- Use the legal takedown or key-rotation runbook only if the incident requires
+  content withdrawal or key replacement.
+
+## Human Approval Gates
+
+- CTO / infra approves any `matters.town` Worker route or WAF/cache change.
+- Product approves first pilot handle and user-facing wording.
+- Security approves key owner, backup, and rotation path.
+- Legal / policy approves privacy notice and takedown handling.
+- Launch owner approves the first production outbound `Create`, `Update`, or
+  `Delete`.
+
+## Next Engineering Step
+
+Open an implementation PR that adds config-driven canonical pilot handle support
+and tests, but keep deployment blocked until the gates above are recorded. The
+PR should be reviewable independently of production cutover.

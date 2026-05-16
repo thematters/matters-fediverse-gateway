@@ -1,6 +1,6 @@
 # Current Production Gates
 
-Date: 2026-05-15
+Date: 2026-05-16
 Status: staging can continue; production rollout is still gated
 
 This is the current gate list after the staging Cloudflare crawler bypass,
@@ -19,13 +19,14 @@ scheduled inbound reconciliation endpoint.
 | Cloudflare Meta crawler bypass | Cleared on staging | `skip-staging-fediverse-meta-crawlers` is active for `staging-gateway.matters.town`; `check:threads-discovery` returns `ok: true`. |
 | Manual inbound reconcile | Cleared on staging | `POST /admin/inbound/reconcile-activity` can import a public remote reply to a known local object and preserve SQLite consistency. |
 | Periodic inbound reconcile baseline | Cleared on staging | `POST /jobs/inbound-reconciliation` batches known public Activity URLs through the same policy-checked reconcile path, requires a configured scheduler bearer token, has a bounded source runner for explicit public `https` Activity URLs, and is wired on the Mac-hosted staging gateway as a 15-minute no-op-safe loop. |
+| Canonical cutover planning | Cleared for planning only | `research/matters-fediverse-compat/05-roadmap/decisions/11-canonical-identity-cutover.md` defines the planned `acct:mashbeanmatters@matters.town` contract, verification checklist, rollback path, and human approval gates. |
 
 ## Still Open Before Production
 
 | Gate | Required decision or proof | Owner |
 | --- | --- | --- |
-| Threads UI discovery | Retest exact Threads search after crawler bypass; if still missing, decide whether to wait for indexing or move it behind canonical identity cutover. | Product + gateway operator |
-| Canonical identity cutover | Decide when to expose `acct:user@matters.town` instead of staging `acct:user@staging-gateway.matters.town`. | CTO / infra + gateway operator |
+| Threads UI discovery | Retest exact Threads search after canonical `acct:mashbeanmatters@matters.town` WebFinger is visible and no longer challenged for Meta user agents. | Product + gateway operator |
+| Canonical identity cutover | Approve and deploy narrow `matters.town` canonical pilot handle support. Current live canonical surface does not yet accept `acct:mashbeanmatters@matters.town`. | CTO / infra + gateway operator |
 | Production gateway hosting | Confirm long-running gateway host, SQLite backup path, restore drill, monitoring, and direct-origin fallback outside Cloudflare. | Infra + gateway operator |
 | Production private S3 | Create/confirm bucket, prefix, IAM role, lifecycle, access logs, and retention for generated bundles. | Infra + security/legal input |
 | Production Lambda secrets | Confirm owner and rotation path for Lambda credentials and gateway ingestion credentials. | CTO / infra |

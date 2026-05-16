@@ -1,6 +1,6 @@
 # Next Steps
 
-Updated: 2026-05-15
+Updated: 2026-05-16
 
 ## Done Baseline
 
@@ -49,6 +49,10 @@ Updated: 2026-05-15
   `https://g0v.social/users/mashbean/statuses/116575631875488289/activity`.
   The activity was already present in SQLite from the earlier inbound reconcile
   pass, and a post-run consistency scan returned `totalDiffs=0`.
+- Canonical identity cutover planning has started. The planned pilot identity
+  is `acct:mashbeanmatters@matters.town`; the current canonical Worker surface
+  still only accepts the demo handles `matters` and `mattersprobe02`, so the
+  pilot identity is intentionally not public yet.
 
 ## Immediate Engineering Work
 
@@ -60,9 +64,12 @@ Updated: 2026-05-15
    indexing, federation-sharing account settings, and canonical identity. Do
    not block Mastodon/Misskey staging signoff on the current Threads UI
    discovery result.
-3. Retest Threads again after canonical identity or a production-like domain is
-   available.
-4. Keep using `check:mastodon-readback` after each staging `Create`, `Update`,
+3. Prepare an implementation PR for config-driven canonical pilot handle
+   support on `matters.town`, but do not deploy it until CTO / infra approves
+   the route and Cloudflare cache/WAF changes.
+4. Retest Threads again after canonical identity or a production-like domain is
+   available and `meta-externalagent` can reach the canonical WebFinger route.
+5. Keep using `check:mastodon-readback` after each staging `Create`, `Update`,
    `Reply`, or `Delete` delivery run.
 
 ## Human Gates Before Production
