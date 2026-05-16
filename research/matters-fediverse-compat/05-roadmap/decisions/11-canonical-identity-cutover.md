@@ -31,6 +31,12 @@ identity `acct:mashbeanmatters@matters.town`.
   readiness reporting. `https://matters.town/ap/healthz` currently reports
   `mode=edge-demo`, `inboxMode=accepted-not-persistent`, and
   `followReadiness=blocked` because `GATEWAY_CORE_ORIGIN` is not active.
+- Worker deploy `7f9077c0-5dc8-4164-8793-83d437508758` fixed canonical
+  proxy pathing so future `/ap/users/<handle>/inbox` requests are forwarded to
+  gateway-core as `/users/<handle>/inbox`.
+- Worker deploy `7096c2e3-4e03-4133-9b0d-3ac7547be482` added an origin health
+  contract. Future follow readiness will remain blocked unless
+  `GATEWAY_CORE_ORIGIN/healthz` returns `component=gateway-core`.
 - This cutover did not change production DNS, production backend settings,
   production delivery, or formal Matters article/user data.
 
@@ -108,7 +114,11 @@ actors for the same author.
      `followReadiness=blocked`.
    - First set a real, persistent `GATEWAY_CORE_ORIGIN` so canonical inbox
      POSTs are verified, persisted, and can deliver Accept responses.
+   - The configured origin must serve `/healthz` with `component=gateway-core`;
+     otherwise Worker healthz keeps `followReadiness=blocked`.
    - Then run `npm run check:follow-readiness -- --base-url https://matters.town --handle mashbeanmatters`.
+   - Optionally add `--probe-inbox` after the origin is configured; the invalid
+     probe must be rejected by gateway-core instead of accepted by edge-demo.
    - Only after readiness returns `ok: true`, run visible canonical follow
      tests.
 

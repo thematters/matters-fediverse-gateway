@@ -63,6 +63,9 @@
 - Canonical follow proof is blocked until `GATEWAY_CORE_ORIGIN` is active and
   `check:follow-readiness` returns `ok: true`; current live mode is
   `edge-demo`, which accepts inbox POSTs without persistence.
+- The origin must expose gateway-core `/healthz`; Worker healthz will not mark
+  follow readiness ready unless origin health identifies as
+  `component=gateway-core`.
 - Production gateway hosting, private S3 bundle storage, production secrets
   ownership, legal takedown owner, privacy notice, key exposure/rotation owner,
   rollback rehearsal, and launch communication remain explicit human rollout
