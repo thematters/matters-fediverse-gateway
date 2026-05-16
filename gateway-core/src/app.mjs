@@ -1398,21 +1398,42 @@ function getEvidenceRetentionDays(config) {
 
 async function verifySignatureWithRemoteActor({ request, bodyText, remoteActor }) {
   const url = new URL(request.url);
-  const signatureHeaders = new Headers(request.headers);
   const forwardedHost = request.headers.get("x-forwarded-host")?.trim();
+  const forwardedPrefix = request.headers.get("x-forwarded-prefix")?.trim();
   const originalUrl = request.headers.get("x-original-url")?.trim();
-  let pathnameWithQuery = `${url.pathname}${url.search}`;
-
-  if (forwardedHost) {
-    signatureHeaders.set("host", forwardedHost);
-  }
+  const requestHost = request.headers.get("host")?.trim();
+  let parsedOriginalUrl = null;
 
   if (originalUrl) {
     try {
-      const publicUrl = new URL(originalUrl);
-      pathnameWithQuery = `${publicUrl.pathname}${publicUrl.search}`;
+      parsedOriginalUrl = new URL(originalUrl);
     } catch {
       // Fall back to the origin URL when the proxy metadata is malformed.
+    }
+  }
+
+  const pathCandidates = [];
+  const hostCandidates = [];
+  const addUnique = (items, value) => {
+    if (value && !items.includes(value)) {
+      items.push(value);
+    }
+  };
+
+  if (parsedOriginalUrl) {
+    addUnique(pathCandidates, `${parsedOriginalUrl.pathname}${parsedOriginalUrl.search}`);
+    addUnique(hostCandidates, parsedOriginalUrl.host);
+  }
+  if (forwardedPrefix) {
+    const normalizedPrefix = forwardedPrefix.startsWith("/") ? forwardedPrefix : `/${forwardedPrefix}`;
+    addUnique(pathCandidates, `${normalizedPrefix}${url.pathname}${url.search}`);
+  }
+  addUnique(pathCandidates, `${url.pathname}${url.search}`);
+  addUnique(hostCandidates, forwardedHost);
+  addUnique(hostCandidates, requestHost);
+  for (const host of [...hostCandidates]) {
+    if (host && !host.includes(":")) {
+      addUnique(hostCandidates, `${host}:443`);
     }
   }
 
@@ -1431,22 +1452,29 @@ async function verifySignatureWithRemoteActor({ request, bodyText, remoteActor }
 
   let lastError = null;
   for (const candidate of candidates) {
-    try {
-      const verification = verifyHttpSignature({
-        method: request.method,
-        pathnameWithQuery,
-        headers: signatureHeaders,
-        body: bodyText,
-        publicKeyPem: candidate.publicKeyPem,
-        expectedKeyId: candidate.keyId,
-      });
+    for (const pathnameWithQuery of pathCandidates) {
+      for (const host of hostCandidates) {
+        const signatureHeaders = new Headers(request.headers);
+        signatureHeaders.set("host", host);
 
-      return {
-        ...verification,
-        keyPhase: candidate.phase,
-      };
-    } catch (error) {
-      lastError = error;
+        try {
+          const verification = verifyHttpSignature({
+            method: request.method,
+            pathnameWithQuery,
+            headers: signatureHeaders,
+            body: bodyText,
+            publicKeyPem: candidate.publicKeyPem,
+            expectedKeyId: candidate.keyId,
+          });
+
+          return {
+            ...verification,
+            keyPhase: candidate.phase,
+          };
+        } catch (error) {
+          lastError = error;
+        }
+      }
     }
   }
 
