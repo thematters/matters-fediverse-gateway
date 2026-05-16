@@ -7821,6 +7821,46 @@ test("config loader normalizes actor key rotation overlap fields", async () => {
   assert.equal(config.actors.alice.previousPublicKeyPem, previousKeys.publicKeyPem);
 });
 
+test("config loader supports a public ActivityPub path prefix behind an edge proxy", async () => {
+  const tmpDir = path.join(os.tmpdir(), `matters-gateway-path-prefix-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(tmpDir, { recursive: true });
+  const keys = pemPair();
+  const configPath = path.join(tmpDir, "instance.json");
+  const publicKeyFile = path.join(tmpDir, "current-public.pem");
+  const privateKeyFile = path.join(tmpDir, "current-private.pem");
+
+  await writeFile(publicKeyFile, keys.publicKeyPem);
+  await writeFile(privateKeyFile, keys.privateKeyPem);
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        instance: {
+          domain: "matters.example",
+          activityPathPrefix: "/ap/",
+        },
+        actors: {
+          alice: {
+            publicKeyPemFile: "./current-public.pem",
+            privateKeyPemFile: "./current-private.pem",
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  const config = await loadGatewayConfig(configPath);
+
+  assert.equal(config.instance.baseUrl, "https://matters.example");
+  assert.equal(config.instance.activityPathPrefix, "/ap");
+  assert.equal(config.instance.activityBaseUrl, "https://matters.example/ap");
+  assert.equal(config.actors.alice.actorUrl, "https://matters.example/ap/users/alice");
+  assert.equal(config.actors.alice.inboxUrl, "https://matters.example/ap/users/alice/inbox");
+  assert.equal(config.actors.alice.keyId, "https://matters.example/ap/users/alice#main-key");
+});
+
 test("key rotation script writes overlap config and local actor update artifact", async () => {
   const tmpDir = path.join(os.tmpdir(), `matters-gateway-rotate-key-${Date.now()}-${Math.random().toString(16).slice(2)}`);
   await mkdir(tmpDir, { recursive: true });

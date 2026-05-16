@@ -207,3 +207,44 @@ test("canonical inbox proxy strips /ap prefix before forwarding to gateway-core"
     globalThis.fetch = originalFetch;
   }
 });
+
+test("canonical pilot actor reads proxy to gateway-core when origin is configured", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init });
+    return new Response(
+      JSON.stringify({
+        id: "https://matters.town/ap/users/mashbeanmatters",
+        type: "Person",
+        preferredUsername: "mashbeanmatters",
+        publicKey: {
+          owner: "https://matters.town/ap/users/mashbeanmatters",
+          publicKeyPem: "origin-public-key",
+        },
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/activity+json" },
+      },
+    );
+  };
+
+  try {
+    const response = await fetchWorker("/ap/users/mashbeanmatters", {
+      ...canonicalEnv,
+      CANONICAL_PILOT_HANDLES: "mashbeanmatters",
+      GATEWAY_CORE_ORIGIN: "https://gateway-origin.example.test/",
+    });
+    const actor = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(actor.publicKey.publicKeyPem, "origin-public-key");
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, "https://gateway-origin.example.test/users/mashbeanmatters");
+    assert.equal(calls[0].init.headers.get("x-forwarded-prefix"), "/ap");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

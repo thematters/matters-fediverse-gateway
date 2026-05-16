@@ -65,7 +65,13 @@
   `edge-demo`, which accepts inbox POSTs without persistence.
 - The origin must expose gateway-core `/healthz`; Worker healthz will not mark
   follow readiness ready unless origin health identifies as
-  `component=gateway-core`.
+  `component=gateway-core`. The AWS origin runbook is
+  `aws-gateway-core-origin-runbook.md`, and the CloudShell bootstrap script is
+  `gateway-core/deploy/aws-gateway-core-origin-cloudshell.sh`.
+- Canonical actor GET and inbox POST must come from the same key owner once
+  `GATEWAY_CORE_ORIGIN` is enabled. The Worker now proxies configured pilot
+  actor reads to `gateway-core`; the origin config must set
+  `instance.activityPathPrefix` to `/ap`.
 - Production gateway hosting, private S3 bundle storage, production secrets
   ownership, legal takedown owner, privacy notice, key exposure/rotation owner,
   rollback rehearsal, and launch communication remain explicit human rollout

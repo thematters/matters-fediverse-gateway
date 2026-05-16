@@ -136,6 +136,14 @@ function isSupportedActorHandle(handle, env) {
   return supportedActorHandles(env).has(handle);
 }
 
+function shouldProxyPilotActorRead(actorHandle, env) {
+  return Boolean(
+    actorHandle &&
+      gatewayCoreOrigin(env) &&
+      configuredPilotHandles(env).includes(actorHandle),
+  );
+}
+
 function acceptedWebfingerSubjects(base, env) {
   const host = new URL(base).host;
   const hosts = new Set([host, MATTERS_CANONICAL_HOST]);
@@ -650,15 +658,39 @@ export default {
       return respond(activityResponse(collection(inboxUrl(base, prefix))));
     }
     if (actorHandle && actorSubpath === null) {
+      if (shouldProxyPilotActorRead(actorHandle, env)) {
+        const proxied = await proxyToGatewayCore(request, env);
+        if (proxied) {
+          return respond(proxied);
+        }
+      }
       return respond(activityResponse(actorDocument(base, prefix, request, env, actorHandle)));
     }
     if (actorHandle && actorSubpath === "outbox") {
+      if (shouldProxyPilotActorRead(actorHandle, env)) {
+        const proxied = await proxyToGatewayCore(request, env);
+        if (proxied) {
+          return respond(proxied);
+        }
+      }
       return respond(activityResponse(outbox(base, prefix, actorHandle)));
     }
     if (actorHandle && actorSubpath === "followers") {
+      if (shouldProxyPilotActorRead(actorHandle, env)) {
+        const proxied = await proxyToGatewayCore(request, env);
+        if (proxied) {
+          return respond(proxied);
+        }
+      }
       return respond(activityResponse(collection(`${actorUrl(base, prefix, actorHandle)}/followers`)));
     }
     if (actorHandle && actorSubpath === "following") {
+      if (shouldProxyPilotActorRead(actorHandle, env)) {
+        const proxied = await proxyToGatewayCore(request, env);
+        if (proxied) {
+          return respond(proxied);
+        }
+      }
       return respond(activityResponse(collection(`${actorUrl(base, prefix, actorHandle)}/following`)));
     }
     if (actorHandle && actorSubpath === "inbox") {

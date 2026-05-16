@@ -1,0 +1,116 @@
+# AWS Gateway-Core Origin Runbook
+
+## Goal
+
+把 `gateway-core` 從本機 Mac staging 移到一台獨立 AWS origin，讓 canonical `acct:mashbeanmatters@matters.town` 可以進入真實 follow / reply 測試，但不把 federation runtime 放進 `matters-server` Elastic Beanstalk，也不佔用主站後端資源。
+
+## Recommended Shape
+
+- AWS EC2 small VM runs only `gateway-core`.
+- SQLite stays on the VM EBS volume under `/var/lib/matters-gateway/runtime/`.
+- `systemd` keeps `gateway-core` alive.
+- Cloudflare remains the public edge for `matters.town/.well-known/*` and `matters.town/ap/*`.
+- Cloudflare Worker forwards canonical pilot actor reads and inbox writes to the AWS origin when `GATEWAY_CORE_ORIGIN` is configured.
+- The origin should not expose public inbound ports directly. Prefer Cloudflare Tunnel or a locked-down origin hostname.
+
+Do not host this inside `matters-server-develop` or `matters-server-prod-new`; federation delivery, inbox persistence, retry, moderation, and SQLite recovery should fail independently from the main Matters backend.
+
+## Instance Baseline
+
+Recommended first VM:
+
+- Region: `ap-southeast-1`
+- Runtime: Amazon Linux 2023, x86_64
+- Size: `t3a.micro` or `t3a.small`
+- Disk: 20 GB gp3
+- Inbound security group: no public inbound rules for the Tunnel path
+- Access: AWS Systems Manager Session Manager, not public SSH
+- IAM role: `AmazonSSMManagedInstanceCore`
+
+Use `t3a.small` if repeated native `better-sqlite3` rebuilds or interop tests feel tight on memory. Keep it isolated either way.
+
+## Gateway Config
+
+For canonical `matters.town` through the Worker `/ap` route, the origin config must set an ActivityPub path prefix:
+
+```json
+{
+  "instance": {
+    "domain": "matters.town",
+    "activityPathPrefix": "/ap",
+    "title": "Matters Fediverse Gateway",
+    "summary": "ActivityPub gateway for public Matters articles",
+    "softwareName": "matters-gateway-core",
+    "softwareVersion": "0.1.0",
+    "openRegistrations": false
+  },
+  "actors": {
+    "mashbeanmatters": {
+      "displayName": "mashbean",
+      "summary": "Canonical Matters Fediverse pilot actor",
+      "autoAcceptFollows": true,
+      "aliases": ["https://matters.town/@mashbean"],
+      "publicKeyPemFile": "./secrets/mashbeanmatters-public-key.pem",
+      "privateKeyPemFile": "./secrets/mashbeanmatters-private-key.pem"
+    }
+  },
+  "runtime": {
+    "storeDriver": "sqlite",
+    "sqliteFile": "/var/lib/matters-gateway/runtime/matters-gateway.sqlite"
+  }
+}
+```
+
+`activityPathPrefix` is required so the origin can receive stripped internal paths like `/users/mashbeanmatters/inbox` while still producing canonical public IDs like `https://matters.town/ap/users/mashbeanmatters`.
+
+## Key Rule
+
+The actor document and the private signing key must come from the same runtime. Once `GATEWAY_CORE_ORIGIN` is enabled, the Worker proxies canonical pilot actor GET requests to `gateway-core`; this avoids a split-brain key state where Worker serves one public key but the origin signs with another private key.
+
+Do not run a public follow test until:
+
+- `https://matters.town/ap/users/mashbeanmatters` returns the origin actor document.
+- The actor public key matches the private key on the AWS origin.
+- `https://matters.town/ap/healthz` reports `followReadiness: "ready"`.
+
+## AWS Bootstrap
+
+Use `gateway-core/deploy/aws-gateway-core-origin-cloudshell.sh` from AWS CloudShell after the account, region, VPC, and subnet are confirmed.
+
+The script creates:
+
+- one IAM role and instance profile for SSM
+- one security group with no inbound rules
+- one EC2 instance
+- Node.js, npm, git, build tools, SQLite
+- `/opt/matters-gateway/repo`
+- `/etc/matters-gateway/`
+- `/var/lib/matters-gateway/runtime/`
+- `/var/log/matters-gateway/`
+- a disabled-by-default operator checklist for real key and config provisioning
+
+The script intentionally does not create production actor key material. The key owner must provision the final private key on the VM before follow tests.
+
+## Cloudflare Cutover
+
+After the AWS origin is healthy:
+
+1. Create a Cloudflare Tunnel or locked-down origin hostname to the VM service.
+2. Verify the origin directly: `GET /healthz` returns `component: "gateway-core"`.
+3. Set Worker var `GATEWAY_CORE_ORIGIN=https://<origin-host>`.
+4. Redeploy Worker with `CANONICAL_PILOT_HANDLES=mashbeanmatters`.
+5. Run `cloudflare-worker/scripts/check-follow-readiness.mjs`.
+6. Only after readiness passes, run Mastodon and Misskey canonical follow tests.
+
+Production outbound `Create`, `Update`, and `Delete` delivery is a separate rollout gate. Enabling the origin only proves persistent inbound follow/reply runtime readiness.
+
+## Rollback
+
+Fast rollback:
+
+1. Remove `GATEWAY_CORE_ORIGIN` from the Worker deployment.
+2. Redeploy Worker.
+3. Confirm `https://matters.town/ap/healthz` returns `followReadiness: "blocked"` and `mode: "edge-demo"`.
+4. Stop the AWS systemd service if needed.
+
+This keeps `matters.town` main backend untouched because the narrow Worker routes are independent from the main site backend.
