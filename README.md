@@ -7,7 +7,7 @@ An open-source ActivityPub gateway that connects Matters' long-form publishing l
 > **Canonical demo actor**: `acct:matters@matters.town`
 > **Worker testbed**: <https://gateway-demo.matters.town>
 > **Source**: <https://github.com/thematters/matters-fediverse-gateway>
-> **Current integration slice**: G2-A preflight has moved past review-stage PRs. `ipns-site-generator` PR #161 is merged to `main`, `matters-server` PR #4761 is merged to `develop` and deployed to `matters.icu`, `lambda-handlers` PR #223 is deployed to `federation-export-dev` as `v0.14.1`, and real deployed-Lambda staging bundles have been ingested by `gateway-core`, checked through WebFinger / actor / outbox / NodeInfo, and verified against gyutte.site Misskey without admin mutations. G2-B product controls are merged to `develop` in `matters-server` PR #4773 and `matters-web` PR #5883, both develop deploys passed, and the `mashbean@matters.town` staging pilot path now has API, browser UI, Lambda, gateway, and Misskey read-side validation. `matters-server` PR #4774 is merged to `develop`; its develop migration, EB deploy, Lambda deploy, and notification jobs passed. The remaining staging trigger check is to enable `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only` on `matters.icu`, then confirm publish/edit audit rows. Production rollout is not enabled.
+> **Current integration slice**: G2-A preflight has moved past review-stage PRs. `ipns-site-generator` PR #161 is merged to `main`, `matters-server` PR #4761 is merged to `develop` and deployed to `matters.icu`, `lambda-handlers` PR #223 is deployed to `federation-export-dev` as `v0.14.1`, and real deployed-Lambda staging bundles have been ingested by `gateway-core`, checked through WebFinger / actor / outbox / NodeInfo, and verified against gyutte.site Misskey without admin mutations. G2-B product controls are merged to `develop` in `matters-server` PR #4773 and `matters-web` PR #5883, both develop deploys passed, and the `mashbean@matters.town` staging pilot path now has API, browser UI, Lambda, gateway, and Misskey read-side validation. `matters-server` PR #4774 is merged to `develop`; its develop migration, EB deploy, Lambda deploy, and notification jobs passed. The isolated AWS `gateway-core` origin is now connected through the Cloudflare Worker for the canonical pilot actor `acct:mashbeanmatters@matters.town`; readiness passes and g0v.social Mastodon follow created persistent SQLite follower state. Misskey canonical follow remains a compatibility item because gyutte.site entered a processing state but did not deliver a Follow to the gateway inbox. Production rollout is not enabled.
 
 ## Why
 
@@ -72,11 +72,13 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 - Observability: metrics, alerts, logs, webhook dispatch, and Slack incoming webhook support
 - Mastodon sandbox black-box interoperability check completed
 - `g0v.social` exact discovery and inbound follow delivery confirmed for `acct:matters@matters.town`
+- Canonical `acct:mashbeanmatters@matters.town` follow readiness is live through the AWS `gateway-core` origin and Cloudflare Worker proxy; g0v.social Mastodon follow reached the origin inbox, passed HTTP Signature verification, wrote one persistent SQLite follower row, and received a signed Accept with HTTP 202
 - Misskey public interoperability now covers discovery, follow, text Article delivery, media attachment display, and human UI visual review on gyutte.site
+- Misskey canonical follow is not yet counted as passed: gyutte.site can resolve `mashbeanmatters@matters.town`, but the visible follow action stayed in a processing state and no gyutte.site Follow activity reached gateway-core traces
 - GoToSocial probe has local contract coverage; public GoToSocial run is intentionally deferred
-- 131 `gateway-core` automated tests passing in the latest local verification snapshot after rebuilding `better-sqlite3` for the current local Node runtime
+- 132 `gateway-core` automated tests passing in the latest local verification snapshot after rebuilding `better-sqlite3` for the current local Node runtime
 - Public static ActivityPub prototype endpoints and seed bundle live under `thematters.github.io`
-- Canonical Matters-domain Cloudflare Worker routes are deployed under `matters.town`, including the pilot read-side actor `acct:mashbeanmatters@matters.town`
+- Canonical Matters-domain Cloudflare Worker routes are deployed under `matters.town`, including the pilot actor `acct:mashbeanmatters@matters.town`; configured pilot reads and inbox writes are proxied to the AWS `gateway-core` origin
 - Isolated Cloudflare Worker testbed remains deployed under `gateway-demo.matters.town`
 - G2-A server preflight landed in `matters-server` PR [#4761](https://github.com/thematters/matters-server/pull/4761), merged to `develop`, and the post-merge develop deploy to `matters.icu` passed
 - The ActivityPub bundle contract landed in `ipns-site-generator` PR [#161](https://github.com/thematters/ipns-site-generator/pull/161), merged to `main`
@@ -99,7 +101,7 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 
 The project is past fixture-only proof of concept, but it is not production-ready. The next concrete work items are:
 
-1. Provision an isolated AWS `gateway-core` origin for the canonical pilot path, then enable `GATEWAY_CORE_ORIGIN` only after `/healthz` reports `component=gateway-core` and actor key files are present.
+1. Keep the isolated AWS `gateway-core` origin healthy for the canonical pilot path. `GATEWAY_CORE_ORIGIN` is enabled only for the narrow Worker federation routes, `/healthz` reports `component=gateway-core`, and actor key files are present on the VM.
    - The AWS origin runbook is [`research/matters-fediverse-compat/03-ops/aws-gateway-core-origin-runbook.md`](research/matters-fediverse-compat/03-ops/aws-gateway-core-origin-runbook.md).
    - The CloudShell bootstrap script is [`gateway-core/deploy/aws-gateway-core-origin-cloudshell.sh`](gateway-core/deploy/aws-gateway-core-origin-cloudshell.sh).
    - The origin config must use `instance.activityPathPrefix: "/ap"` for canonical `matters.town/ap/*` identity.
@@ -112,7 +114,7 @@ The project is past fixture-only proof of concept, but it is not production-read
    - The product contract slice is [`research/matters-fediverse-compat/02-runtime-slices/g2b-product-contract-slice.md`](research/matters-fediverse-compat/02-runtime-slices/g2b-product-contract-slice.md).
    - The exact staging pilot checklist is [`research/matters-fediverse-compat/03-ops/g2b-staging-pilot-validation-checklist.md`](research/matters-fediverse-compat/03-ops/g2b-staging-pilot-validation-checklist.md).
    - The accepted default is conservative: author federation is off by default, author opt-in is explicit, article setting defaults to `inherit`, `disabled` always wins, and existing public articles are not backfilled automatically on opt-in.
-4. Keep G2-A/G2-B non-production until production credentials, migration timing, legal/privacy review, rollback/takedown checks, AWS origin backup/restore, and canonical follow proof are complete. Production private S3 storage and public `Create`/`Update`/`Delete` delivery after rollout are approved.
+4. Keep G2-A/G2-B non-production until production credentials, migration timing, legal/privacy review, rollback/takedown checks, AWS origin backup/restore, and canonical multi-platform follow proof are complete. Mastodon canonical follow proof has passed; Misskey canonical follow and Threads discovery remain open compatibility tracks. Production private S3 storage and public `Create`/`Update`/`Delete` delivery after rollout are approved.
 
 ## G1 roadmap, May-July 2026
 
