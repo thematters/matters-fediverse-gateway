@@ -6,7 +6,8 @@ const ACTIVITY_CONTEXT = [
 
 const DEFAULT_ACTOR_HANDLE = "matters";
 const DIAGNOSTIC_ACTOR_HANDLE = "mattersprobe02";
-const SUPPORTED_ACTOR_HANDLES = new Set([DEFAULT_ACTOR_HANDLE, DIAGNOSTIC_ACTOR_HANDLE]);
+const BUILTIN_ACTOR_HANDLES = [DEFAULT_ACTOR_HANDLE, DIAGNOSTIC_ACTOR_HANDLE];
+const HANDLE_PATTERN = /^[a-z0-9_][a-z0-9_.-]{0,63}$/;
 const ARTICLE_SLUG = "matters-main-site-open-social-demo";
 const ARTICLE_SOURCE_URL = "https://matters.town";
 const PROJECT_REPOSITORY_URL = "https://github.com/thematters/matters-fediverse-gateway";
@@ -42,9 +43,38 @@ function subjectFor(request, env, handle = DEFAULT_ACTOR_HANDLE) {
   return `acct:${handle}@${host}`;
 }
 
-function handleFromResource(resource) {
+function configuredPilotHandles(env) {
+  return String(env.CANONICAL_PILOT_HANDLES || "")
+    .split(/[\s,]+/u)
+    .map((handle) => handle.trim().toLowerCase())
+    .filter((handle) => HANDLE_PATTERN.test(handle));
+}
+
+function supportedActorHandles(env) {
+  return new Set([...BUILTIN_ACTOR_HANDLES, ...configuredPilotHandles(env)]);
+}
+
+function isSupportedActorHandle(handle, env) {
+  return supportedActorHandles(env).has(handle);
+}
+
+function acceptedWebfingerSubjects(base, env) {
+  const host = new URL(base).host;
+  const hosts = new Set([host, MATTERS_CANONICAL_HOST]);
+  const subjects = [];
+
+  for (const handle of supportedActorHandles(env)) {
+    for (const acceptedHost of hosts) {
+      subjects.push(`acct:${handle}@${acceptedHost}`);
+    }
+  }
+
+  return subjects;
+}
+
+function handleFromResource(resource, env) {
   const match = /^acct:([^@]+)@([^@]+)$/.exec(resource || "");
-  return match && SUPPORTED_ACTOR_HANDLES.has(match[1]) ? match[1] : null;
+  return match && isSupportedActorHandle(match[1], env) ? match[1] : null;
 }
 
 function escapeRegExp(value) {
@@ -182,20 +212,14 @@ function webfinger(request, env) {
   const prefix = activityPrefix(request, env);
   const url = new URL(request.url);
   const resource = url.searchParams.get("resource") || subjectFor(request, env);
-  const host = new URL(base).host;
-  const handle = handleFromResource(resource);
-  const acceptedSubjects = new Set([
-    `acct:${DEFAULT_ACTOR_HANDLE}@${host}`,
-    `acct:${DEFAULT_ACTOR_HANDLE}@matters.town`,
-    `acct:${DIAGNOSTIC_ACTOR_HANDLE}@${host}`,
-    `acct:${DIAGNOSTIC_ACTOR_HANDLE}@matters.town`,
-  ]);
+  const handle = handleFromResource(resource, env);
+  const acceptedSubjects = acceptedWebfingerSubjects(base, env);
 
-  if (!handle || !acceptedSubjects.has(resource)) {
+  if (!handle || !acceptedSubjects.includes(resource)) {
     return jsonResponse(
       {
         error: "unknown_resource",
-        accepted: Array.from(acceptedSubjects),
+        accepted: acceptedSubjects,
       },
       404,
       "application/jrd+json; charset=utf-8",
@@ -446,6 +470,7 @@ function landing(request, env) {
       docs: env.PROJECT_DOCS_URL || "https://thematters.github.io/matters-fediverse-gateway/",
       actor: `acct:${DEFAULT_ACTOR_HANDLE}@${host}`,
       diagnosticActor: `acct:${DIAGNOSTIC_ACTOR_HANDLE}@${host}`,
+      pilotActors: configuredPilotHandles(env).map((handle) => `acct:${handle}@${host}`),
       endpoints: {
         webfinger: `${base}/.well-known/webfinger?resource=acct:${DEFAULT_ACTOR_HANDLE}@${host}`,
         actor: actorUrl(base, prefix),
@@ -478,7 +503,7 @@ export default {
     const prefix = activityPrefix(request, env);
     const path = url.pathname.replace(/\/$/, "") || "/";
     const actorMatch = actorRouteMatch(path, prefix);
-    const actorHandle = actorMatch && SUPPORTED_ACTOR_HANDLES.has(actorMatch[1]) ? actorMatch[1] : null;
+    const actorHandle = actorMatch && isSupportedActorHandle(actorMatch[1], env) ? actorMatch[1] : null;
     const actorSubpath = actorHandle ? actorMatch[2] || null : null;
 
     if (request.method === "OPTIONS") {

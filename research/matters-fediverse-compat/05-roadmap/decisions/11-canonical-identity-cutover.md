@@ -55,7 +55,7 @@ actors for the same author.
 
 2. **Implementation PR, no deploy**
    - Add explicit pilot handle support for `mashbeanmatters` on the
-     `matters.town` Worker surface.
+     `matters.town` Worker surface through `CANONICAL_PILOT_HANDLES`.
    - Preserve demo handles while avoiding catch-all account discovery.
    - Add config-driven handle allowlisting before adding more authors.
    - Do not deploy this to production routes until the human gates below pass.
@@ -93,6 +93,8 @@ actors for the same author.
 
 - The canonical WebFinger route must allow
   `/.well-known/webfinger?resource=acct:mashbeanmatters@matters.town`.
+- `CANONICAL_PILOT_HANDLES` must be unset by default and set explicitly for
+  the production cutover deployment.
 - The canonical actor, outbox, inbox, followers, and following routes must pass
   through without conflicting with the existing Matters application.
 - Cloudflare cache and WAF rules must not challenge WebFinger, actor, outbox,
@@ -100,6 +102,33 @@ actors for the same author.
   Meta crawler user agents.
 - Do not bypass protection for admin or webhook routes.
 - Keep route changes narrow to `/.well-known/*`, `/nodeinfo/*`, and `/ap/*`.
+
+## Main-Site Impact Assessment
+
+Merging the implementation PR should not affect the Matters main site by
+itself. The pilot handle is closed unless `CANONICAL_PILOT_HANDLES` is set
+during a Worker deployment.
+
+The approved production change should remain low-risk if Cloudflare changes
+stay inside these boundaries:
+
+- Route only `matters.town/.well-known/webfinger*`,
+  `matters.town/.well-known/host-meta`, `matters.town/.well-known/nodeinfo`,
+  `matters.town/nodeinfo/*`, and `matters.town/ap/*` to the Worker.
+- Do not route `matters.town/`, article pages, user profile pages, GraphQL,
+  auth, payment, or editor paths to the Worker.
+- Apply cache/WAF bypass only to public federation discovery and ActivityPub
+  paths. Do not disable WAF or cache globally for `matters.town`.
+- Do not apply this rule to `server.matters.town`, `matters.icu`, or other
+  backend/admin hostnames.
+- Keep WebFinger and actor responses `no-store` or explicitly cache-bounded for
+  federation compatibility.
+
+The main risk is not the Worker code path; it is an overly broad Cloudflare
+route, cache rule, or WAF skip rule. If the rule accidentally matches ordinary
+main-site pages, it could bypass protection or change caching for the main app.
+The rollout should therefore be reviewed as Cloudflare rule scope first, then
+ActivityPub behavior second.
 
 ## Verification Checklist
 

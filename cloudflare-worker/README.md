@@ -35,6 +35,17 @@ https://matters.town/.well-known/nodeinfo
 https://matters.town/ap/instance-info/2.1
 ```
 
+Canonical pilot handles are closed by default. To expose a pilot handle such as
+`acct:mashbeanmatters@matters.town`, deploy with an explicit allowlist:
+
+```toml
+[vars]
+CANONICAL_PILOT_HANDLES = "mashbeanmatters"
+```
+
+Do not set this variable on the production route until the canonical identity
+cutover gate, Cloudflare cache/WAF review, and rollback plan have been approved.
+
 The isolated Worker testbed remains:
 
 ```text
