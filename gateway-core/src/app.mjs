@@ -3555,6 +3555,31 @@ export function createGatewayApp({
       const handle = extractHandle(pathname);
       const actor = handle ? config.actors[handle] : null;
 
+      if (isReadMethod(request.method) && pathname === "/healthz") {
+        return jsonResponse(
+          {
+            ok: true,
+            component: "gateway-core",
+            instance: {
+              domain: config.instance.domain,
+              baseUrl: config.instance.baseUrl,
+            },
+            runtime: {
+              storeDriver: config.runtime?.storeDriver ?? (store.getRuntimeMetadata?.() ?? {}).driver ?? "unknown",
+            },
+            actors: Object.keys(config.actors),
+            checks: {
+              inboxPersistence: true,
+              deliveryQueue: true,
+              httpSignatureVerification: true,
+            },
+          },
+          200,
+          "application/json",
+          DISCOVERY_RESPONSE_HEADERS,
+        );
+      }
+
       if (isReadMethod(request.method) && pathname === "/.well-known/webfinger") {
         const resource = url.searchParams.get("resource") ?? "";
         const expectedPrefix = "acct:";

@@ -84,22 +84,86 @@ test("canonical healthz reports edge demo follow readiness when gateway-core ori
     mode: "edge-demo",
     inboxMode: "accepted-not-persistent",
     followReadiness: "blocked",
+    origin: {
+      configured: false,
+      health: null,
+    },
   });
 });
 
-test("canonical healthz reports gateway-core follow readiness when origin is configured", async () => {
-  const response = await fetchWorker("/ap/healthz", {
-    ...canonicalEnv,
-    GATEWAY_CORE_ORIGIN: "https://gateway-origin.example.test/",
-  });
-  const body = await response.json();
+test("canonical healthz reports gateway-core follow readiness when origin health passes", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
 
-  assert.equal(response.status, 200);
-  assert.deepEqual(body.runtime, {
-    mode: "gateway-core-proxy",
-    inboxMode: "persistent",
-    followReadiness: "ready",
-  });
+  globalThis.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        component: "gateway-core",
+        instance: { domain: "matters.town" },
+        runtime: { storeDriver: "sqlite" },
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      },
+    );
+  };
+
+  try {
+    const response = await fetchWorker("/ap/healthz", {
+      ...canonicalEnv,
+      GATEWAY_CORE_ORIGIN: "https://gateway-origin.example.test/",
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(calls, ["https://gateway-origin.example.test/healthz"]);
+    assert.deepEqual(body.runtime, {
+      mode: "gateway-core-proxy",
+      inboxMode: "persistent",
+      followReadiness: "ready",
+      origin: {
+        configured: true,
+        health: {
+          ok: true,
+          status: 200,
+          component: "gateway-core",
+          instanceDomain: "matters.town",
+          storeDriver: "sqlite",
+        },
+      },
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("canonical healthz blocks follow readiness when origin health fails", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () =>
+    new Response(JSON.stringify({ ok: true, component: "other-service" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+
+  try {
+    const response = await fetchWorker("/ap/healthz", {
+      ...canonicalEnv,
+      GATEWAY_CORE_ORIGIN: "https://gateway-origin.example.test/",
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.runtime.mode, "gateway-core-proxy");
+    assert.equal(body.runtime.inboxMode, "origin-unverified");
+    assert.equal(body.runtime.followReadiness, "blocked");
+    assert.equal(body.runtime.origin.health.component, "other-service");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("canonical inbox proxy strips /ap prefix before forwarding to gateway-core", async () => {
