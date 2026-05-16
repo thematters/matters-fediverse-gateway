@@ -160,11 +160,11 @@ For the canonical Matters-domain surface, use `https://matters.town` and the `/a
 
 ## Runtime Forwarding
 
-Set `GATEWAY_CORE_ORIGIN` to forward dynamic POST requests to a deployed `gateway-core` runtime:
+Set `GATEWAY_CORE_ORIGIN` to forward canonical pilot actor reads and dynamic inbox POST requests to a deployed `gateway-core` runtime:
 
 ```toml
 [vars]
 GATEWAY_CORE_ORIGIN = "https://gateway-core.example"
 ```
 
-The current demo accepts inbox POST requests only as an edge demo when `GATEWAY_CORE_ORIGIN` is unset. Production federation still requires `gateway-core` for signature verification, followers state, delivery queues, moderation, and persistence.
+When `GATEWAY_CORE_ORIGIN` is unset, the current demo accepts inbox POST requests only as an edge demo. When it is set, configured canonical pilot handles such as `mashbeanmatters` proxy actor, outbox, followers, and following reads to `gateway-core`, and inbox POST requests are also forwarded with the `/ap` prefix stripped for the origin. Production federation still requires `gateway-core` for signature verification, followers state, delivery queues, moderation, and persistence.

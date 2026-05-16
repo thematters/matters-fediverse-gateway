@@ -5,6 +5,10 @@ const SECURITY_V1 = "https://w3id.org/security/v1";
 const PUBLIC_AUDIENCE = `${ACTIVITY_STREAMS}#Public`;
 const MASTODON_NS = "http://joinmastodon.org/ns#";
 
+function activityBaseUrl(instance) {
+  return instance.activityBaseUrl ?? instance.baseUrl;
+}
+
 export function buildWebFinger({ instance, actor }) {
   return {
     subject: `acct:${actor.handle}@${instance.domain}`,
@@ -25,6 +29,7 @@ export function buildWebFinger({ instance, actor }) {
 }
 
 export function buildActorDocument({ instance, actor }) {
+  const baseUrl = activityBaseUrl(instance);
   const document = {
     "@context": [
       ACTIVITY_STREAMS,
@@ -50,7 +55,7 @@ export function buildActorDocument({ instance, actor }) {
     indexable: true,
     manuallyApprovesFollowers: actor.autoAcceptFollows === false,
     endpoints: {
-      sharedInbox: `${instance.baseUrl}/inbox`,
+      sharedInbox: `${baseUrl}/inbox`,
     },
     publicKey: {
       id: actor.keyId,
@@ -126,9 +131,11 @@ export function buildNodeInfo({ instance, actors }) {
 }
 
 export function buildAcceptActivity({ actor, follow, now, instance }) {
+  const baseUrl = activityBaseUrl(instance);
+
   return {
     "@context": ACTIVITY_STREAMS,
-    id: `${instance.baseUrl}/activities/${now.getTime()}-accept-${actor.handle}`,
+    id: `${baseUrl}/activities/${now.getTime()}-accept-${actor.handle}`,
     type: "Accept",
     actor: actor.actorUrl,
     object: follow,
@@ -136,9 +143,11 @@ export function buildAcceptActivity({ actor, follow, now, instance }) {
 }
 
 export function buildRejectActivity({ actor, follow, now, instance }) {
+  const baseUrl = activityBaseUrl(instance);
+
   return {
     "@context": ACTIVITY_STREAMS,
-    id: `${instance.baseUrl}/activities/${now.getTime()}-reject-${actor.handle}`,
+    id: `${baseUrl}/activities/${now.getTime()}-reject-${actor.handle}`,
     type: "Reject",
     actor: actor.actorUrl,
     object: follow,
@@ -146,9 +155,11 @@ export function buildRejectActivity({ actor, follow, now, instance }) {
 }
 
 export function buildDeleteActivity({ actor, objectId, now, instance }) {
+  const baseUrl = activityBaseUrl(instance);
+
   return {
     "@context": ACTIVITY_STREAMS,
-    id: `${instance.baseUrl}/activities/${now.getTime()}-delete-${actor.handle}`,
+    id: `${baseUrl}/activities/${now.getTime()}-delete-${actor.handle}`,
     type: "Delete",
     actor: actor.actorUrl,
     to: [PUBLIC_AUDIENCE],
@@ -158,11 +169,12 @@ export function buildDeleteActivity({ actor, objectId, now, instance }) {
 }
 
 export function buildUpdateActivity({ actor, object, now, instance }) {
+  const baseUrl = activityBaseUrl(instance);
   const normalizedObject = normalizeArticleObject({ object, actor });
 
   return {
     "@context": ACTIVITY_STREAMS,
-    id: `${instance.baseUrl}/activities/${now.getTime()}-update-${actor.handle}`,
+    id: `${baseUrl}/activities/${now.getTime()}-update-${actor.handle}`,
     type: "Update",
     actor: actor.actorUrl,
     to: [PUBLIC_AUDIENCE],
@@ -175,6 +187,7 @@ export function buildUpdateActivity({ actor, object, now, instance }) {
 }
 
 export function buildCreateActivity({ actor, object, now, instance, mentionTags = [], to = null, cc = null }) {
+  const baseUrl = activityBaseUrl(instance);
   const normalizedObject = normalizeArticleObject({ object, actor });
   const existingTags = Array.isArray(normalizedObject.tag) ? normalizedObject.tag : normalizedObject.tag ? [normalizedObject.tag] : [];
   const mergedTags = [...existingTags];
@@ -200,7 +213,7 @@ export function buildCreateActivity({ actor, object, now, instance, mentionTags 
 
   return {
     "@context": ACTIVITY_STREAMS,
-    id: `${instance.baseUrl}/activities/${now.getTime()}-create-${actor.handle}`,
+    id: `${baseUrl}/activities/${now.getTime()}-create-${actor.handle}`,
     type: "Create",
     actor: actor.actorUrl,
     to: resolvedTo ?? [PUBLIC_AUDIENCE],
@@ -216,9 +229,11 @@ export function buildCreateActivity({ actor, object, now, instance, mentionTags 
 }
 
 export function buildLikeActivity({ actor, objectId, now, instance, targetActorIds = [], to = null, cc = null }) {
+  const baseUrl = activityBaseUrl(instance);
+
   return {
     "@context": ACTIVITY_STREAMS,
-    id: `${instance.baseUrl}/activities/${now.getTime()}-like-${actor.handle}`,
+    id: `${baseUrl}/activities/${now.getTime()}-like-${actor.handle}`,
     type: "Like",
     actor: actor.actorUrl,
     to: [...new Set((to ?? targetActorIds).filter(Boolean))],
@@ -228,12 +243,13 @@ export function buildLikeActivity({ actor, objectId, now, instance, targetActorI
 }
 
 export function buildAnnounceActivity({ actor, objectId, now, instance, targetActorIds = [], to = null, cc = null }) {
+  const baseUrl = activityBaseUrl(instance);
   const resolvedCc =
     Array.isArray(cc) && cc.length ? [...new Set(cc.filter(Boolean))] : [...new Set([actor.followersUrl, ...targetActorIds.filter(Boolean)])];
 
   return {
     "@context": ACTIVITY_STREAMS,
-    id: `${instance.baseUrl}/activities/${now.getTime()}-announce-${actor.handle}`,
+    id: `${baseUrl}/activities/${now.getTime()}-announce-${actor.handle}`,
     type: "Announce",
     actor: actor.actorUrl,
     to: Array.isArray(to) && to.length ? [...new Set(to.filter(Boolean))] : [PUBLIC_AUDIENCE],

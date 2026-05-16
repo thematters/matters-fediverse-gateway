@@ -326,8 +326,12 @@ The receiver uses a bearer-token-only model. It is intended for staging drills b
 - System service template: `deploy/matters-gateway-core.service.example`
 - Deployment topology baseline: `../research/matters-fediverse-compat/03-ops/deployment-topology-baseline.md`
 - Cloudflare Tunnel staging runbook: `../research/matters-fediverse-compat/03-ops/staging-cloudflare-tunnel-runbook.md`
+- AWS gateway-core origin runbook: `../research/matters-fediverse-compat/03-ops/aws-gateway-core-origin-runbook.md`
+- AWS CloudShell bootstrap script: `deploy/aws-gateway-core-origin-cloudshell.sh`
 
 The G1 baseline runs `gateway-core` behind a public reverse proxy with SQLite persistence. External observability sinks are configured under `runtime.alerting.dispatch`, `runtime.metrics.dispatch`, and `runtime.logs.dispatch`.
+
+For the canonical `matters.town/ap/*` Worker route, set `instance.activityPathPrefix` to `"/ap"` in the origin config. The origin can still receive stripped internal paths such as `/users/<handle>/inbox`, while generated ActivityPub IDs, inboxes, and activity IDs stay canonical under `https://matters.town/ap/...`.
 
 Check staging secret references:
 

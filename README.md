@@ -74,9 +74,9 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 - `g0v.social` exact discovery and inbound follow delivery confirmed for `acct:matters@matters.town`
 - Misskey public interoperability now covers discovery, follow, text Article delivery, media attachment display, and human UI visual review on gyutte.site
 - GoToSocial probe has local contract coverage; public GoToSocial run is intentionally deferred
-- 117 `gateway-core` automated tests passing in the latest local verification snapshot after rebuilding `better-sqlite3` for the current local Node runtime
+- 131 `gateway-core` automated tests passing in the latest local verification snapshot after rebuilding `better-sqlite3` for the current local Node runtime
 - Public static ActivityPub prototype endpoints and seed bundle live under `thematters.github.io`
-- Canonical Matters-domain Cloudflare Worker routes are deployed under `matters.town`
+- Canonical Matters-domain Cloudflare Worker routes are deployed under `matters.town`, including the pilot read-side actor `acct:mashbeanmatters@matters.town`
 - Isolated Cloudflare Worker testbed remains deployed under `gateway-demo.matters.town`
 - G2-A server preflight landed in `matters-server` PR [#4761](https://github.com/thematters/matters-server/pull/4761), merged to `develop`, and the post-merge develop deploy to `matters.icu` passed
 - The ActivityPub bundle contract landed in `ipns-site-generator` PR [#161](https://github.com/thematters/ipns-site-generator/pull/161), merged to `main`
@@ -88,7 +88,7 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 - G2-B staging pilot/admin setup is now verified on `matters.icu`: `mashbean@matters.town` signs in as admin, has `fediverseBeta`, and account-level federation is `enabled`
 - Real staging settings now make public article `23520` eligible through the server gate while paywalled article `23522` remains blocked as `article_not_public`; strict-gate deployed-Lambda dry-run [25712528545](https://github.com/thematters/lambda-handlers/actions/runs/25712528545) selected 2 rows, exported 1 public Article, skipped 1 paywalled Article, and returned the expected seven-file bundle
 - The pilot-owned staging article `23525` (`ckl5le599uwc`) was created through `matters.icu`, account settings showed the Fediverse row enabled, article edit settings showed the Fediverse override as `Follow author setting`, and strict-gate deployed-Lambda dry-run [25713858021](https://github.com/thematters/lambda-handlers/actions/runs/25713858021) exported it as `mashbeanmatters@staging-gateway.matters.town`
-- The `mashbeanmatters` staging bundle passed `gateway-core` ingestion, WebFinger / actor / outbox / NodeInfo public probes, SQLite consistency scan with `totalDiffs=0`, secret layout check, 117 automated tests, and gyutte.site Misskey read-side account resolution
+- The `mashbeanmatters` staging bundle passed `gateway-core` ingestion, WebFinger / actor / outbox / NodeInfo public probes, SQLite consistency scan with `totalDiffs=0`, secret layout check, 131 automated tests, and gyutte.site Misskey read-side account resolution
 - `matters-server` PR [#4774](https://github.com/thematters/matters-server/pull/4774) is merged to `develop`; deploy run [25768243309](https://github.com/thematters/matters-server/actions/runs/25768243309) passed build, develop DB migration, Elastic Beanstalk deploy, develop Lambda deploy, and notification. The scaffold stays default-off unless `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only` is configured on the staging environment.
 - The generated `zeckagent3` Article was delivered through `gateway-core` to gyutte.site Misskey; a follow-up read-only Misskey dry-run resolved the actor, confirmed one follower, and prepared a public Create without sending it
 - The latest `zeckagent3` staging probe also validates WebFinger, actor, outbox, NodeInfo discovery, NodeInfo 2.1 ActivityPub support, bundle manifest shape, and SQLite consistency with zero diffs against the G2-B strict-gate bundle
@@ -99,16 +99,20 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 
 The project is past fixture-only proof of concept, but it is not production-ready. The next concrete work items are:
 
-1. Keep the deployed-Lambda staging proof repeatable: rerun explicit public article IDs through `federation-export-dev`, ingest the returned manifest into staging gateway, and preserve the Misskey delivery report.
+1. Provision an isolated AWS `gateway-core` origin for the canonical pilot path, then enable `GATEWAY_CORE_ORIGIN` only after `/healthz` reports `component=gateway-core` and actor key files are present.
+   - The AWS origin runbook is [`research/matters-fediverse-compat/03-ops/aws-gateway-core-origin-runbook.md`](research/matters-fediverse-compat/03-ops/aws-gateway-core-origin-runbook.md).
+   - The CloudShell bootstrap script is [`gateway-core/deploy/aws-gateway-core-origin-cloudshell.sh`](gateway-core/deploy/aws-gateway-core-origin-cloudshell.sh).
+   - The origin config must use `instance.activityPathPrefix: "/ap"` for canonical `matters.town/ap/*` identity.
+2. Keep the deployed-Lambda staging proof repeatable: rerun explicit public article IDs through `federation-export-dev`, ingest the returned manifest into staging gateway, and preserve the Misskey delivery report.
    - The repeatable staging runner is `gateway-core/scripts/run-matters-icu-staging-check.mjs`; see [`research/matters-fediverse-compat/03-ops/matters-icu-staging-e2e-check.md`](research/matters-fediverse-compat/03-ops/matters-icu-staging-e2e-check.md).
    - The `record_only` trigger validation runbook is [`research/matters-fediverse-compat/03-ops/record-only-trigger-validation-runbook.md`](research/matters-fediverse-compat/03-ops/record-only-trigger-validation-runbook.md).
    - Product settings, legal/privacy, and production rollout approvals are tracked in [`research/matters-fediverse-compat/05-roadmap/decisions/08-production-rollout-human-approval.md`](research/matters-fediverse-compat/05-roadmap/decisions/08-production-rollout-human-approval.md).
-2. Enable `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only` on the `matters.icu` develop server environment, redeploy or restart that environment, then validate the trigger by publishing a fresh pilot public article, editing the same article, and confirming `federation_export_event` records the strict decision report without invoking production delivery.
+3. Keep `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only` on the `matters.icu` develop server environment and use it only for staging audit validation.
    - The G2-B task note is [`docs/tasks/matters-g2-b-web-app-integration.md`](docs/tasks/matters-g2-b-web-app-integration.md).
    - The product contract slice is [`research/matters-fediverse-compat/02-runtime-slices/g2b-product-contract-slice.md`](research/matters-fediverse-compat/02-runtime-slices/g2b-product-contract-slice.md).
    - The exact staging pilot checklist is [`research/matters-fediverse-compat/03-ops/g2b-staging-pilot-validation-checklist.md`](research/matters-fediverse-compat/03-ops/g2b-staging-pilot-validation-checklist.md).
    - The accepted default is conservative: author federation is off by default, author opt-in is explicit, article setting defaults to `inherit`, `disabled` always wins, and existing public articles are not backfilled automatically on opt-in.
-3. Keep G2-A/G2-B non-production until production credentials, migration timing, legal/privacy review, rollback/takedown checks, and canonical `acct:user@matters.town` cutover are complete. Production private S3 storage and public `Create`/`Update`/`Delete` delivery after rollout are approved.
+4. Keep G2-A/G2-B non-production until production credentials, migration timing, legal/privacy review, rollback/takedown checks, AWS origin backup/restore, and canonical follow proof are complete. Production private S3 storage and public `Create`/`Update`/`Delete` delivery after rollout are approved.
 
 ## G1 roadmap, May-July 2026
 

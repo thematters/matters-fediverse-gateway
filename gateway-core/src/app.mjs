@@ -3563,6 +3563,8 @@ export function createGatewayApp({
             instance: {
               domain: config.instance.domain,
               baseUrl: config.instance.baseUrl,
+              activityPathPrefix: config.instance.activityPathPrefix,
+              activityBaseUrl: config.instance.activityBaseUrl,
             },
             runtime: {
               storeDriver: config.runtime?.storeDriver ?? (store.getRuntimeMetadata?.() ?? {}).driver ?? "unknown",

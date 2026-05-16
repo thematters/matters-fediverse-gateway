@@ -5,6 +5,16 @@ function ensureTrailingSlashless(url) {
   return url.endsWith("/") ? url.slice(0, -1) : url;
 }
 
+function normalizeActivityPathPrefix(value) {
+  const rawValue = value?.trim();
+  if (!rawValue) {
+    return "";
+  }
+
+  const normalized = `/${rawValue.replace(/^\/+|\/+$/gu, "")}`;
+  return normalized === "/" ? "" : normalized;
+}
+
 function normalizeRateLimitPolicies(rawRateLimits) {
   const entries = [
     ["instance-inbound", rawRateLimits?.instanceInbound],
@@ -169,7 +179,11 @@ export async function loadGatewayConfig(configPath) {
   }
 
   const domain = ensureTrailingSlashless(raw.instance.domain.trim());
+  const activityPathPrefix = normalizeActivityPathPrefix(
+    raw.instance.activityPathPrefix ?? raw.instance.publicPathPrefix ?? raw.instance.pathPrefix,
+  );
   const instanceBaseUrl = `https://${domain}`;
+  const instanceActivityBaseUrl = `${instanceBaseUrl}${activityPathPrefix}`;
   const actors = {};
 
   for (const [handle, actor] of Object.entries(raw.actors ?? {})) {
@@ -197,7 +211,7 @@ export async function loadGatewayConfig(configPath) {
       throw new Error(`actors.${handle}.publicKeyPem or publicKeyPemFile is required`);
     }
 
-    const actorUrl = `${instanceBaseUrl}/users/${handle}`;
+    const actorUrl = `${instanceActivityBaseUrl}/users/${handle}`;
     const keyId = actor.keyId?.trim() || `${actorUrl}#main-key`;
     const previousKeyId = previousPublicKeyPem
       ? actor.previousKeyId?.trim() || `${actorUrl}#previous-key`
@@ -215,12 +229,12 @@ export async function loadGatewayConfig(configPath) {
       staticBundleManifestFile: actor.staticBundleManifestFile
         ? path.resolve(configDir, actor.staticBundleManifestFile)
         : null,
-      profileUrl: `${instanceBaseUrl}/@${handle}`,
+      profileUrl: `${instanceActivityBaseUrl}/@${handle}`,
       actorUrl,
-      inboxUrl: `${instanceBaseUrl}/users/${handle}/inbox`,
-      outboxUrl: `${instanceBaseUrl}/users/${handle}/outbox`,
-      followersUrl: `${instanceBaseUrl}/users/${handle}/followers`,
-      followingUrl: `${instanceBaseUrl}/users/${handle}/following`,
+      inboxUrl: `${instanceActivityBaseUrl}/users/${handle}/inbox`,
+      outboxUrl: `${instanceActivityBaseUrl}/users/${handle}/outbox`,
+      followersUrl: `${instanceActivityBaseUrl}/users/${handle}/followers`,
+      followingUrl: `${instanceActivityBaseUrl}/users/${handle}/following`,
       publicKeyPem,
       privateKeyPem,
       keyId,
@@ -241,6 +255,8 @@ export async function loadGatewayConfig(configPath) {
     instance: {
       domain,
       baseUrl: instanceBaseUrl,
+      activityPathPrefix,
+      activityBaseUrl: instanceActivityBaseUrl,
       title: raw.instance.title ?? "Matters Instance",
       summary: raw.instance.summary ?? "",
       softwareName: raw.instance.softwareName ?? "matters-gateway-core",
