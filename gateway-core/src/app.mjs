@@ -1398,6 +1398,24 @@ function getEvidenceRetentionDays(config) {
 
 async function verifySignatureWithRemoteActor({ request, bodyText, remoteActor }) {
   const url = new URL(request.url);
+  const signatureHeaders = new Headers(request.headers);
+  const forwardedHost = request.headers.get("x-forwarded-host")?.trim();
+  const originalUrl = request.headers.get("x-original-url")?.trim();
+  let pathnameWithQuery = `${url.pathname}${url.search}`;
+
+  if (forwardedHost) {
+    signatureHeaders.set("host", forwardedHost);
+  }
+
+  if (originalUrl) {
+    try {
+      const publicUrl = new URL(originalUrl);
+      pathnameWithQuery = `${publicUrl.pathname}${publicUrl.search}`;
+    } catch {
+      // Fall back to the origin URL when the proxy metadata is malformed.
+    }
+  }
+
   const candidates = [
     {
       publicKeyPem: remoteActor.publicKeyPem,
@@ -1416,8 +1434,8 @@ async function verifySignatureWithRemoteActor({ request, bodyText, remoteActor }
     try {
       const verification = verifyHttpSignature({
         method: request.method,
-        pathnameWithQuery: `${url.pathname}${url.search}`,
-        headers: request.headers,
+        pathnameWithQuery,
+        headers: signatureHeaders,
         body: bodyText,
         publicKeyPem: candidate.publicKeyPem,
         expectedKeyId: candidate.keyId,
