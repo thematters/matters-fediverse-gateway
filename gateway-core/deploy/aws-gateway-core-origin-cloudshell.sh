@@ -127,7 +127,10 @@ cat >"$USER_DATA" <<EOF
 set -euxo pipefail
 
 dnf update -y
-dnf install -y git nodejs npm gcc-c++ make python3 sqlite openssl
+dnf install -y git nodejs20 nodejs20-npm gcc-c++ make python3 sqlite openssl
+alternatives --set node /usr/bin/node-20 || true
+node --version
+npm --version
 
 id matters-gateway >/dev/null 2>&1 || useradd --system --create-home --shell /bin/bash matters-gateway
 mkdir -p /opt/matters-gateway /etc/matters-gateway/secrets /var/lib/matters-gateway/runtime /var/lib/matters-gateway/runtime/backups /var/log/matters-gateway
