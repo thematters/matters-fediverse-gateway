@@ -50,6 +50,24 @@ function configuredPilotHandles(env) {
     .filter((handle) => HANDLE_PATTERN.test(handle));
 }
 
+function gatewayCoreOrigin(env) {
+  return env.GATEWAY_CORE_ORIGIN ? trimTrailingSlash(env.GATEWAY_CORE_ORIGIN) : null;
+}
+
+function runtimeMode(env) {
+  return gatewayCoreOrigin(env)
+    ? {
+        mode: "gateway-core-proxy",
+        inboxMode: "persistent",
+        followReadiness: "ready",
+      }
+    : {
+        mode: "edge-demo",
+        inboxMode: "accepted-not-persistent",
+        followReadiness: "blocked",
+      };
+}
+
 function supportedActorHandles(env) {
   return new Set([...BUILTIN_ACTOR_HANDLES, ...configuredPilotHandles(env)]);
 }
@@ -418,7 +436,7 @@ function seedOutbox(base, prefix, env) {
 }
 
 async function proxyToGatewayCore(request, env) {
-  const origin = env.GATEWAY_CORE_ORIGIN && trimTrailingSlash(env.GATEWAY_CORE_ORIGIN);
+  const origin = gatewayCoreOrigin(env);
   if (!origin) {
     return null;
   }
@@ -468,6 +486,7 @@ function landing(request, env) {
     {
       name: "Matters Fediverse Gateway Worker Demo",
       docs: env.PROJECT_DOCS_URL || "https://thematters.github.io/matters-fediverse-gateway/",
+      runtime: runtimeMode(env),
       actor: `acct:${DEFAULT_ACTOR_HANDLE}@${host}`,
       diagnosticActor: `acct:${DIAGNOSTIC_ACTOR_HANDLE}@${host}`,
       pilotActors: configuredPilotHandles(env).map((handle) => `acct:${handle}@${host}`),
@@ -534,7 +553,17 @@ export default {
       return respond(landing(request, env));
     }
     if (path === "/healthz" || path === `${prefix}/healthz`) {
-      return respond(jsonResponse({ ok: true }, 200, "application/json; charset=utf-8", "no-store"));
+      return respond(
+        jsonResponse(
+          {
+            ok: true,
+            runtime: runtimeMode(env),
+          },
+          200,
+          "application/json; charset=utf-8",
+          "no-store",
+        ),
+      );
     }
     if (path === "/icon.svg" || path === `${prefix}/icon.svg`) {
       return respond(textResponse(iconSvg(), 200, "image/svg+xml; charset=utf-8"));
