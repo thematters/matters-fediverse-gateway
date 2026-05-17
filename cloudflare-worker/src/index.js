@@ -30,6 +30,14 @@ function actorUrl(base, prefix = "", handle = DEFAULT_ACTOR_HANDLE) {
   return `${base}${prefix}/users/${handle}`;
 }
 
+function profileUrlForHandle(base, env, handle = DEFAULT_ACTOR_HANDLE) {
+  if (handle === DEFAULT_ACTOR_HANDLE || handle === DIAGNOSTIC_ACTOR_HANDLE) {
+    return env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL;
+  }
+
+  return `${base}/@${handle}`;
+}
+
 function articleUrl(base, prefix = "") {
   return `${base}${prefix}/articles/${ARTICLE_SLUG}`;
 }
@@ -263,6 +271,7 @@ function createActivity(base, prefix = "", handle = DEFAULT_ACTOR_HANDLE) {
 function actorDocument(base, prefix, request, env, handle = DEFAULT_ACTOR_HANDLE) {
   const actor = actorUrl(base, prefix, handle);
   const isDiagnostic = handle === DIAGNOSTIC_ACTOR_HANDLE;
+  const profileUrl = profileUrlForHandle(base, env, handle);
 
   return {
     "@context": ACTIVITY_CONTEXT,
@@ -272,7 +281,7 @@ function actorDocument(base, prefix, request, env, handle = DEFAULT_ACTOR_HANDLE
     name: isDiagnostic ? "Matters Interop" : "Matters",
     summary:
       "Matters is a long-form publishing community. This demo actor shows how public Matters articles can be exposed to the Fediverse through an ActivityPub gateway.",
-    url: env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL,
+    url: profileUrl,
     inbox: `${actor}/inbox`,
     outbox: `${actor}/outbox`,
     followers: `${actor}/followers`,
@@ -300,6 +309,7 @@ function webfinger(request, env) {
   const resource = url.searchParams.get("resource") || subjectFor(request, env);
   const handle = handleFromResource(resource, env);
   const acceptedSubjects = acceptedWebfingerSubjects(base, env);
+  const profileUrl = handle ? profileUrlForHandle(base, env, handle) : null;
 
   if (!handle || !acceptedSubjects.includes(resource)) {
     return jsonResponse(
@@ -316,12 +326,12 @@ function webfinger(request, env) {
   return jsonResponse(
     {
       subject: resource,
-      aliases: [env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL, actorUrl(base, prefix, handle)],
+      aliases: [profileUrl, actorUrl(base, prefix, handle)],
       links: [
         {
           rel: "http://webfinger.net/rel/profile-page",
           type: "text/html",
-          href: env.MATTERS_PROFILE_URL || ARTICLE_SOURCE_URL,
+          href: profileUrl,
         },
         {
           rel: "self",

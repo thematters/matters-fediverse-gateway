@@ -40,6 +40,14 @@ test("configured canonical pilot handle exposes WebFinger and actor routes", asy
 
   assert.equal(webfingerResponse.status, 200);
   assert.equal(webfinger.subject, "acct:mashbeanmatters@matters.town");
+  assert.deepEqual(webfinger.aliases, [
+    "https://matters.town/@mashbeanmatters",
+    "https://matters.town/ap/users/mashbeanmatters",
+  ]);
+  assert.equal(
+    webfinger.links.find((link) => link.rel === "http://webfinger.net/rel/profile-page")?.href,
+    "https://matters.town/@mashbeanmatters",
+  );
   assert.equal(
     webfinger.links.some(
       (link) =>
@@ -55,6 +63,7 @@ test("configured canonical pilot handle exposes WebFinger and actor routes", asy
   assert.equal(actorResponse.status, 200);
   assert.equal(actor.type, "Person");
   assert.equal(actor.id, "https://matters.town/ap/users/mashbeanmatters");
+  assert.equal(actor.url, "https://matters.town/@mashbeanmatters");
   assert.equal(actor.inbox, "https://matters.town/ap/users/mashbeanmatters/inbox");
   assert.equal(actor.outbox, "https://matters.town/ap/users/mashbeanmatters/outbox");
   assert.equal(actor.publicKey.owner, actor.id);
