@@ -1,8 +1,8 @@
 # Production Rollout Human Approval Brief
 
 Date: 2026-05-05
-Last updated: 2026-05-13
-Status: partially approved; final launch window still pending
+Last updated: 2026-05-17
+Status: production preparation approved for pilot; full rollout still pending
 
 This brief is for product settings, legal/privacy, and production rollout decisions that should not be silently automated. Engineering can keep building and staging, but these items need explicit approval before public production enablement.
 
@@ -22,6 +22,23 @@ The product owner approved these rollout decisions in session:
 - Canonical `acct:user@matters.town` cutover waits until staging E2E, rollback, and takedown checks pass.
 - Production public `Create`, `Update`, and `Delete` delivery is approved once production gateway rollout is otherwise enabled; no separate delivery go/no-go is required.
 - Launch window is intentionally deferred until the remaining implementation and staging checks are complete.
+
+## 2026-05-17 Accepted Decisions
+
+The product owner approved these additional rollout decisions in session:
+
+- Threads is not a launch blocker.
+- Engineering may enter production rollout preparation, but must not enable full outbound delivery.
+- The next production-facing step is record-only plus narrow pilot-author observation.
+- Pilot author: `mashbean`.
+- Production actor keys should use a new versioned key id, not the old Worker demo `#main-key`.
+
+Current pilot evidence:
+
+- Canonical pilot Article delivery to Mastodon / g0v.social and Misskey / gyutte.site passed.
+- Misskey reply, reaction/like, and renote/boost returned to gateway-core and were persisted.
+- Mastodon visibility passed; Mastodon interaction return still needs a write-scoped test token or browser-based manual action because the current g0v.social token is read-only.
+- Evidence report: [`canonical-pilot-article-interop-20260517.md`](../../03-ops/canonical-pilot-article-interop-20260517.md).
 
 ## User-Facing Copy Draft
 
@@ -83,6 +100,7 @@ Approve this staging-to-production policy:
 | Article override | `disabled` blocks export, `enabled` only works when author is opted in | Prevents article-level override from bypassing author consent. |
 | Public filter | Active public articles only | Matches current Matters usage while keeping old private/paid paths outside federation. |
 | Pilot scope | No named pilot author list required; broad access is acceptable while default-off and explicit opt-in remain in force | Removes launch-list overhead without federating anyone by default. |
+| First production-facing pilot | Start with `mashbean` only, in record-only / observation mode before broader rollout | Keeps the first real identity path narrow while preserving default-off behavior. |
 | User-facing copy | Use the draft copy in this brief as the next product-copy baseline | Explains external replication without making the setting scary or vague. |
 
 ## Legal / Privacy
@@ -104,6 +122,7 @@ Approve this staging-to-production policy:
 | Storage | Use private S3 for production generated bundles; staging may continue direct return or private staging output | S3 gives production audit/retry while keeping bundle output private by default. |
 | Gateway state | SQLite remains runtime source for the current gateway slice | Already chosen for staging; backup/restore remains required. |
 | Canonical identity | Delay `acct:user@matters.town` until staging E2E and rollback pass | Prevents premature public identity commitment. |
+| Production key id | Use a fresh versioned gateway-core key id for production actors | Avoids remote instance public-key cache conflicts from earlier demo keys. |
 | Public delivery | Public `Create`, `Update`, and `Delete` delivery is approved once production gateway rollout is otherwise enabled | No separate delivery decision is required after production gates pass. |
 | Rollback | Disable author opt-in, stop async export, preserve gateway evidence, then remove public routing if needed | Keeps rollback clear and reversible. |
 
@@ -118,7 +137,8 @@ Before production beta, confirm:
 - [ ] External federation persistence notice.
 - [x] Production private S3 decision.
 - [ ] Production Lambda secrets owner.
-- [ ] Gateway canonical domain and actor key owner.
+- [x] Gateway canonical domain and versioned key-id strategy.
+- [ ] Actor key owner.
 - [ ] Rollback owner and launch window.
 
 ## Not Yet Approved
