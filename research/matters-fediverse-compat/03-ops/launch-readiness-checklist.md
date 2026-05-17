@@ -92,6 +92,11 @@
   canonical gateway health, WebFinger, actor paths, outbox, followers,
   `record_only`, pilot author `mashbean`, full outbound disabled, and versioned
   key id without sending ActivityPub activities.
+- 2026-05-17 read-only production record-only preflight passed with
+  `ok=true`: `https://matters.town` is in `gateway-core-proxy` mode, origin
+  health reports `component=gateway-core` and `storeDriver=sqlite`, WebFinger
+  resolves `acct:mashbeanmatters@matters.town`, actor key id is
+  `#gateway-core-20260517`, outbox is readable, and followers total is `2`.
 - Production gateway hosting, private S3 bundle storage, production secrets
   ownership, legal takedown owner, privacy notice, key exposure/rotation owner,
   live rollback rehearsal, and launch communication remain explicit human
