@@ -2130,6 +2130,10 @@ export function createGatewayApp({
 
     const items = store.getOutboundItems?.({}) ?? [];
     for (const item of items) {
+      if (item?.activity?.id === objectId) {
+        return item.activity;
+      }
+
       const object = item?.activity?.object;
       if (object && typeof object === "object" && object.id === objectId) {
         return object;
@@ -5836,7 +5840,8 @@ export function createGatewayApp({
       }
 
       if (isReadMethod(request.method)) {
-        const object = resolveOutboundObjectById(`${url.origin}${pathname}`);
+        const objectId = request.headers.get("x-original-url")?.trim() || `${url.origin}${pathname}`;
+        const object = resolveOutboundObjectById(objectId);
         if (object) {
           return activityResponse(object, 200, DISCOVERY_RESPONSE_HEADERS);
         }
