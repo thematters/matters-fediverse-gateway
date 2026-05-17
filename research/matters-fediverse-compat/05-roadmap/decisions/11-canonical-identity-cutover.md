@@ -25,8 +25,9 @@ identity `acct:mashbeanmatters@matters.town`.
 - Threads web UI search still does not show the profile as of the first
   post-bypass retest. Treat this as a Threads indexing/UI compatibility item,
   not a WebFinger or Cloudflare challenge failure.
-- Read-only remote discovery also works from g0v.social Mastodon and
-  gyutte.site Misskey for `mashbeanmatters@matters.town`.
+- Read-only remote discovery works from g0v.social Mastodon and gyutte.site
+  Misskey for `mashbeanmatters@matters.town`; visible follow proof now also
+  converges on both platforms.
 - Worker deploy `b002f589-f9d3-4cf3-b389-0e137e36efc9` added live follow
   readiness reporting. `https://matters.town/ap/healthz` currently reports
   `mode=edge-demo`, `inboxMode=accepted-not-persistent`, and
@@ -39,6 +40,12 @@ identity `acct:mashbeanmatters@matters.town`.
   `GATEWAY_CORE_ORIGIN/healthz` returns `component=gateway-core`.
 - This cutover did not change production DNS, production backend settings,
   production delivery, or formal Matters article/user data.
+- Misskey initially kept the canonical follow pending because gyutte.site had
+  cached the earlier Worker demo actor key under `#main-key`. The staging
+  gateway actor now uses key id
+  `https://matters.town/ap/users/mashbeanmatters#gateway-core-20260517`,
+  after which gyutte.site remote-user refresh plus cancel/re-follow converged
+  to `isFollowing=true`.
 
 ## Identity Contract
 
@@ -54,7 +61,7 @@ the pilot author.
 | Outbox | `https://matters.town/ap/users/mashbeanmatters/outbox` |
 | Followers | `https://matters.town/ap/users/mashbeanmatters/followers` |
 | Following | `https://matters.town/ap/users/mashbeanmatters/following` |
-| Public key id | `https://matters.town/ap/users/mashbeanmatters#main-key` |
+| Public key id | `https://matters.town/ap/users/mashbeanmatters#gateway-core-20260517` for the current staging pilot; production should use a fresh, versioned gateway-core key id instead of reusing the old Worker demo `#main-key` |
 
 Use the `/ap/users/<handle>` actor path for the first cutover because the
 current `matters.town` Worker route already owns the narrow `/ap/*` namespace.
@@ -93,8 +100,8 @@ actors for the same author.
    - Search `mashbeanmatters@matters.town` from Mastodon and Misskey.
    - Search from Threads after the canonical surface is visible and no longer
      challenged by Cloudflare.
-   - Status: machine probes pass; Mastodon and Misskey read-only discovery
-     pass; Threads UI search is still unresolved.
+   - Status: machine probes pass; Mastodon and Misskey discovery and follow
+     proof pass; Threads discovery passes but follow is still unresolved.
 
 5. **Staging follower boundary**
    - Treat existing `staging-gateway.matters.town` followers as test-only.
@@ -182,8 +189,13 @@ ActivityPub behavior second.
   the canonical `matters.town` actor path.
 - Mastodon resolves `mashbeanmatters@matters.town` through read-only API.
 - Misskey resolves `mashbeanmatters@matters.town` through read-only API.
-- Mastodon/Misskey follow should be tested only when the team is ready to
-  create canonical pilot followers.
+- Mastodon and Misskey canonical follow proof should show persistent state:
+  Mastodon writes an accepted SQLite follower row on the gateway side, and
+  gyutte.site Misskey `users/relation` returns `isFollowing=true`.
+- When moving from Worker demo to gateway-core for an existing actor id, do not
+  reuse the same public key id with different key material. Use a new key id
+  fragment and refresh or recreate the remote follow if an instance has cached
+  the demo key.
 - `npm run check:follow-readiness -- --base-url https://matters.town --handle mashbeanmatters`
   returns `ok: true` before any canonical follow proof is attempted.
 - Threads can discover the canonical pilot profile, but follow still does not
