@@ -37,6 +37,12 @@ New baseline:
   - Historical staging checks remain available with `--base-url`.
 - `gateway-core/scripts/run-mastodon-readback.mjs`
   - Default readback account is now `mashbeanmatters@matters.town`.
+- `gateway-core/scripts/check-production-record-only-preflight.mjs`
+  - Read-only preflight now checks the canonical pilot surface before
+    production record-only / observation.
+  - It verifies `record_only`, `mashbean`, full outbound disabled, gateway-core
+    persistent health, WebFinger, actor URLs, outbox, followers, and versioned
+    key id.
 - `research/matters-fediverse-compat/04-status/next-steps.md`
   - Immediate work now starts from production record-only / `mashbean` pilot
     preparation.
@@ -70,6 +76,7 @@ explicitly says the test is about staging history:
 cd gateway-core
 npm run check:threads-discovery
 npm run check:mastodon-readback -- --expected-url <canonical-article-url>
+npm run check:production-record-only
 ```
 
 Use staging hostnames only for archived staging proofs or pre-production
