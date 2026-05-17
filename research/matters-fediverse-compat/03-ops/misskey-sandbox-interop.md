@@ -83,3 +83,5 @@ npm run report:interop -- \
 - 2026-05-02 已對 gyutte.site 執行外部 follow probe，結果 `passed`
 - 公開 report 已封存：`research/matters-fediverse-compat/03-ops/misskey-public-run-20260502T152117Z.md`
 - gyutte.site 對 `ap/show` 回 400；script 已 fallback 到 `users/show`，並成功 follow `alice@staging-gateway.matters.town`
+- 2026-05-17 已對 canonical `acct:mashbeanmatters@matters.town` 完成 follow convergence：gateway-core 收到 gyutte.site signed Follow、回送 delivered Accept，gyutte.site `users/relation` 最後回 `isFollowing: true`
+- 若 canonical follow 卡在 `hasPendingFollowRequestFromYou=true`，先檢查遠端 instance 是否快取了舊 actor public key。這次 gyutte.site 的解法是把 staging actor key id 從早期 Worker demo `#main-key` 換成 `#gateway-core-20260517`，呼叫 Misskey `federation/update-remote-user`，再 cancel/re-follow。
