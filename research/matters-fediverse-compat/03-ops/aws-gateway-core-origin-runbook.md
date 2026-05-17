@@ -167,16 +167,32 @@ The 2026-05-16 canonical Mastodon follow proof passed for
   `https://g0v.social/users/mashbean`.
 - gateway-core delivered the signed `Accept` to g0v.social with HTTP 202.
 
-Misskey canonical follow is still open at the relationship-convergence layer.
-gyutte.site resolves the canonical profile and now sends signed `Follow`
-activities to gateway-core. gateway-core verifies the request, records accepted
-SQLite follower state, and delivers a signed `Accept` with HTTP 202. Interop
-hardening PRs #50, #51, and #52 made the response more explicit by adding a
-direct `to` audience, sending Follow responses to the actor inbox, and
-referencing the inbound Follow id. After redeploying those changes, gyutte.site
-still reports `hasPendingFollowRequestFromYou=true` instead of
-`isFollowing=true`. The remaining diagnosis needs gyutte.site/Misskey inbox job
-logs or admin-side error visibility.
+The 2026-05-17 canonical Misskey follow proof passed after key-id cache
+hardening:
+
+- gyutte.site resolves `mashbeanmatters@matters.town`.
+- gateway-core verifies signed `Follow`, records accepted SQLite follower
+  state, and delivers signed `Accept` with HTTP 202.
+- PR #57 made outbound `Accept` activities dereferenceable through
+  `/ap/activities/*`.
+- The staging actor key id was moved from the earlier Worker demo `#main-key`
+  to `#gateway-core-20260517`, then gyutte.site remote-user refresh plus
+  cancel/re-follow converged to `isFollowing=true`.
+
+Do not reuse a public key id with different key material when moving from the
+Worker demo actor to gateway-core. Use a fresh versioned key id for production
+actors.
+
+The 2026-05-17 canonical pilot Article interop run also passed for
+`acct:mashbeanmatters@matters.town`:
+
+- gateway-core delivered a pilot Article to g0v.social and gyutte.site.
+- Mastodon readback found the Article status.
+- Misskey `users/notes` found the Article note.
+- Misskey reply, reaction/like, and renote/boost returned to gateway-core as
+  `reply.stored`, `like.stored`, and `announce.stored`.
+- The available g0v.social token is read-only, so Mastodon interaction return
+  testing requires a write-scoped test token or browser action.
 
 The 2026-05-16 backup/restore drill also passed without overwriting the live
 database:
