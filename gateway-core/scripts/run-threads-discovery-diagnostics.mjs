@@ -22,10 +22,11 @@ const META_USER_AGENTS = [
 
 function parseArgs(argv) {
   const options = {
-    baseUrl: "https://staging-gateway.matters.town",
+    baseUrl: null,
     handle: "mashbeanmatters",
     canonicalDomain: "matters.town",
     canonicalBaseUrl: null,
+    actorPathPrefix: null,
     outputFile: null,
   };
 
@@ -39,6 +40,8 @@ function parseArgs(argv) {
       options.canonicalDomain = argv[++index];
     } else if (arg === "--canonical-base-url") {
       options.canonicalBaseUrl = argv[++index];
+    } else if (arg === "--actor-path-prefix") {
+      options.actorPathPrefix = argv[++index];
     } else if (arg === "--output-file") {
       options.outputFile = argv[++index];
     } else {
@@ -46,8 +49,14 @@ function parseArgs(argv) {
     }
   }
 
+  options.baseUrl = options.baseUrl ?? process.env.THREADS_DISCOVERY_BASE_URL ?? "https://matters.town";
   options.baseUrl = options.baseUrl.replace(/\/+$/u, "");
   options.canonicalBaseUrl = options.canonicalBaseUrl?.replace(/\/+$/u, "") || null;
+  options.actorPathPrefix =
+    options.actorPathPrefix ??
+    process.env.THREADS_DISCOVERY_ACTOR_PATH_PREFIX ??
+    (new URL(options.baseUrl).host === "matters.town" ? "/ap" : "");
+  options.actorPathPrefix = `/${options.actorPathPrefix.replace(/^\/+|\/+$/gu, "")}`.replace(/^\/$/u, "");
   options.handle = options.handle.trim();
   options.canonicalDomain = options.canonicalDomain?.trim() || null;
 
@@ -189,7 +198,7 @@ function evaluate({ probes, stagingAcct, canonicalAcct, actorUrl, canonicalDomai
 
   if (canonicalDomain && canonicalWebfinger?.status !== 200) {
     warnings.push(
-      `${canonicalAcct} is not currently discoverable from the configured canonical surface; Threads tests should use ${stagingAcct} until canonical identity cutover is implemented`,
+      `${canonicalAcct} is not currently discoverable from the configured canonical surface; Threads discovery remains unproven until this returns 200`,
     );
   }
 
@@ -205,7 +214,7 @@ async function main() {
   const baseHost = new URL(options.baseUrl).host;
   const stagingAcct = `acct:${options.handle}@${baseHost}`;
   const canonicalAcct = options.canonicalDomain ? `acct:${options.handle}@${options.canonicalDomain}` : null;
-  const actorPath = `/users/${options.handle}`;
+  const actorPath = `${options.actorPathPrefix}/users/${options.handle}`;
   const actorUrl = `${options.baseUrl}${actorPath}`;
 
   const endpoints = [
@@ -276,6 +285,7 @@ async function main() {
     scope: {
       baseUrl: options.baseUrl,
       handle: options.handle,
+      actorPathPrefix: options.actorPathPrefix,
       stagingAcct,
       canonicalAcct,
       canonicalBaseUrl: options.canonicalBaseUrl,

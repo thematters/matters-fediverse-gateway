@@ -35,16 +35,18 @@ https://matters.town/.well-known/nodeinfo
 https://matters.town/ap/instance-info/2.1
 ```
 
-Canonical pilot handles are closed by default. To expose a pilot handle such as
-`acct:mashbeanmatters@matters.town`, deploy with an explicit allowlist:
+Canonical pilot handles are closed by default. The current pilot exposes
+`acct:mashbeanmatters@matters.town` through an explicit allowlist:
 
 ```toml
 [vars]
 CANONICAL_PILOT_HANDLES = "mashbeanmatters"
 ```
 
-Do not set this variable on the production route until the canonical identity
-cutover gate, Cloudflare cache/WAF review, and rollback plan have been approved.
+Do not expand this variable beyond the approved pilot handles until product,
+legal/privacy, rollback, and launch gates are closed. The current approved
+production-preparation mode is `mashbean` only, record-only / observation, with
+full outbound delivery still disabled.
 
 The isolated Worker testbed remains:
 
@@ -168,3 +170,8 @@ GATEWAY_CORE_ORIGIN = "https://gateway-core.example"
 ```
 
 When `GATEWAY_CORE_ORIGIN` is unset, the current demo accepts inbox POST requests only as an edge demo. When it is set, configured canonical pilot handles such as `mashbeanmatters` proxy actor, outbox, followers, and following reads to `gateway-core`, and inbox POST requests are also forwarded with the `/ap` prefix stripped for the origin. Production federation still requires `gateway-core` for signature verification, followers state, delivery queues, moderation, and persistence.
+
+The active canonical pilot uses the AWS `gateway-core` origin behind the
+Worker. Keep actor keys on a fresh versioned key id when moving real pilot
+actors to gateway-core; do not reuse an earlier Worker demo `#main-key` with
+new gateway-core key material.
