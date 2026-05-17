@@ -172,7 +172,9 @@ ActivityPub behavior second.
 - `npm run check:threads-discovery -- --canonical-base-url https://matters.town`
   passes after canonical exposure and Cloudflare crawler bypass.
 - `curl https://matters.town/.well-known/webfinger?resource=acct:mashbeanmatters@matters.town`
-  returns `200` and subject `acct:mashbeanmatters@matters.town`.
+  returns `200`, subject `acct:mashbeanmatters@matters.town`, profile-page
+  `https://matters.town/@mashbeanmatters`, and self
+  `https://matters.town/ap/users/mashbeanmatters`.
 - The same WebFinger URL returns `200` for `facebookexternalua`,
   `facebookexternalhit`, and `meta-externalagent`.
 - `https://matters.town/ap/users/mashbeanmatters` returns a `Person` whose
@@ -184,10 +186,9 @@ ActivityPub behavior second.
   create canonical pilot followers.
 - `npm run check:follow-readiness -- --base-url https://matters.town --handle mashbeanmatters`
   returns `ok: true` before any canonical follow proof is attempted.
-- Threads has been retested after the canonical route became visible; search
-  still has no profile result / can hang in loading state. Record it as
-  platform indexing or compatibility evidence, not as a gateway WebFinger
-  failure.
+- Threads can discover the canonical pilot profile, but follow still does not
+  complete. Record it as a Follow compatibility problem unless WebFinger or
+  actor probes regress.
 - SQLite consistency scan returns `totalDiffs=0`.
 - Delivery queue returns to zero pending and zero dead letters after the first
   approved pilot delivery.
