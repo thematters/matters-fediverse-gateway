@@ -7900,6 +7900,7 @@ test("config loader supports a public ActivityPub path prefix behind an edge pro
   assert.equal(config.instance.activityPathPrefix, "/ap");
   assert.equal(config.instance.activityBaseUrl, "https://matters.example/ap");
   assert.equal(config.actors.alice.actorUrl, "https://matters.example/ap/users/alice");
+  assert.equal(config.actors.alice.profileUrl, "https://matters.example/@alice");
   assert.equal(config.actors.alice.inboxUrl, "https://matters.example/ap/users/alice/inbox");
   assert.equal(config.actors.alice.keyId, "https://matters.example/ap/users/alice#main-key");
 });

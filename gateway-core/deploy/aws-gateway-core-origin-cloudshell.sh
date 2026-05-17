@@ -169,6 +169,7 @@ cat >/etc/matters-gateway/staging.instance.json <<'JSON'
       "displayName": "mashbean",
       "summary": "Canonical Matters Fediverse pilot actor",
       "autoAcceptFollows": true,
+      "profileUrl": "https://matters.town/@mashbeanmatters",
       "aliases": ["https://matters.town/@mashbean"],
       "publicKeyPemFile": "./secrets/mashbeanmatters-public-key.pem",
       "privateKeyPemFile": "./secrets/mashbeanmatters-private-key.pem"
