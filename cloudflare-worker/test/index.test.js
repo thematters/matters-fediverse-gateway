@@ -257,3 +257,44 @@ test("canonical pilot actor reads proxy to gateway-core when origin is configure
     globalThis.fetch = originalFetch;
   }
 });
+
+test("canonical activity reads proxy to gateway-core when origin is configured", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init });
+    return new Response(
+      JSON.stringify({
+        "@context": "https://www.w3.org/ns/activitystreams",
+        id: "https://matters.town/ap/activities/accept-1",
+        type: "Accept",
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/activity+json" },
+      },
+    );
+  };
+
+  try {
+    const response = await fetchWorker("/ap/activities/accept-1", {
+      ...canonicalEnv,
+      CANONICAL_PILOT_HANDLES: "mashbeanmatters",
+      GATEWAY_CORE_ORIGIN: "https://gateway-origin.example.test/",
+    });
+    const activity = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(activity.type, "Accept");
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, "https://gateway-origin.example.test/activities/accept-1");
+    assert.equal(calls[0].init.headers.get("x-forwarded-prefix"), "/ap");
+    assert.equal(
+      calls[0].init.headers.get("x-original-url"),
+      "https://matters.town/ap/activities/accept-1",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

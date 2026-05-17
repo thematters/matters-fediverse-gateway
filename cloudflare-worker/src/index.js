@@ -706,6 +706,12 @@ export default {
     if (actorHandle && actorSubpath === "inbox") {
       return respond(activityResponse(collection(`${actorUrl(base, prefix, actorHandle)}/inbox`)));
     }
+    if (path.startsWith(`${prefix}/activities/`)) {
+      const proxied = await proxyToGatewayCore(request, env);
+      if (proxied) {
+        return respond(proxied);
+      }
+    }
     if (path === `${prefix}/articles/${ARTICLE_SLUG}`) {
       return respond(activityResponse(mattersArticle(base, prefix)));
     }

@@ -2742,6 +2742,28 @@ test("signed Follow is accepted, persisted, and queued for delivery", async () =
   assert.deepEqual(deliveries[0].activity.to, ["https://remote.example/users/zoe"]);
   assert.equal(deliveries[0].targetInbox, "https://remote.example/users/zoe/inbox");
 
+  const acceptResponse = await app.handle(
+    new Request(deliveries[0].activity.id, {
+      headers: { accept: "application/activity+json" },
+    }),
+  );
+  const acceptDocument = await acceptResponse.json();
+  assert.equal(acceptResponse.status, 200);
+  assert.equal(acceptDocument.type, "Accept");
+  assert.equal(acceptDocument.id, deliveries[0].activity.id);
+
+  const proxiedAcceptResponse = await app.handle(
+    new Request(deliveries[0].activity.id.replace("https://matters.example", "https://gateway-core-origin.example"), {
+      headers: {
+        accept: "application/activity+json",
+        "x-original-url": deliveries[0].activity.id,
+      },
+    }),
+  );
+  const proxiedAcceptDocument = await proxiedAcceptResponse.json();
+  assert.equal(proxiedAcceptResponse.status, 200);
+  assert.equal(proxiedAcceptDocument.id, deliveries[0].activity.id);
+
   const snapshot = store.getSnapshot();
   assert.equal(snapshot.actors.alice.followers["https://remote.example/users/zoe"].status, "accepted");
   assert.equal(snapshot.outboundQueue[0].status, "delivered");
