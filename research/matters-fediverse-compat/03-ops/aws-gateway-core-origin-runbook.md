@@ -97,6 +97,7 @@ For canonical `matters.town` through the Worker `/ap` route, the origin config m
       "displayName": "mashbean",
       "summary": "Canonical Matters Fediverse pilot actor",
       "autoAcceptFollows": true,
+      "profileUrl": "https://matters.town/@mashbeanmatters",
       "aliases": ["https://matters.town/@mashbean"],
       "publicKeyPemFile": "./secrets/mashbeanmatters-public-key.pem",
       "privateKeyPemFile": "./secrets/mashbeanmatters-private-key.pem"

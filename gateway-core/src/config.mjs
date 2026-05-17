@@ -216,6 +216,7 @@ export async function loadGatewayConfig(configPath) {
     const previousKeyId = previousPublicKeyPem
       ? actor.previousKeyId?.trim() || `${actorUrl}#previous-key`
       : null;
+    const profileUrl = actor.profileUrl?.trim() || `${instanceBaseUrl}/@${handle}`;
 
     actors[handle] = {
       handle,
@@ -229,7 +230,7 @@ export async function loadGatewayConfig(configPath) {
       staticBundleManifestFile: actor.staticBundleManifestFile
         ? path.resolve(configDir, actor.staticBundleManifestFile)
         : null,
-      profileUrl: `${instanceActivityBaseUrl}/@${handle}`,
+      profileUrl,
       actorUrl,
       inboxUrl: `${instanceActivityBaseUrl}/users/${handle}/inbox`,
       outboxUrl: `${instanceActivityBaseUrl}/users/${handle}/outbox`,
