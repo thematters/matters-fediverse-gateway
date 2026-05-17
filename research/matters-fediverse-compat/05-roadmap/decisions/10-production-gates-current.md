@@ -28,6 +28,7 @@ endpoint.
 | Canonical pilot Article visibility | Cleared for Mastodon and Misskey | Pilot Article `https://matters.town/ap/articles/canonical-pilot-article-20260517t042821z` is visible through Mastodon readback and Misskey `users/notes`. |
 | Canonical Misskey interaction return | Cleared | Misskey reply, reaction/like, and renote returned to gateway-core and were persisted as `reply.stored`, `like.stored`, and `announce.stored`. |
 | Production preparation mode | Approved for narrow pilot | Product approved `mashbean` as the first pilot author, record-only / observation mode, and a fresh versioned key id. Full outbound remains disabled. |
+| Production record-only preflight | Cleared as read-only check | `npm run check:production-record-only` validates canonical gateway health, WebFinger, actor, outbox, followers, `record_only`, pilot author `mashbean`, full outbound disabled, and versioned key id without sending ActivityPub activities. |
 
 ## Still Open Before Production
 

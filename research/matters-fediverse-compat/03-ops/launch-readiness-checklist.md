@@ -28,7 +28,10 @@
 
 ## Social Loop
 
-- 外部 reply、like、announce 可進入 Matters 事件流
+- 外部 reply、like、announce 可進入 gateway-core 事件流；2026-05-17
+  Misskey canonical pilot Article reply、reaction/like、renote 已回到
+  gateway-core 並寫入 SQLite。Mastodon 互動回傳仍需 write-scoped token 或
+  browser action。
 - Matters 的 update 已在 staging outbound delivery 驗證；bounded staging
   delete proof 也已完成，g0v.social 對刪除後 status 回 `404`
 
@@ -59,15 +62,13 @@
 
 ## Current Pre-Production Gaps
 
-- Threads actor discovery remains unresolved in the web UI even after canonical
-  `acct:mashbeanmatters@matters.town` WebFinger and Meta crawler probes return
-  200. Treat this as compatibility/indexing work, not as proof that the gateway
-  ActivityPub core failed.
+- Threads can discover the canonical pilot profile, but Follow still does not
+  complete. Treat this as compatibility work, not as proof that the gateway
+  ActivityPub core failed or as a launch blocker.
 - Canonical Mastodon follow proof for `mashbeanmatters@matters.town` has passed
-  on g0v.social. Misskey canonical Follow reaches gateway-core and Accept
-  delivery returns HTTP 202, but gyutte.site still reports
-  `hasPendingFollowRequestFromYou=true`; relationship convergence now needs
-  Misskey-side inbox job logs or admin error visibility.
+  on g0v.social. Misskey canonical Follow now also converges on gyutte.site
+  after the actor key id moved to the versioned gateway-core key id
+  `#gateway-core-20260517`.
 - `GATEWAY_CORE_ORIGIN` is active for the narrow canonical pilot path and
   `check:follow-readiness` returns `ok: true`; live mode is
   `gateway-core-proxy`, not `edge-demo`.
@@ -80,6 +81,11 @@
   configured pilot actor. The Worker proxies configured pilot actor reads and
   inbox writes to `gateway-core`; the origin config sets
   `instance.activityPathPrefix` to `/ap`.
+- The read-only production record-only preflight is available as
+  `cd gateway-core && npm run check:production-record-only`. It checks
+  canonical gateway health, WebFinger, actor paths, outbox, followers,
+  `record_only`, pilot author `mashbean`, full outbound disabled, and versioned
+  key id without sending ActivityPub activities.
 - Production gateway hosting, private S3 bundle storage, production secrets
   ownership, legal takedown owner, privacy notice, key exposure/rotation owner,
   live rollback rehearsal, and launch communication remain explicit human

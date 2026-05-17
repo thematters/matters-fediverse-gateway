@@ -26,6 +26,7 @@
     "check:matters-icu-staging": "node scripts/run-matters-icu-staging-check.mjs",
     "check:mastodon-readback": "node scripts/run-mastodon-readback.mjs",
     "check:threads-discovery": "node scripts/run-threads-discovery-diagnostics.mjs",
+    "check:production-record-only": "node scripts/check-production-record-only-preflight.mjs",
     "run:inbound-reconciliation": "node scripts/run-inbound-reconciliation-job.mjs",
     "check:record-only-trigger": "node scripts/check-record-only-trigger-report.mjs",
     "check:gotosocial-contract": "node scripts/run-gotosocial-sandbox-interop.mjs --dry-run-contract",

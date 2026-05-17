@@ -79,7 +79,7 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 - Canonical pilot Article visibility now passes on Mastodon / g0v.social and Misskey / gyutte.site; Misskey reply, like, and boost-style interactions return to gateway-core and persist as SQLite inbound state. Evidence: [`canonical-pilot-article-interop-20260517.md`](research/matters-fediverse-compat/03-ops/canonical-pilot-article-interop-20260517.md)
 - The 2026-05-17 feature dependency audit updated the dependent scripts, gates, and runbooks for the new baseline: canonical `matters.town` pilot identity, `mashbean` record-only / observation preparation, versioned key id, and Threads as a non-blocking compatibility track. See [`12-feature-dependency-audit-20260517.md`](research/matters-fediverse-compat/05-roadmap/decisions/12-feature-dependency-audit-20260517.md).
 - GoToSocial probe has local contract coverage; public GoToSocial run is intentionally deferred
-- 135 `gateway-core` automated tests passing in the latest local verification snapshot after rebuilding `better-sqlite3` for the current local Node runtime
+- 137 `gateway-core` automated tests passing in the latest local verification snapshot after rebuilding `better-sqlite3` for the current local Node runtime
 - Public static ActivityPub prototype endpoints and seed bundle live under `thematters.github.io`
 - Canonical Matters-domain Cloudflare Worker routes are deployed under `matters.town`, including the pilot actor `acct:mashbeanmatters@matters.town`; configured pilot reads and inbox writes are proxied to the AWS `gateway-core` origin
 - Isolated Cloudflare Worker testbed remains deployed under `gateway-demo.matters.town`
@@ -118,6 +118,7 @@ The project is past fixture-only proof of concept, but it is not production-read
    - The exact staging pilot checklist is [`research/matters-fediverse-compat/03-ops/g2b-staging-pilot-validation-checklist.md`](research/matters-fediverse-compat/03-ops/g2b-staging-pilot-validation-checklist.md).
    - The accepted default is conservative: author federation is off by default, author opt-in is explicit, article setting defaults to `inherit`, `disabled` always wins, and existing public articles are not backfilled automatically on opt-in.
 4. Production preparation may proceed for the `mashbean` pilot author in record-only / observation mode, but full outbound delivery remains gated. Mastodon canonical follow proof, Misskey canonical follow convergence, canonical pilot Article visibility, Misskey interaction return, and AWS origin offline backup/restore proof have passed. Threads follow is not a launch blocker and remains an open compatibility track. Production private S3 storage and public `Create`/`Update`/`Delete` delivery after rollout are approved.
+   - The read-only production preparation preflight is `cd gateway-core && npm run check:production-record-only`. It checks canonical gateway health, WebFinger, actor paths, outbox, followers, `record_only`, pilot author `mashbean`, full outbound disabled, and versioned key id without sending ActivityPub activities.
 
 ## G1 roadmap, May-July 2026
 

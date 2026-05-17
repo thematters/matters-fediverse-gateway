@@ -72,10 +72,13 @@ Updated: 2026-05-17
    Threads Follow failure.
 3. Prepare production record-only / observation wiring for the `mashbean` pilot
    author only. Do not enable full outbound delivery.
-4. Keep using `check:mastodon-readback` after each pilot `Create`, `Update`,
+4. Run `npm run check:production-record-only` before any production backend
+   setting change. This is read-only and must pass before entering production
+   record-only / observation.
+5. Keep using `check:mastodon-readback` after each pilot `Create`, `Update`,
    `Reply`, or `Delete` delivery run. Use a write-scoped Mastodon token or a
    browser-based manual action before claiming Mastodon interaction return.
-5. Preserve the versioned key-id rule for production actors; do not reuse the
+6. Preserve the versioned key-id rule for production actors; do not reuse the
    earlier Worker demo `#main-key` with gateway-core key material.
 
 ## Human Gates Before Production
