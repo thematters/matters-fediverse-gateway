@@ -15,6 +15,8 @@ New baseline:
 - Canonical identity: `acct:mashbeanmatters@matters.town`.
 - Actor key strategy: use a fresh versioned gateway-core key id; do not reuse a
   Worker demo `#main-key` with new gateway-core key material.
+- User-facing Fediverse UI eligibility now comes from
+  `User.features.fediverseBeta`, not admin-only `User.oss.featureFlags`.
 
 ## Dependency Corrections
 
@@ -28,6 +30,7 @@ New baseline:
 | Interaction return | Interaction return was unproven | Misskey reply / like / renote return is persisted; Mastodon interaction return still needs write scope |
 | Production path | Production rollout was broadly gated | Production prep may proceed for `mashbean` record-only / observation; full outbound remains gated |
 | Key id | `#main-key` was acceptable for demos | Real gateway-core actors must use versioned key ids to avoid remote public-key cache conflicts |
+| Feature eligibility | Matters Web could gate controls with `viewer.oss.featureFlags` | Matters Web must gate public controls with `viewer.features.fediverseBeta`; `User.oss` stays admin-only |
 
 ## Files Updated
 
@@ -57,6 +60,12 @@ New baseline:
     path and versioned key-id rule.
 - `research/matters-fediverse-compat/03-ops/matters-icu-staging-e2e-check.md`
   - Threads diagnostics now point to canonical defaults.
+- `matters-server` PR #4798
+  - Adds public-safe `User.features` with current-viewer scoped
+    `fediverseBeta` and `communityWatch`.
+- `matters-web` PR #5905 / #5906
+  - Restores Fediverse controls through `viewer.features.fediverseBeta`; #5906
+    removes the transient settings-row flash while eligibility loads.
 
 ## Still Intentionally Open
 
@@ -65,6 +74,9 @@ New baseline:
 - Threads Follow failure remains under compatibility investigation.
 - Production private S3, Lambda secret owner, legal/privacy copy, takedown
   owner, rollback rehearsal, and launch owner are still full-rollout gates.
+- Production branch/deploy parity still needs a final check: server and web
+  deployments must both include the `User.features` contract before record-only
+  pilot validation.
 - Full production outbound `Create` / `Update` / `Delete` is not enabled.
 
 ## Operator Rule

@@ -52,6 +52,12 @@
 
 - staging E2E、G2-B pilot checklist、demo page 與 implementation progress 需
   持續同步最新 evidence
+- `matters-server` #4798 has moved user-facing Fediverse UI eligibility to
+  `User.features.fediverseBeta`. `User.oss.featureFlags` remains admin-only
+  inventory and should not be used by Matters Web to gate public controls.
+- `matters-web` #5905 has restored settings, draft, and article edit controls
+  through `viewer.features.fediverseBeta`; #5906 should merge before production
+  record-only to avoid a transient settings-row flash while eligibility loads.
 - task note 與 active run 狀態需保持一致
 - 下一輪工程 task 需列出 verify command
 - rollback plan 已定義 routing、runtime、data restore 與 key rollback path
@@ -92,3 +98,6 @@
   rollout gates. Offline AWS origin backup/restore proof has passed.
 - Production outbound `Create` / `Update` / `Delete` remains disabled until
   launch approval is recorded.
+- Production record-only / `mashbean` pilot is the next allowable production
+  step after the no-flash UI fix, branch/deploy parity, and staging regression
+  checks pass. It is not the same as full production federation.
