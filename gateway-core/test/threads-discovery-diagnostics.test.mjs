@@ -28,13 +28,14 @@ async function closeServer(server) {
   });
 }
 
-function createDiscoveryServer({ handle = "alice", acceptedHost = null } = {}) {
+function createDiscoveryServer({ handle = "alice", acceptedHost = null, actorPathPrefix = "" } = {}) {
   const requests = [];
   const server = createServer(async (request, response) => {
     const requestUrl = new URL(request.url ?? "/", "http://127.0.0.1");
     const host = request.headers.host;
     const baseUrl = `http://${host}`;
-    const actorUrl = `${baseUrl}/users/${handle}`;
+    const actorPath = `${actorPathPrefix}/users/${handle}`;
+    const actorUrl = `${baseUrl}${actorPath}`;
     const accountHost = acceptedHost ?? host;
     const stagingAcct = `acct:${handle}@${accountHost}`;
 
@@ -63,7 +64,7 @@ function createDiscoveryServer({ handle = "alice", acceptedHost = null } = {}) {
       return;
     }
 
-    if (requestUrl.pathname === `/users/${handle}`) {
+    if (requestUrl.pathname === actorPath) {
       response.writeHead(200, { "content-type": "application/activity+json", "cache-control": "no-store" });
       response.end(
         JSON.stringify({
@@ -84,7 +85,7 @@ function createDiscoveryServer({ handle = "alice", acceptedHost = null } = {}) {
       return;
     }
 
-    if (requestUrl.pathname === `/users/${handle}/outbox`) {
+    if (requestUrl.pathname === `${actorPath}/outbox`) {
       response.writeHead(200, { "content-type": "application/activity+json" });
       response.end(
         JSON.stringify({
@@ -192,5 +193,41 @@ test("threads discovery diagnostics can probe the real canonical base separately
   } finally {
     await closeServer(staging.server);
     await closeServer(canonical.server);
+  }
+});
+
+test("threads discovery diagnostics can probe a prefixed canonical actor path", async () => {
+  const discovery = createDiscoveryServer({ actorPathPrefix: "/ap" });
+  const baseUrl = await listen(discovery.server);
+
+  try {
+    const { stdout } = await execFile(
+      nodeBin,
+      [
+        "scripts/run-threads-discovery-diagnostics.mjs",
+        "--base-url",
+        baseUrl,
+        "--handle",
+        "alice",
+        "--canonical-domain",
+        new URL(baseUrl).host,
+        "--actor-path-prefix",
+        "/ap",
+      ],
+      {
+        cwd: path.resolve(process.cwd()),
+      },
+    );
+
+    const report = JSON.parse(stdout);
+    assert.equal(report.ok, true);
+    assert.equal(report.scope.actorPathPrefix, "/ap");
+    assert.equal(report.scope.actorUrl, `${baseUrl}/ap/users/alice`);
+    assert.equal(
+      report.probes.some((probe) => probe.name === "actor" && probe.url === `${baseUrl}/ap/users/alice`),
+      true,
+    );
+  } finally {
+    await closeServer(discovery.server);
   }
 });

@@ -256,11 +256,9 @@ node src/server.mjs --config ./runtime/matters-icu-staging/gateway.instance.json
   gyutte.site remain previous staging `Article` / reply probes, so the delivered
   `Update` is counted as delivery-level proof rather than a fresh UI display
   proof.
-- Threads still cannot discover
-  `@mashbeanmatters@staging-gateway.matters.town` after the WebFinger cache
-  bypass and PR #29 actor hints. Current assessment: treat Threads as a
-  staging-domain / indexing / canonical-identity compatibility issue, not a
-  blocker for Mastodon or Misskey staging validation.
+- This historical staging-domain Threads result is superseded by the canonical
+  `matters.town` pilot checks: Threads can now discover the canonical profile,
+  while Follow still remains a non-blocking compatibility issue.
 - Local AWS CLI is not configured with a usable profile, region, or credentials
   on this Mac, so fresh `federation-export-dev` invocation from the local
   staging script is blocked until AWS CLI access is configured. Existing
@@ -339,7 +337,7 @@ Added `gateway-core/scripts/run-threads-discovery-diagnostics.mjs` and npm
 script `check:threads-discovery` to separate gateway correctness from Threads
 indexing behavior.
 
-Latest command:
+Initial staging command:
 
 ```bash
 node scripts/run-threads-discovery-diagnostics.mjs \
@@ -349,18 +347,18 @@ node scripts/run-threads-discovery-diagnostics.mjs \
   --output-file runtime/interop/threads-discovery-diagnostics-20260515T091300Z.json
 ```
 
-Latest rerun:
+Staging rerun:
 
 ```bash
 node scripts/run-threads-discovery-diagnostics.mjs \
   --output-file runtime/interop/threads-discovery-diagnostics-20260515T120607Z.json
 ```
 
-Post-Cloudflare-rule rerun:
+Post-Cloudflare-rule canonical rerun:
 
 ```bash
 npm run check:threads-discovery -- \
-  --output-file ./runtime/interop/threads-discovery-after-cf-bypass-20260515T142954Z.json
+  --output-file ./runtime/interop/threads-discovery-canonical-latest.json
 ```
 
 Result:
@@ -375,24 +373,24 @@ Result:
   `facebookexternalua`, `facebookexternalhit`, and `meta-externalagent/1.1`
   all receive 200 for staging WebFinger, actor, outbox, and NodeInfo
   discovery. The diagnostic now returns `ok: true`.
-- `acct:mashbeanmatters@matters.town` is not yet exposed from the staging
-  surface; staging tests must use
-  `acct:mashbeanmatters@staging-gateway.matters.town` until canonical identity
-  cutover.
+- `acct:mashbeanmatters@matters.town` is now the canonical pilot identity.
+  `check:threads-discovery` defaults to `https://matters.town` with the `/ap`
+  actor path. Use `--base-url https://staging-gateway.matters.town` only when
+  intentionally comparing historical staging behavior.
 
 Current Threads hypothesis:
 
 1. Cloudflare WAF/Bot blocking for `meta-externalagent` on staging federation
    paths is cleared.
-2. Threads may require a production-like canonical identity surface, or may
-   cache the earlier failed discovery result.
+2. Threads can discover the canonical pilot profile but Follow still fails,
+   likely because of platform-specific Follow / actor-key / inbox behavior or
+   cached remote actor state.
 3. This does not invalidate Mastodon/Misskey evidence because those paths
    already pass discovery and delivery.
 
-Next Threads action: retry exact Threads profile search for
-`mashbeanmatters@staging-gateway.matters.town`, and if Threads still cannot
-discover the actor, continue it as a Threads indexing/canonical-identity
-compatibility track rather than a gateway WebFinger or Cloudflare blocker.
+Next Threads action: keep the exact canonical profile search and Follow attempt
+as a compatibility track, but do not block production record-only / `mashbean`
+pilot preparation on Threads.
 
 Follow-up permission check:
 

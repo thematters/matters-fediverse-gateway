@@ -1,7 +1,7 @@
 # Canonical Identity Cutover Plan
 
 Date: 2026-05-16
-Status: canonical read surface deployed for pilot; production outbound delivery remains gated
+Status: canonical pilot identity and Mastodon/Misskey follow proof complete; production outbound delivery remains gated
 
 This note plans the cutover from the staging test account
 `acct:mashbeanmatters@staging-gateway.matters.town` to the canonical Matters
@@ -9,7 +9,10 @@ identity `acct:mashbeanmatters@matters.town`.
 
 ## Current State
 
-- Staging identity is active as `acct:mashbeanmatters@staging-gateway.matters.town`.
+- Staging identity remains available as
+  `acct:mashbeanmatters@staging-gateway.matters.town` for historical staging
+  evidence, but the current pilot identity is
+  `acct:mashbeanmatters@matters.town`.
 - The staging gateway has passed WebFinger, actor, outbox, NodeInfo,
   Mastodon/Misskey delivery, Mastodon read-back, bounded Delete, and scheduled
   inbound reconciliation checks.
@@ -29,9 +32,9 @@ identity `acct:mashbeanmatters@matters.town`.
   Misskey for `mashbeanmatters@matters.town`; visible follow proof now also
   converges on both platforms.
 - Worker deploy `b002f589-f9d3-4cf3-b389-0e137e36efc9` added live follow
-  readiness reporting. `https://matters.town/ap/healthz` currently reports
-  `mode=edge-demo`, `inboxMode=accepted-not-persistent`, and
-  `followReadiness=blocked` because `GATEWAY_CORE_ORIGIN` is not active.
+  readiness reporting. The current `https://matters.town/ap/healthz` path now
+  reports the AWS `gateway-core` origin through the Worker proxy with
+  persistent inbox state and `followReadiness=ready`.
 - Worker deploy `7f9077c0-5dc8-4164-8793-83d437508758` fixed canonical
   proxy pathing so future `/ap/users/<handle>/inbox` requests are forwarded to
   gateway-core as `/users/<handle>/inbox`.
@@ -46,6 +49,12 @@ identity `acct:mashbeanmatters@matters.town`.
   `https://matters.town/ap/users/mashbeanmatters#gateway-core-20260517`,
   after which gyutte.site remote-user refresh plus cancel/re-follow converged
   to `isFollowing=true`.
+- A canonical pilot Article was delivered to g0v.social and gyutte.site.
+  Mastodon and Misskey readback both found it. Misskey reply, reaction/like,
+  and renote returned to gateway-core and were persisted. Mastodon interaction
+  return still needs a write-scoped token or browser-based manual action.
+- Product approval now allows production preparation for `mashbean` in
+  record-only / observation mode. Full outbound delivery remains disabled.
 
 ## Identity Contract
 
@@ -101,7 +110,8 @@ actors for the same author.
    - Search from Threads after the canonical surface is visible and no longer
      challenged by Cloudflare.
    - Status: machine probes pass; Mastodon and Misskey discovery and follow
-     proof pass; Threads discovery passes but follow is still unresolved.
+     proof pass; Threads discovery passes but follow is still unresolved and is
+     not a launch blocker.
 
 5. **Staging follower boundary**
    - Treat existing `staging-gateway.matters.town` followers as test-only.
@@ -117,17 +127,20 @@ actors for the same author.
      with queue, dead-letter, read-back, and remote UI checks.
 
 7. **Canonical follow proof**
-   - Do not send Mastodon/Misskey follow requests while healthz reports
-     `followReadiness=blocked`.
-   - First set a real, persistent `GATEWAY_CORE_ORIGIN` so canonical inbox
-     POSTs are verified, persisted, and can deliver Accept responses.
-   - The configured origin must serve `/healthz` with `component=gateway-core`;
-     otherwise Worker healthz keeps `followReadiness=blocked`.
-   - Then run `npm run check:follow-readiness -- --base-url https://matters.town --handle mashbeanmatters`.
-   - Optionally add `--probe-inbox` after the origin is configured; the invalid
-     probe must be rejected by gateway-core instead of accepted by edge-demo.
-   - Only after readiness returns `ok: true`, run visible canonical follow
-     tests.
+   - Status: completed for g0v.social Mastodon and gyutte.site Misskey.
+   - Keep `npm run check:follow-readiness -- --base-url https://matters.town --handle mashbeanmatters`
+     as the preflight before any future canonical follow retest.
+   - If remote instances cache old actor key material, use a fresh versioned
+     key id and refresh or recreate the remote follow instead of reusing
+     `#main-key`.
+
+8. **Production record-only pilot**
+   - Start with author `mashbean` only.
+   - Keep production trigger behavior record-only / observation before any real
+     public delivery.
+   - Preserve queue, trace, SQLite, Lambda, and S3 audit evidence for the pilot.
+   - Do not expand to all authors until legal/privacy, rollback, and launch
+     gates are closed.
 
 ## Cloudflare Requirements
 
@@ -175,9 +188,11 @@ ActivityPub behavior second.
 
 ## Verification Checklist
 
-- `npm run check:threads-discovery` passes against staging.
-- `npm run check:threads-discovery -- --canonical-base-url https://matters.town`
-  passes after canonical exposure and Cloudflare crawler bypass.
+- `npm run check:threads-discovery` passes against the canonical
+  `matters.town` pilot surface.
+- `npm run check:threads-discovery -- --base-url https://staging-gateway.matters.town --canonical-base-url https://matters.town`
+  remains available when comparing the old staging surface with canonical
+  WebFinger.
 - `curl https://matters.town/.well-known/webfinger?resource=acct:mashbeanmatters@matters.town`
   returns `200`, subject `acct:mashbeanmatters@matters.town`, profile-page
   `https://matters.town/@mashbeanmatters`, and self
@@ -192,6 +207,11 @@ ActivityPub behavior second.
 - Mastodon and Misskey canonical follow proof should show persistent state:
   Mastodon writes an accepted SQLite follower row on the gateway side, and
   gyutte.site Misskey `users/relation` returns `isFollowing=true`.
+- A canonical pilot Article is visible on Mastodon and Misskey.
+- Misskey reply / like / renote interactions return to gateway-core and
+  persist in SQLite.
+- Mastodon interaction return is pending a write-scoped token or browser
+  action; the current read-only token is enough only for visibility checks.
 - When moving from Worker demo to gateway-core for an existing actor id, do not
   reuse the same public key id with different key material. Use a new key id
   fragment and refresh or recreate the remote follow if an instance has cached
@@ -239,6 +259,8 @@ After outbound delivery:
 
 ## Next Engineering Step
 
-Keep the canonical read surface in pilot mode and continue Mastodon/Misskey
-canonical discovery checks. Do not enable production outbound delivery until
-the remaining production gates are closed and launch approval is recorded.
+Prepare production record-only / observation for the `mashbean` pilot author,
+keep canonical identity stable, and continue Threads Follow plus Mastodon
+write-scope interaction checks as compatibility work. Do not enable production
+full outbound delivery until the remaining production gates are closed and
+launch approval is recorded.

@@ -6,7 +6,7 @@ function parseArgs(argv) {
     mastodonBaseUrl: process.env.MASTODON_BASE_URL ?? "https://g0v.social",
     accessToken: process.env.MASTODON_ACCESS_TOKEN ?? null,
     tokenFile: process.env.MASTODON_ACCESS_TOKEN_FILE ?? "./runtime/secrets/g0v-mastodon-readback-token",
-    acct: "mashbeanmatters@staging-gateway.matters.town",
+    acct: "mashbeanmatters@matters.town",
     expectedUrl: null,
     outputFile: null,
     limit: 20,

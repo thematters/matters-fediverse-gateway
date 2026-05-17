@@ -141,14 +141,12 @@ Stop and record the blocker if:
 - Mastodon can receive delivered activities through g0v.social and canonical
   follow proof now persists one accepted follower for
   `acct:mashbeanmatters@matters.town`.
-- Misskey canonical follow still needs a focused compatibility pass. gyutte.site
-  resolves the actor, but the first visible follow attempt did not reach the
-  gateway-core inbox.
-- Threads still cannot discover the staging actor. Keep this as a separate
-  compatibility investigation and avoid blocking Mastodon/Misskey staging signoff
-  on Threads until canonical `acct:user@matters.town` or production-like
-  discovery is ready to test.
-- Threads diagnostic now shows a concrete Cloudflare edge blocker:
-  `meta-externalagent/1.1` gets 403 on staging WebFinger, actor, outbox, and
-  NodeInfo. Add a narrow staging federation-path bypass before the next Threads
-  UI retry.
+- Misskey canonical follow has passed after the actor key id was moved to the
+  versioned gateway-core key id and gyutte.site remote-user state was refreshed.
+- Threads can discover the canonical pilot profile but Follow still does not
+  complete. Keep this as a non-blocking Threads Follow compatibility
+  investigation.
+- Cloudflare Meta crawler diagnostics now pass on the narrow staging and
+  canonical federation paths. If Threads regresses, re-check WebFinger, actor,
+  outbox, and NodeInfo with `meta-externalagent/1.1` before changing gateway
+  behavior.
