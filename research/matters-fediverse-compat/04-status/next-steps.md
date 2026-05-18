@@ -100,7 +100,8 @@ Updated: 2026-05-18
    Threads Follow failure.
 3. Wait for the production query workflow to be available from an allowed
    `master` / `main` branch, then query `federation_export_event` for production
-   article `1225211`.
+   article `1225211`. The exact command and pass/fail criteria are in
+   `03-ops/production-record-only-observation-runbook.md`.
 4. Confirm the audit row reports `mode=record_only`, `status=recorded`, and
    `eligible=true`. Do not enable full outbound delivery.
 5. Keep using `npm run check:production-record-only` after production
