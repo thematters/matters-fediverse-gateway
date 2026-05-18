@@ -1,13 +1,14 @@
 # Current Production Gates
 
-Date: 2026-05-17
-Status: production preparation is approved for `mashbean` record-only observation; production outbound rollout is still gated
+Date: 2026-05-18
+Status: production `record_only` is enabled for `mashbean` observation; production outbound rollout is still gated
 
 This is the current gate list after the staging Cloudflare crawler bypass,
 canonical `matters.town` pilot deployment, Threads diagnostic rerun,
 Mastodon/Misskey follow proof, canonical pilot Article visibility proof,
-Misskey interaction return proof, and the first scheduled inbound reconciliation
-endpoint.
+Misskey interaction return proof, the first scheduled inbound reconciliation
+endpoint, production `record_only` enablement on `matters-server-prod-new`,
+and the post-change production preflight.
 
 ## Cleared For Staging
 
@@ -29,6 +30,8 @@ endpoint.
 | Canonical Misskey interaction return | Cleared | Misskey reply, reaction/like, and renote returned to gateway-core and were persisted as `reply.stored`, `like.stored`, and `announce.stored`. |
 | Production preparation mode | Approved for narrow pilot | Product approved `mashbean` as the first pilot author, record-only / observation mode, and a fresh versioned key id. Full outbound remains disabled. |
 | Production record-only preflight | Cleared as read-only check | `npm run check:production-record-only` validates canonical gateway health, WebFinger, actor, outbox, followers, `record_only`, pilot author `mashbean`, full outbound disabled, and versioned key id without sending ActivityPub activities. |
+| Production `record_only` backend setting | Enabled for pilot observation | `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only` is set on Elastic Beanstalk environment `matters-server-prod-new`; the update returned to Ready / Green / Ok, `https://server.matters.town/health` returned 200, production schema exposes `UserFeatures.fediverseBeta`, and the post-change production preflight passed. No production ActivityPub outbound delivery was sent. |
+| Deployed-Lambda staging workflow | Cleared as repeatable path | `lambda-handlers` workflow run 26017383955 selected public article `23525`, skipped paywalled article `23522` as `article_not_public`, returned one eligible bundle, and kept `dryRun=true`. Direct `articleIds` Lambda invocation is not the validated path because the Lambda environment does not include DB connection variables. |
 
 ## Still Open Before Production
 
@@ -43,7 +46,7 @@ endpoint.
 | Privacy notice | Approve user-facing copy that explains external server caching and replication. | Product + legal |
 | Key exposure / rotation | Name the owner and approve severity, rotation, actor update/delete, and external notice rules. | CTO / security |
 | Rollback rehearsal | Prove the rollback sequence: disable author opt-in, stop export trigger, preserve evidence, pause delivery, and remove public routing if needed. | Launch commander + gateway operator |
-| Production `record_only` | Implement and observe production audit-only mode for the `mashbean` pilot author before real delivery. | CTO / backend operator |
+| Production pilot account enablement | Enable `fediverseBeta` and author federation setting for `mashbean` through the approved admin API path, then observe record-only audit rows from a minimal public publish/edit test. | Backend operator + pilot author |
 | Production public delivery | Although approved in principle, only enable `Create` / `Update` / `Delete` after the gates above pass. | Launch commander |
 
 ## Do Not Do Automatically
