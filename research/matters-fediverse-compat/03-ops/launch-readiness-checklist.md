@@ -56,8 +56,8 @@
   `User.features.fediverseBeta`. `User.oss.featureFlags` remains admin-only
   inventory and should not be used by Matters Web to gate public controls.
 - `matters-web` #5905 has restored settings, draft, and article edit controls
-  through `viewer.features.fediverseBeta`; #5906 should merge before production
-  record-only to avoid a transient settings-row flash while eligibility loads.
+  through `viewer.features.fediverseBeta`; #5906 is merged and avoids a
+  transient settings-row flash while eligibility loads.
 - task note 與 active run 狀態需保持一致
 - 下一輪工程 task 需列出 verify command
 - rollback plan 已定義 routing、runtime、data restore 與 key rollback path
@@ -92,17 +92,22 @@
   canonical gateway health, WebFinger, actor paths, outbox, followers,
   `record_only`, pilot author `mashbean`, full outbound disabled, and versioned
   key id without sending ActivityPub activities.
-- 2026-05-17 read-only production record-only preflight passed with
+- 2026-05-18 read-only production record-only preflight passed with
   `ok=true`: `https://matters.town` is in `gateway-core-proxy` mode, origin
   health reports `component=gateway-core` and `storeDriver=sqlite`, WebFinger
   resolves `acct:mashbeanmatters@matters.town`, actor key id is
-  `#gateway-core-20260517`, outbox is readable, and followers total is `2`.
+  `#gateway-core-20260517`, outbox total is `0`, and followers total is `2`.
+- Production article `1225211` / `3tmz0u0a42qx` is active, public, owned by
+  `mashbean`, and production GraphQL reports
+  `federationEligibility.eligible=true` with effective article setting
+  `inherit`. The next audit-row step is documented in
+  `production-record-only-observation-runbook.md`.
 - Production gateway hosting, private S3 bundle storage, production secrets
   ownership, legal takedown owner, privacy notice, key exposure/rotation owner,
   live rollback rehearsal, and launch communication remain explicit human
   rollout gates. Offline AWS origin backup/restore proof has passed.
 - Production outbound `Create` / `Update` / `Delete` remains disabled until
   launch approval is recorded.
-- Production record-only / `mashbean` pilot is the next allowable production
-  step after the no-flash UI fix, branch/deploy parity, and staging regression
-  checks pass. It is not the same as full production federation.
+- Production record-only / `mashbean` pilot is the current allowable production
+  step. It is not the same as full production federation; outbound delivery
+  remains disabled until the remaining production gates are closed.
