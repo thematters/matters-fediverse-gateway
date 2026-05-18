@@ -194,6 +194,10 @@ Web:
 
 - API validation confirmed the pilot account has `fediverseBeta` and
   account-level federation is `enabled`.
+- 2026-05-18 develop parity is deployed on `matters.icu`: `server.matters.icu`
+  exposes `UserFeatures.fediverseBeta`, and the live
+  `/me/settings/misc` page chunk queries `viewer.features.fediverseBeta`
+  instead of admin-only `viewer.oss.featureFlags`.
 - Manual browser QA on `matters.icu` confirmed the account settings row is
   visible/enabled and the pilot-owned public article shows the article-level
   Fediverse override as `Follow author setting`.
