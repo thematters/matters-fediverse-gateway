@@ -1,6 +1,6 @@
 # Next Steps
 
-Updated: 2026-05-17
+Updated: 2026-05-18
 
 ## Done Baseline
 
@@ -60,6 +60,19 @@ Updated: 2026-05-17
 - Product approval now allows production preparation for `mashbean` in
   record-only / observation mode. Full production outbound delivery remains
   disabled.
+- Production `matters-server-prod-new` now has
+  `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only`. Elastic Beanstalk
+  returned to Ready / Green / Ok after the setting change,
+  `https://server.matters.town/health` returned 200, production GraphQL exposes
+  `UserFeatures.fediverseBeta`, and the post-change
+  `npm run check:production-record-only` preflight passed. No production
+  ActivityPub outbound delivery was enabled or sent.
+- The repeatable deployed-Lambda staging path is the `lambda-handlers` workflow
+  `Invoke Federation Export Staging`. Run `26017383955` selected public article
+  `23525`, skipped paywalled article `23522` as `article_not_public`, returned
+  one eligible generated bundle, and kept `dryRun=true`. Direct Lambda
+  `articleIds` invocation is not the validated path because the deployed Lambda
+  environment does not include DB connection variables.
 
 ## Immediate Engineering Work
 
@@ -70,15 +83,19 @@ Updated: 2026-05-17
 2. Keep Threads as a separate compatibility investigation around Follow
    acceptance. Do not block Mastodon/Misskey pilot preparation on the current
    Threads Follow failure.
-3. Prepare production record-only / observation wiring for the `mashbean` pilot
-   author only. Do not enable full outbound delivery.
-4. Run `npm run check:production-record-only` before any production backend
-   setting change. This is read-only and must pass before entering production
-   record-only / observation.
-5. Keep using `check:mastodon-readback` after each pilot `Create`, `Update`,
+3. Enable the production pilot account only through the approved admin API path:
+   `fediverseBeta` for `mashbean`, then author federation setting `enabled`.
+   Do not use ad hoc SQL unless the backend owner explicitly chooses that as an
+   emergency operation.
+4. Observe production record-only audit rows from one minimal public publish or
+   edit by the pilot author. Do not enable full outbound delivery.
+5. Keep using `npm run check:production-record-only` after production
+   configuration changes. This is read-only and must keep passing while the
+   system remains in observation mode.
+6. Keep using `check:mastodon-readback` after each pilot `Create`, `Update`,
    `Reply`, or `Delete` delivery run. Use a write-scoped Mastodon token or a
    browser-based manual action before claiming Mastodon interaction return.
-6. Preserve the versioned key-id rule for production actors; do not reuse the
+7. Preserve the versioned key-id rule for production actors; do not reuse the
    earlier Worker demo `#main-key` with gateway-core key material.
 
 ## Human Gates Before Production
@@ -86,7 +103,8 @@ Updated: 2026-05-17
 1. Confirm production gateway hosting, SQLite backup/restore path, scheduler
    boundary, monitoring, and direct-origin fallback outside Cloudflare.
 2. Confirm production storage owner and S3 bucket/prefix policy.
-3. Confirm production outbound delivery mode and rollback window.
+3. Confirm production outbound delivery mode and rollback window after
+   record-only observation, not before.
 4. Confirm legal takedown owner, privacy notice text, and key
    exposure/rotation owner.
 5. Confirm launch copy and whether the first rollout is silent beta,
