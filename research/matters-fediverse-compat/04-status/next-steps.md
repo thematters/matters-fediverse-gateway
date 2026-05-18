@@ -64,15 +64,30 @@ Updated: 2026-05-18
   `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only`. Elastic Beanstalk
   returned to Ready / Green / Ok after the setting change,
   `https://server.matters.town/health` returned 200, production GraphQL exposes
-  `UserFeatures.fediverseBeta`, and the post-change
-  `npm run check:production-record-only` preflight passed. No production
-  ActivityPub outbound delivery was enabled or sent.
+  `UserFeatures.fediverseBeta`, and the 2026-05-18
+  `npm run check:production-record-only` preflight passed with
+  `fullOutboundEnabled=false`, outbox `totalItems=0`, and followers
+  `totalItems=2`. No production ActivityPub outbound delivery was enabled or
+  sent.
+- Production `mashbean` has visible Fediverse settings and author federation is
+  enabled. The first real pilot article,
+  `https://matters.town/a/3tmz0u0a42qx` (`article_id=1225211`), is `active`,
+  `public`, owned by `mashbean`, and production GraphQL reports
+  `federationEligibility.eligible=true` with effective article setting
+  `inherit` in a 2026-05-18 production GraphQL check.
 - The repeatable deployed-Lambda staging path is the `lambda-handlers` workflow
   `Invoke Federation Export Staging`. Run `26017383955` selected public article
   `23525`, skipped paywalled article `23522` as `article_not_public`, returned
   one eligible generated bundle, and kept `dryRun=true`. Direct Lambda
   `articleIds` invocation is not the validated path because the deployed Lambda
   environment does not include DB connection variables.
+- The first production audit-row query attempt showed that the workflow cannot
+  run from `develop`, because the GitHub `production` environment only allows
+  `main` / `master` deployment branches. `matters-server` PR #4804 moves the
+  same read-only query workflow onto `master` so audit-row verification can run
+  without broadening production runtime behavior. Its pull-request and push
+  build checks passed after rerun; it still requires review because the base
+  branch is `master`.
 
 ## Immediate Engineering Work
 
@@ -83,12 +98,11 @@ Updated: 2026-05-18
 2. Keep Threads as a separate compatibility investigation around Follow
    acceptance. Do not block Mastodon/Misskey pilot preparation on the current
    Threads Follow failure.
-3. Enable the production pilot account only through the approved admin API path:
-   `fediverseBeta` for `mashbean`, then author federation setting `enabled`.
-   Do not use ad hoc SQL unless the backend owner explicitly chooses that as an
-   emergency operation.
-4. Observe production record-only audit rows from one minimal public publish or
-   edit by the pilot author. Do not enable full outbound delivery.
+3. Wait for the production query workflow to be available from an allowed
+   `master` / `main` branch, then query `federation_export_event` for production
+   article `1225211`.
+4. Confirm the audit row reports `mode=record_only`, `status=recorded`, and
+   `eligible=true`. Do not enable full outbound delivery.
 5. Keep using `npm run check:production-record-only` after production
    configuration changes. This is read-only and must keep passing while the
    system remains in observation mode.
