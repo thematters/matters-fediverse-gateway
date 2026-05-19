@@ -1,7 +1,7 @@
 # Production Record-Only Observation Runbook
 
-Date: 2026-05-18
-Status: prepared; waiting for `matters-server` #4804 review / merge
+Date: 2026-05-19
+Status: passed for production article `1225211`; keep for repeat checks
 
 ## Purpose
 
@@ -51,13 +51,13 @@ Update, Delete, Follow, Accept, or other ActivityPub activities from production.
 
 ## Workflow Gate
 
-`matters-server` PR #4804 adds the read-only workflow on `master` because the
+`matters-server` PR #4804 added the read-only workflow on `master` because the
 GitHub `production` environment rejects `develop` branch runs.
 
 Do not broaden the GitHub production environment branch policy just for this
 query. Keep the production environment restricted to `master` / `main`.
 
-After #4804 is reviewed and merged, trigger:
+Trigger:
 
 ```bash
 gh workflow run query-production-federation-export-event.yml \
@@ -67,6 +67,10 @@ gh workflow run query-production-federation-export-event.yml \
   -f limit=10 \
   -f include_decision_report=false
 ```
+
+Note: the first `include_decision_report=false` run exposed a redaction SQL
+quoting bug in the workflow. `matters-server` PR #4808 fixes that path. The
+successful evidence run used `include_decision_report=true`.
 
 Watch the run:
 
@@ -96,6 +100,37 @@ with:
 
 If the row is absent, do not enable outbound delivery. First confirm whether the
 article was published or edited after production `record_only` became active.
+
+## 2026-05-19 Production Evidence
+
+Workflow run:
+`https://github.com/thematters/matters-server/actions/runs/26079277083`
+
+The production DB query returned one row:
+
+| Field | Observed value |
+| --- | --- |
+| `id` | `399` |
+| `article_id` | `1225211` |
+| `actor_id` | `66871` |
+| `trigger` | `publish_article` |
+| `mode` | `record_only` |
+| `status` | `recorded` |
+| `eligible` | `true` |
+| `reason` | `eligible` |
+| `author_setting` | `enabled` |
+| `article_setting` | null |
+| `effective_article_setting` | `inherit` |
+| `created_at` | `2026-05-18T10:17:51.792293+00:00` |
+
+Decision report summary:
+
+- `selected=1`
+- `eligible=1`
+- `skipped=0`
+- `enforceFederationGate=true`
+- decision for `articleId=1225211` was `eligible=true` with
+  `effectiveArticleSetting=inherit`
 
 ## Stop Conditions
 

@@ -32,6 +32,7 @@ and the post-change production preflight.
 | Production record-only preflight | Cleared as read-only check | `npm run check:production-record-only` validates canonical gateway health, WebFinger, actor, outbox, followers, `record_only`, pilot author `mashbean`, full outbound disabled, and versioned key id without sending ActivityPub activities. The 2026-05-18 rerun returned `ok=true`, outbox `totalItems=0`, and followers `totalItems=2`. |
 | Production `record_only` backend setting | Enabled for pilot observation | `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only` is set on Elastic Beanstalk environment `matters-server-prod-new`; the update returned to Ready / Green / Ok, `https://server.matters.town/health` returned 200, production schema exposes `UserFeatures.fediverseBeta`, and the 2026-05-18 production preflight passed. No production ActivityPub outbound delivery was sent. |
 | Production pilot article eligibility | Cleared before audit-row query | Real production article `1225211` / `3tmz0u0a42qx` is `active`, `public`, owned by `mashbean`, and a 2026-05-18 production GraphQL check reports `federationEligibility.eligible=true` with effective article setting `inherit`. |
+| Production audit-row query | Cleared for record-only observation | Read-only production workflow run 26079277083 returned one `federation_export_event` row for article `1225211`: `trigger=publish_article`, `mode=record_only`, `status=recorded`, `eligible=true`, `reason=eligible`, `author_setting=enabled`, and `effective_article_setting=inherit`. No production ActivityPub outbound delivery was enabled. |
 | Deployed-Lambda staging workflow | Cleared as repeatable path | `lambda-handlers` workflow run 26017383955 selected public article `23525`, skipped paywalled article `23522` as `article_not_public`, returned one eligible bundle, and kept `dryRun=true`. Direct `articleIds` Lambda invocation is not the validated path because the Lambda environment does not include DB connection variables. |
 
 ## Still Open Before Production
@@ -47,7 +48,6 @@ and the post-change production preflight.
 | Privacy notice | Approve user-facing copy that explains external server caching and replication. | Product + legal |
 | Key exposure / rotation | Name the owner and approve severity, rotation, actor update/delete, and external notice rules. | CTO / security |
 | Rollback rehearsal | Prove the rollback sequence: disable author opt-in, stop export trigger, preserve evidence, pause delivery, and remove public routing if needed. | Launch commander + gateway operator |
-| Production audit-row query | Run the read-only production query workflow from an allowed `master` / `main` branch and verify `article_id=1225211` has `mode=record_only`, `status=recorded`, and `eligible=true`. `develop` cannot run the production environment because of GitHub deployment branch policy. | Backend operator |
 | Production public delivery | Although approved in principle, only enable `Create` / `Update` / `Delete` after the gates above pass. | Launch commander |
 
 ## Do Not Do Automatically
