@@ -75,19 +75,21 @@ Updated: 2026-05-18
   `public`, owned by `mashbean`, and production GraphQL reports
   `federationEligibility.eligible=true` with effective article setting
   `inherit` in a 2026-05-18 production GraphQL check.
+- Production record-only audit-row verification passed in read-only workflow
+  run `26079277083`. The row for article `1225211` has
+  `trigger=publish_article`, `mode=record_only`, `status=recorded`,
+  `eligible=true`, `reason=eligible`, `author_setting=enabled`, and
+  `effective_article_setting=inherit`.
 - The repeatable deployed-Lambda staging path is the `lambda-handlers` workflow
   `Invoke Federation Export Staging`. Run `26017383955` selected public article
   `23525`, skipped paywalled article `23522` as `article_not_public`, returned
   one eligible generated bundle, and kept `dryRun=true`. Direct Lambda
   `articleIds` invocation is not the validated path because the deployed Lambda
   environment does not include DB connection variables.
-- The first production audit-row query attempt showed that the workflow cannot
-  run from `develop`, because the GitHub `production` environment only allows
-  `main` / `master` deployment branches. `matters-server` PR #4804 moves the
-  same read-only query workflow onto `master` so audit-row verification can run
-  without broadening production runtime behavior. Its pull-request and push
-  build checks passed after rerun; it still requires review because the base
-  branch is `master`.
+- The first production audit-row query attempt showed a redacted SQL quoting
+  bug when `include_decision_report=false`. `matters-server` PR #4808 fixes that
+  repeat-check path. The successful evidence run used
+  `include_decision_report=true`.
 
 ## Immediate Engineering Work
 
@@ -98,12 +100,10 @@ Updated: 2026-05-18
 2. Keep Threads as a separate compatibility investigation around Follow
    acceptance. Do not block Mastodon/Misskey pilot preparation on the current
    Threads Follow failure.
-3. Wait for the production query workflow to be available from an allowed
-   `master` / `main` branch, then query `federation_export_event` for production
-   article `1225211`. The exact command and pass/fail criteria are in
-   `03-ops/production-record-only-observation-runbook.md`.
-4. Confirm the audit row reports `mode=record_only`, `status=recorded`, and
-   `eligible=true`. Do not enable full outbound delivery.
+3. Merge `matters-server` PR #4808 so future redacted production audit queries
+   work with `include_decision_report=false`.
+4. Keep production in record-only observation. Audit-row verification has
+   passed; do not enable full outbound delivery.
 5. Keep using `npm run check:production-record-only` after production
    configuration changes. This is read-only and must keep passing while the
    system remains in observation mode.
