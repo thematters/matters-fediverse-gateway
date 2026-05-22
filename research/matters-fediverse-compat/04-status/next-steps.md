@@ -57,8 +57,8 @@ Updated: 2026-05-22
 - Misskey reply, reaction/like, and renote return paths have been stored by
   gateway-core. Mastodon interaction return remains unproven only because the
   current g0v.social test token is read-only.
-- Product approval now allows production preparation for `mashbean` in
-  record-only / observation mode. Full production outbound delivery remains
+- Product approval allowed a bounded production pilot for `mashbean` in
+  record-only / observation mode. Broad production outbound delivery remains
   disabled.
 - Production `matters-server-prod-new` now has
   `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only`. Elastic Beanstalk
@@ -102,6 +102,21 @@ Updated: 2026-05-22
   probes across the default, `facebookexternalua`, `facebookexternalhit`, and
   `meta-externalagent` user agents. This does not prove Threads Follow, but it
   confirms the public crawler-facing prerequisites still pass.
+- The first bounded production pilot `Create` ran during the approved
+  2026-05-22 16:43-20:43 CST (+0800) window. `federation-export-dev` generated
+  the production bundle into private S3 under
+  `s3://matters-fediverse-prod-bundles/pilot/mashbean/1225211/2026-05-22T08-45-04-869Z`.
+  The public Worker edge correctly rejected direct POST with 405, so the
+  bounded send used the gateway-core origin
+  `/users/mashbeanmatters/outbox/create`. g0v.social and gyutte.site accepted
+  delivery with HTTP 202, the queue returned to `pending=0` and
+  `deadLetter=0`, Mastodon readback found
+  `https://matters.town/a/3tmz0u0a42qx`, and Misskey visual readback showed the
+  canonical actor and Matters Fediverse article on gyutte.site.
+- Post-send gateway-origin backup and scan completed through SSM command
+  `58e14af3-becb-4626-8e52-f0656de548c4`. The scan reported
+  `totalDiffs=5`, all `missing_in_file`, with `missing_in_sqlite=0` and
+  `value_mismatch=0`, which matches the SQLite-primary runtime direction.
 
 ## Immediate Engineering Work
 
@@ -116,15 +131,12 @@ Updated: 2026-05-22
    (`include_decision_report=false`), using workflow run
    [26269962135](https://github.com/thematters/matters-server/actions/runs/26269962135)
    as the post-release proof.
-4. Keep production in record-only observation until the release branch path is
-   complete. The pilot outbound sequence is prepared in
-   `03-ops/production-pilot-outbound-runbook.md`, but not yet executed.
-   The blocking pre-outbound gates are separated in
-   `03-ops/production-pilot-final-gates-20260522.md`.
-   On 2026-05-22, AWS CLI auth was restored, private pilot S3 storage was
-   created at `s3://matters-fediverse-prod-bundles/pilot/`, the live gateway
-   origin SQLite backup succeeded, and the consistency scan reported only
-   explained SQLite-primary diffs.
+4. Keep production in pilot observation after the first bounded `Create`.
+   The pilot outbound sequence is tracked in
+   `03-ops/production-pilot-outbound-runbook.md`, and the first run evidence is
+   archived in `03-ops/production-pilot-create-run-20260522.md`. Do not expand
+   beyond the `mashbean` pilot or send a bounded `Update` until that next
+   action is explicitly approved.
 5. Keep using `npm run check:production-record-only` after production
    configuration changes. This is read-only and must keep passing while the
    system remains in observation mode.
@@ -142,8 +154,9 @@ Updated: 2026-05-22
    storage, rollback, legal takedown, privacy notice, key exposure/rotation,
    and Lambda/gateway ingestion secrets. Infra, CTO/security, legal/policy, and
    gateway operator roles support execution and advice.
-3. Confirm production outbound delivery mode and rollback window after
-   record-only observation, not before.
+3. Confirm whether the next bounded action is observation-only or one pilot
+   `Update` for article `1225211`; do not interpret the successful `Create` as
+   broad rollout approval.
 4. Confirm legal takedown response path, privacy notice text, and key
    exposure/rotation path under the General Manager owner model.
 5. Confirm launch copy and whether the first rollout is silent beta,
