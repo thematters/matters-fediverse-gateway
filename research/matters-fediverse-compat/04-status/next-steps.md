@@ -121,6 +121,10 @@ Updated: 2026-05-22
    `03-ops/production-pilot-outbound-runbook.md`, but not yet executed.
    The blocking pre-outbound gates are separated in
    `03-ops/production-pilot-final-gates-20260522.md`.
+   On 2026-05-22, AWS CLI auth was restored, private pilot S3 storage was
+   created at `s3://matters-fediverse-prod-bundles/pilot/`, the live gateway
+   origin SQLite backup succeeded, and the consistency scan reported only
+   explained SQLite-primary diffs.
 5. Keep using `npm run check:production-record-only` after production
    configuration changes. This is read-only and must keep passing while the
    system remains in observation mode.
