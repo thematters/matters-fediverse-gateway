@@ -100,10 +100,12 @@ Updated: 2026-05-18
 2. Keep Threads as a separate compatibility investigation around Follow
    acceptance. Do not block Mastodon/Misskey pilot preparation on the current
    Threads Follow failure.
-3. Merge `matters-server` PR #4808 so future redacted production audit queries
-   work with `include_decision_report=false`.
-4. Keep production in record-only observation. Audit-row verification has
-   passed; do not enable full outbound delivery.
+3. Merge the redacted production audit query fix through `matters-server` #4809
+   so future queries work with `include_decision_report=false`. Under the
+   release branch policy, direct master PR #4808 is superseded.
+4. Keep production in record-only observation until the release branch path is
+   complete. The pilot outbound sequence is prepared in
+   `03-ops/production-pilot-outbound-runbook.md`, but not yet executed.
 5. Keep using `npm run check:production-record-only` after production
    configuration changes. This is read-only and must keep passing while the
    system remains in observation mode.
