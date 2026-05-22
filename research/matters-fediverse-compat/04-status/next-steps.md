@@ -90,10 +90,13 @@ Updated: 2026-05-22
   [#4814](https://github.com/thematters/matters-server/pull/4814). The old
   #4806 release PR was closed unmerged; the redacted production audit query fix
   is now on `master`.
-- A 2026-05-22 repeat production audit query was triggered as read-only workflow
-  run [26269962135](https://github.com/thematters/matters-server/actions/runs/26269962135)
-  with `include_decision_report=false`, but it is waiting on GitHub production
-  environment approval before it can prove the post-release repeat-check path.
+- A 2026-05-22 repeat production audit query passed as read-only workflow run
+  [26269962135](https://github.com/thematters/matters-server/actions/runs/26269962135)
+  with `include_decision_report=false`. It returned the same production
+  `federation_export_event` row for article `1225211`: `id=399`,
+  `trigger=publish_article`, `mode=record_only`, `status=recorded`,
+  `eligible=true`, `reason=eligible`, `author_setting=enabled`,
+  `effective_article_setting=inherit`, and redacted `decision_report`.
 - A 2026-05-22 public discovery diagnostic returned `ok=true` for canonical
   `acct:mashbeanmatters@matters.town` WebFinger, actor, outbox, and NodeInfo
   probes across the default, `facebookexternalua`, `facebookexternalhit`, and
@@ -109,10 +112,10 @@ Updated: 2026-05-22
 2. Keep Threads as a separate compatibility investigation around Follow
    acceptance. Do not block Mastodon/Misskey pilot preparation on the current
    Threads Follow failure.
-3. Approve and observe read-only production workflow run
+3. Keep production audit queries on the redacted path by default
+   (`include_decision_report=false`), using workflow run
    [26269962135](https://github.com/thematters/matters-server/actions/runs/26269962135)
-   to confirm the `include_decision_report=false` repeat query works after the
-   v5.23.0 release.
+   as the post-release proof.
 4. Keep production in record-only observation until the release branch path is
    complete. The pilot outbound sequence is prepared in
    `03-ops/production-pilot-outbound-runbook.md`, but not yet executed.
