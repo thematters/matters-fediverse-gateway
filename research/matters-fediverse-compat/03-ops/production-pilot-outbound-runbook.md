@@ -41,6 +41,7 @@ Follow `/Users/mashbean/Documents/AI-Agent/docs/ops/matters-release-branch-polic
 | Canonical actor runtime | `acct:mashbeanmatters@matters.town` resolves through `gateway-core` with versioned key id `#gateway-core-20260517`. |
 | Mastodon / Misskey follow baseline | g0v.social and gyutte.site follow state converge through the AWS `gateway-core` origin. |
 | Misskey interaction return | Reply, like/reaction, and renote returned to `gateway-core` and persisted in SQLite. |
+| Production pilot gate owner | Matters current General Manager is assigned as the decision owner for rollback, legal takedown, privacy notice, key exposure/rotation, and Lambda/gateway ingestion secrets. |
 
 ## Still Required Before Executing
 
@@ -53,11 +54,13 @@ Do not start outbound until these are true:
   `production-pilot-final-gates-20260522.md` has no blocking open items.
 - Private production S3 bundle bucket/prefix, IAM role, lifecycle, access logs,
   and retention are confirmed.
-- Lambda and gateway ingestion secret owners are named, with a rotation path.
-- Rollback owner and rollback window are named.
-- Legal takedown owner and response path are named.
-- Privacy notice / external persistence copy has product/legal approval.
-- Key exposure / rotation owner is named.
+- Matters current General Manager approves the Lambda and gateway ingestion
+  secret rotation path.
+- Matters current General Manager names the rollback window.
+- Matters current General Manager approves the legal takedown response path.
+- Matters current General Manager approves the privacy notice / external
+  persistence copy.
+- Matters current General Manager approves the key exposure / rotation path.
 - Gateway operator confirms latest backup and SQLite consistency scan.
 
 ## Non-Goals
@@ -174,8 +177,10 @@ Stop immediately and keep outbound disabled if:
 - follower target set includes unexpected domains or actors;
 - delivery creates broad queue growth;
 - Mastodon or Misskey rejects all deliveries with signature/key errors;
-- privacy/legal/takedown owner is not confirmed before execution;
-- rollback owner cannot be reached during the pilot window.
+- Matters current General Manager has not approved the privacy, legal takedown,
+  key rotation, secrets, and rollback gates before execution;
+- Matters current General Manager or the delegated pilot operator cannot be
+  reached during the pilot window.
 
 ## Rollback
 
@@ -186,8 +191,8 @@ Fast rollback:
    path.
 3. Preserve gateway SQLite, queue, traces, and delivery logs.
 4. Stop outbound queue processing.
-5. If a remote object must be withdrawn, send a bounded `Delete` only after the
-   rollback owner approves.
+5. If a remote object must be withdrawn, send a bounded `Delete` only after
+   Matters current General Manager or the delegated rollback operator approves.
 6. If routing must be disabled, preserve evidence first and then remove the
    narrow federation route.
 
@@ -204,7 +209,8 @@ Do not delete evidence or rotate keys before preserving logs and SQLite backup.
 - Mastodon read-back output.
 - Misskey notes read-back output.
 - Any remote reply/like/boost return evidence.
-- Rollback owner and go/no-go timestamp.
+- Matters current General Manager go/no-go timestamp and any delegated operator
+  name.
 
 ## Next Step After Pilot Passes
 

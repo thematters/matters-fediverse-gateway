@@ -1,7 +1,7 @@
 # Production Rollout Human Approval Brief
 
 Date: 2026-05-05
-Last updated: 2026-05-17
+Last updated: 2026-05-22
 Status: production preparation approved for pilot; full rollout still pending
 
 This brief is for product settings, legal/privacy, and production rollout decisions that should not be silently automated. Engineering can keep building and staging, but these items need explicit approval before public production enablement.
@@ -32,6 +32,21 @@ The product owner approved these additional rollout decisions in session:
 - The next production-facing step is record-only plus narrow pilot-author observation.
 - Pilot author: `mashbean`.
 - Production actor keys should use a new versioned key id, not the old Worker demo `#main-key`.
+
+## 2026-05-22 Accepted Decisions
+
+The product owner assigned all remaining production pilot gate decision
+ownership to Matters current General Manager:
+
+- rollback owner and pilot window;
+- legal takedown owner and response path;
+- privacy notice approval;
+- key exposure / rotation owner and severity decision path;
+- Lambda and gateway ingestion secret owner and rotation path.
+
+CTO, infra, security, legal/policy, and gateway operator roles support or
+execute the approved decisions, but are not the default pilot decision owners
+unless the General Manager delegates a specific decision in writing.
 
 Current pilot evidence:
 
@@ -67,15 +82,16 @@ Use this as the first copy draft for settings UI and release notes.
 
 Matters 將開始測試 Fediverse 發布功能。作者可自行選擇是否開啟，開啟後公開文章可被 Fediverse 上的其他服務讀取與互動。付費、私人、加密、圈子限定、草稿與已封存內容不會被送出。
 
-## Owner Recommendations
+## Owner Assignment
 
-| Area | Recommended owner | Reason |
+| Area | Decision owner | Support / execution role |
 | --- | --- | --- |
-| Legal takedown | Matters legal / policy owner, with engineering on evidence preservation | Takedown decisions require policy judgment; engineering should preserve logs, affected URLs, actor IDs, object IDs, and delivery attempts. |
-| Privacy notice | Product owner drafts, legal/policy approves, engineering verifies UI placement | The notice needs user-facing clarity and legal correctness; engineering should not own wording alone. |
-| Key exposure / rotation | CTO or security owner as decision owner; gateway operator executes runbook | Key exposure affects public identity trust. The owner should decide severity, rotation timing, actor update/delete messaging, and whether external notice is needed. |
-| S3 bucket / retention | Infrastructure owner with product/legal retention input | Bucket policy, lifecycle, access logs, and retention are operational controls with privacy implications. |
-| Rollback | Launch commander plus gateway operator | Rollback may include disabling opt-in, pausing export jobs, preserving evidence, and changing public routing. |
+| Legal takedown | Matters current General Manager | Legal/policy advises; engineering preserves logs, affected URLs, actor IDs, object IDs, and delivery attempts. |
+| Privacy notice | Matters current General Manager | Product/legal advises on wording; engineering verifies UI placement. |
+| Key exposure / rotation | Matters current General Manager | CTO/security advises on severity; gateway operator executes the rotation runbook. |
+| S3 bucket / retention | Matters current General Manager | Infra maintains bucket policy, lifecycle, access audit, and retention mechanics. |
+| Rollback | Matters current General Manager | Gateway operator executes the rollback sequence and preserves evidence. |
+| Lambda / gateway ingestion secrets | Matters current General Manager | CTO/infra maintains credential storage and rotation mechanics. |
 
 ## Recommended Confirmation
 
@@ -107,9 +123,9 @@ Approve this staging-to-production policy:
 
 | Decision | Recommended choice | Production blocker? |
 |---|---|---|
-| Takedown handling | Legal/policy owner decides; engineering preserves evidence and executes approved removal/update steps | Yes |
+| Takedown handling | Matters current General Manager decides; legal/policy advises; engineering preserves evidence and executes approved removal/update steps | Yes |
 | External replication notice | Add copy that federated public content may be cached or copied by external servers | Yes |
-| Key exposure response | CTO/security owner decides severity; gateway operator rotates key and publishes actor update/delete if approved | Yes |
+| Key exposure response | Matters current General Manager decides severity with CTO/security advice; gateway operator rotates key and publishes actor update/delete if approved | Yes |
 | Paid/private policy | Do not federate paid/private/encrypted/circle content | Yes |
 | Evidence retention | Keep internal staging and incident records, but do not expose credentials or private payloads | Yes |
 
@@ -131,15 +147,18 @@ Approve this staging-to-production policy:
 Before production beta, confirm:
 
 - [x] Pilot author list not required.
-- [ ] Author opt-in copy final approval.
+- [ ] Author opt-in copy final approval by Matters current General Manager.
 - [x] Per-article UI default behavior.
-- [ ] Legal takedown owner and response path.
-- [ ] External federation persistence notice.
+- [x] Legal takedown decision owner assigned to Matters current General Manager.
+- [ ] Legal takedown response path approval by Matters current General Manager.
+- [ ] External federation persistence notice approval by Matters current General Manager.
 - [x] Production private S3 decision.
-- [ ] Production Lambda secrets owner.
+- [x] Production Lambda secrets decision owner assigned to Matters current General Manager.
+- [ ] Production Lambda secrets rotation path approval by Matters current General Manager.
 - [x] Gateway canonical domain and versioned key-id strategy.
-- [ ] Actor key owner.
-- [ ] Rollback owner and launch window.
+- [x] Actor key decision owner assigned to Matters current General Manager.
+- [x] Rollback decision owner assigned to Matters current General Manager.
+- [ ] Rollback pilot window.
 
 ## Not Yet Approved
 
