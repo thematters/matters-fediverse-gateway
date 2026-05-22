@@ -25,9 +25,9 @@ document is closed and the launch commander gives an explicit go.
 
 | Gate | Required result | Current state | Recommended owner |
 | --- | --- | --- | --- |
-| Production private S3 bundle storage | Private bucket or prefix exists, bucket policy blocks public access, lifecycle/retention is documented, and access logging or audit trail is known. | Open. AWS CLI session is currently expired, so this could not be verified on 2026-05-22. | Infra owner, with product/legal input on retention. |
-| Gateway SQLite backup | Fresh backup exists for the live AWS origin SQLite database and has a manifest. | Open for latest run. Historical backup/restore drill passed on 2026-05-16. | Gateway operator. |
-| Gateway SQLite consistency scan | Latest production-origin scan has no unexplained diffs. | Open for latest run. Requires production origin config or SSM access. | Gateway operator. |
+| Production private S3 bundle storage | Private bucket or prefix exists, bucket policy blocks public access, lifecycle/retention is documented, and access logging or audit trail is known. | Cleared for pilot storage on 2026-05-22. Bucket `matters-fediverse-prod-bundles` exists in `ap-southeast-1`, blocks public access, uses SSE-S3 encryption, has versioning enabled, and expires the `pilot/` prefix after 90 days. | Infra owner, with product/legal input on retention. |
+| Gateway SQLite backup | Fresh backup exists for the live AWS origin SQLite database and has a manifest. | Cleared on 2026-05-22 through SSM command `732401b2-f577-499b-8387-20e6b736f361`. Backup manifest reports schema version 6 and WAL mode. | Gateway operator. |
+| Gateway SQLite consistency scan | Latest production-origin scan has no unexplained diffs. | Cleared with explained diffs on 2026-05-22. The scan reported `totalDiffs=5`, all `missing_in_file`: 2 followers, 1 Misskey inbound object, and 2 Misskey engagements exist in SQLite but not legacy file state. There were no `missing_in_sqlite` or value mismatches; this matches the SQLite-primary runtime direction. | Gateway operator. |
 | Rollback owner and window | Named owner, reachable during pilot window, with authority to stop delivery and disable author federation. | Open. | Launch commander plus gateway operator. |
 | Legal takedown owner | Named owner and response path for external takedown requests. | Open. | Legal/policy owner. |
 | Privacy notice | Product/legal approved copy about external caching, replication, and deletion limits. | Open. Draft exists in `08-production-rollout-human-approval.md`. | Product owner plus legal/policy. |
@@ -39,7 +39,7 @@ document is closed and the launch commander gives an explicit go.
 Use these defaults unless the named owner overrides them before the pilot:
 
 - S3 storage: one private prefix for production generated bundles, not public
-  serving.
+  serving. Pilot bucket: `s3://matters-fediverse-prod-bundles/pilot/`.
 - S3 public access: block all public access at bucket level.
 - S3 retention: 90 days for pilot bundle artifacts, then revisit after the
   pilot. Keep longer only if legal/policy explicitly wants it.
@@ -57,7 +57,11 @@ Use these defaults unless the named owner overrides them before the pilot:
 
 ## AWS Readiness Commands
 
-Run these only after AWS CLI is authenticated again.
+The 2026-05-22 run authenticated AWS CLI as
+`arn:aws:iam::903380195283:user/mashbean` and found the gateway origin instance
+`i-0a5bca704b0a14b53` online through SSM.
+
+Run these after any later AWS CLI session refresh.
 
 Read-only identity and resource discovery:
 
@@ -90,6 +94,25 @@ aws ssm send-command \
 Do not paste command output if it contains private paths, credentials, or
 private payloads. Summarize only: backup file path, manifest path, integrity
 result, and `totalDiffs`.
+
+## 2026-05-22 AWS Evidence
+
+- S3 bucket: `matters-fediverse-prod-bundles`
+- Region: `ap-southeast-1`
+- Public access block: all four public access block flags enabled.
+- Encryption: SSE-S3 / `AES256`, bucket key enabled.
+- Versioning: enabled.
+- Lifecycle: `pilot/` objects and noncurrent versions expire after 90 days.
+- SSM command: `732401b2-f577-499b-8387-20e6b736f361`
+- Backup file:
+  `/var/lib/matters-gateway/runtime/backups/matters-gateway-2026-05-22-060943152Z-pre-outbound-pilot-20260522.sqlite`
+- Backup manifest:
+  `/var/lib/matters-gateway/runtime/backups/matters-gateway-2026-05-22-060943152Z-pre-outbound-pilot-20260522.sqlite.json`
+- Consistency report:
+  `/var/lib/matters-gateway/runtime/consistency-scans/consistency-scan-2026-05-22-060943542Z-pre-outbound-pilot-20260522.md`
+- Consistency result: `totalDiffs=5`, all explained as SQLite-only data
+  after the SQLite-primary runtime migration; no SQLite omissions and no value
+  mismatches.
 
 ## Go / No-Go Rule
 
