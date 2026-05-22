@@ -41,23 +41,25 @@ and the post-change production preflight.
 
 ## Still Open Before Production
 
-| Gate | Required decision or proof | Owner |
+| Gate | Required decision or proof | Decision owner |
 | --- | --- | --- |
-| Threads Follow compatibility | Threads can discover the canonical profile but cannot complete Follow; keep investigating without blocking Mastodon/Misskey pilot preparation. | Product + gateway operator |
-| Mastodon interaction return | Current g0v.social token is read-only, so reply / favourite / boost write tests require a write-scoped token or manual browser action. | Gateway operator |
-| Production gateway hosting | Confirm long-running gateway host, SQLite backup path, restore drill, monitoring, and direct-origin fallback outside Cloudflare. | Infra + gateway operator |
-| Production private S3 | Pilot bucket `matters-fediverse-prod-bundles` now exists with public access blocked, SSE-S3 encryption, versioning, and 90-day `pilot/` lifecycle. Before broader rollout, confirm IAM role wiring and whether CloudTrail data events or another access audit path is required. | Infra + security/legal input |
-| Production Lambda secrets | Confirm owner and rotation path for Lambda credentials and gateway ingestion credentials. | CTO / infra |
-| Legal takedown owner | Name the legal/policy owner and approve the takedown response path before beta. | Legal / policy |
-| Privacy notice | Approve user-facing copy that explains external server caching and replication. | Product + legal |
-| Key exposure / rotation | Name the owner and approve severity, rotation, actor update/delete, and external notice rules. | CTO / security |
-| Rollback rehearsal | Prove the rollback sequence: disable author opt-in, stop export trigger, preserve evidence, pause delivery, and remove public routing if needed. | Launch commander + gateway operator |
-| Production public delivery | Although approved in principle, only enable `Create` / `Update` / `Delete` after the gates above pass. | Launch commander |
+| Threads Follow compatibility | Threads can discover the canonical profile but cannot complete Follow; keep investigating without blocking Mastodon/Misskey pilot preparation. | Matters current General Manager; product and gateway operator support. |
+| Mastodon interaction return | Current g0v.social token is read-only, so reply / favourite / boost write tests require a write-scoped token or manual browser action. | Matters current General Manager; gateway operator executes. |
+| Production gateway hosting | Confirm long-running gateway host, SQLite backup path, restore drill, monitoring, and direct-origin fallback outside Cloudflare. | Matters current General Manager; infra and gateway operator support. |
+| Production private S3 | Pilot bucket `matters-fediverse-prod-bundles` now exists with public access blocked, SSE-S3 encryption, versioning, and 90-day `pilot/` lifecycle. Before broader rollout, confirm IAM role wiring and whether CloudTrail data events or another access audit path is required. | Matters current General Manager; infra and security/legal support. |
+| Production Lambda secrets | Confirm owner and rotation path for Lambda credentials and gateway ingestion credentials. | Matters current General Manager; CTO/infra support. |
+| Legal takedown owner | Approve the takedown response path before beta. | Matters current General Manager; legal/policy supports. |
+| Privacy notice | Approve user-facing copy that explains external server caching and replication. | Matters current General Manager; product/legal supports. |
+| Key exposure / rotation | Approve severity, rotation, actor update/delete, and external notice rules. | Matters current General Manager; CTO/security supports. |
+| Rollback rehearsal | Prove the rollback sequence: disable author opt-in, stop export trigger, preserve evidence, pause delivery, and remove public routing if needed. | Matters current General Manager; gateway operator executes. |
+| Production public delivery | Although approved in principle, only enable `Create` / `Update` / `Delete` after the gates above pass. | Matters current General Manager. |
 
 ## Do Not Do Automatically
 
 - Do not expand canonical `acct:user@matters.town` beyond the approved pilot handle before the canonical identity gate is expanded.
 - Do not enable production outbound delivery while legal/privacy/rollback gates are open.
+- Treat Matters current General Manager as the owner for all remaining pilot
+  gate decisions unless a decision is explicitly delegated in writing.
 - Do not expose actor private keys, Lambda secrets, S3 credentials, or Cloudflare production routing changes in repo or chat logs.
 - Do not treat Threads UI failure as a backend regression now that direct crawler diagnostics pass.
 - Do not treat Worker edge-demo inbox 202 responses as successful canonical
