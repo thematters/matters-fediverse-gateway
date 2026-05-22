@@ -1,14 +1,16 @@
 # Production Pilot Final Gates
 
 Date: 2026-05-22
-Status: pre-outbound checklist; production remains `record_only`
+Status: first bounded `Create` pilot delivered; production server remains
+`record_only`
 
-This checklist narrows the remaining work before the first production outbound
+This checklist narrows the remaining work around the first production outbound
 pilot for `acct:mashbeanmatters@matters.town`.
 
-It is not approval to send production ActivityPub `Create`, `Update`, or
-`Delete`. Production outbound remains disabled until every blocking item in this
-document is closed and Matters current General Manager gives an explicit go.
+It is not approval for broad production ActivityPub `Create`, `Update`, or
+`Delete`. One bounded gateway-origin `Create` was sent during the approved
+2026-05-22 pilot window. Server-triggered production outbound remains disabled
+because `matters-server-prod-new` stays in `record_only`.
 
 ## Current Safe Baseline
 
@@ -19,7 +21,8 @@ document is closed and Matters current General Manager gives an explicit go.
 | Redacted audit query | Cleared | Workflow run `26269962135` passed with `include_decision_report=false` and returned row `id=399` for article `1225211`. |
 | Gateway public preflight | Cleared | `npm run check:production-record-only` passed on 2026-05-22 with `outbox.totalItems=0`, `followers.totalItems=2`, and `fullOutboundEnabled=false`. |
 | Public discovery | Cleared | `npm run check:threads-discovery` passed on 2026-05-22 for default, `facebookexternalua`, `facebookexternalhit`, and `meta-externalagent` probes. |
-| Production outbound | Still disabled | No production ActivityPub delivery has been enabled or sent. |
+| Bounded production pilot `Create` | Cleared | One gateway-origin `Create` for article `1225211` was sent during the approved 2026-05-22 window and delivered to the two accepted pilot followers. See `production-pilot-create-run-20260522.md`. |
+| Broad production outbound | Still disabled | `matters-server-prod-new` remains `record_only`; no default-on or server-triggered broad delivery has been enabled. |
 
 ## Blocking Gates Before Outbound
 
@@ -28,7 +31,7 @@ document is closed and Matters current General Manager gives an explicit go.
 | Production private S3 bundle storage | Private bucket or prefix exists, bucket policy blocks public access, lifecycle/retention is documented, and access logging or audit trail is known. | Cleared for pilot storage on 2026-05-22. Bucket `matters-fediverse-prod-bundles` exists in `ap-southeast-1`, blocks public access, uses SSE-S3 encryption, has versioning enabled, and expires the `pilot/` prefix after 90 days. | Matters current General Manager; infra supports execution and audit details. |
 | Gateway SQLite backup | Fresh backup exists for the live AWS origin SQLite database and has a manifest. | Cleared on 2026-05-22 through SSM command `732401b2-f577-499b-8387-20e6b736f361`. Backup manifest reports schema version 6 and WAL mode. | Matters current General Manager; gateway operator executes. |
 | Gateway SQLite consistency scan | Latest production-origin scan has no unexplained diffs. | Cleared with explained diffs on 2026-05-22. The scan reported `totalDiffs=5`, all `missing_in_file`: 2 followers, 1 Misskey inbound object, and 2 Misskey engagements exist in SQLite but not legacy file state. There were no `missing_in_sqlite` or value mismatches; this matches the SQLite-primary runtime direction. | Matters current General Manager; gateway operator executes. |
-| Rollback owner and window | Named owner, reachable during pilot window, with authority to stop delivery and disable author federation. | Owner assigned to Matters current General Manager. Pilot window still needs a concrete time. | Matters current General Manager; gateway operator executes rollback steps. |
+| Rollback owner and window | Named owner, reachable during pilot window, with authority to stop delivery and disable author federation. | Owner assigned to Matters current General Manager. First pilot window was 2026-05-22 16:43-20:43 CST (+0800). | Matters current General Manager; gateway operator executes rollback steps. |
 | Legal takedown owner | Named owner and response path for external takedown requests. | Owner assigned to Matters current General Manager. Legal/policy may advise, but the pilot decision owner is GM. | Matters current General Manager. |
 | Privacy notice | Product/legal approved copy about external caching, replication, and deletion limits. | Owner assigned to Matters current General Manager. Draft exists in `08-production-rollout-human-approval.md`. | Matters current General Manager. |
 | Key exposure / rotation owner | Named severity decision owner and execution owner for rotation, actor update/delete, and external notice decisions. | Owner assigned to Matters current General Manager. CTO/security supports severity assessment and gateway operator executes key rotation. | Matters current General Manager. |
@@ -123,11 +126,33 @@ result, and `totalDiffs`.
   after the SQLite-primary runtime migration; no SQLite omissions and no value
   mismatches.
 
+## 2026-05-22 First Create Pilot Evidence
+
+- Pilot window: 2026-05-22 16:43-20:43 CST (+0800).
+- Pilot run report:
+  `research/matters-fediverse-compat/03-ops/production-pilot-create-run-20260522.md`
+- Lambda bundle S3 prefix:
+  `s3://matters-fediverse-prod-bundles/pilot/mashbean/1225211/2026-05-22T08-45-04-869Z`
+- Gateway send endpoint:
+  `https://gateway-core-origin.matters.town/users/mashbeanmatters/outbox/create`
+- Activity id:
+  `https://matters.town/ap/activities/1779439823202-create-mashbeanmatters`
+- Delivery result: g0v.social and gyutte.site both accepted with HTTP 202.
+- Post-send queue: `pending=0`, `deadLetter=0`.
+- Mastodon readback: `npm run check:mastodon-readback` found
+  `https://matters.town/a/3tmz0u0a42qx`.
+- Misskey readback: gyutte.site profile and notes tab show the
+  `@mashbeanmatters@matters.town` actor and the Matters Fediverse article.
+- Post-send SSM backup command: `58e14af3-becb-4626-8e52-f0656de548c4`.
+- Post-send consistency result: `totalDiffs=5`, all `missing_in_file`;
+  `missing_in_sqlite=0`, `value_mismatch=0`.
+
 ## Go / No-Go Rule
 
-Go only if all of these are true:
+Go only if all of these are true for the next bounded pilot action:
 
-- production remains `record_only` until the pilot send step;
+- production remains `record_only` until any explicitly approved pilot send
+  step;
 - S3 private storage gate is closed;
 - fresh SQLite backup exists;
 - latest consistency scan has `totalDiffs=0` or every diff is explained;
@@ -138,7 +163,7 @@ Go only if all of these are true:
   Manager;
 - Lambda and gateway ingestion secret rotation path is approved by Matters
   current General Manager;
-- pilot scope is still only `mashbean`, article `1225211`, and known accepted
+-- pilot scope is still only `mashbean`, article `1225211`, and known accepted
   Mastodon/Misskey followers.
 
 No-go if Matters current General Manager has not explicitly approved the

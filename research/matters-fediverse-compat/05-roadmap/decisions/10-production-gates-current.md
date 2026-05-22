@@ -1,7 +1,7 @@
 # Current Production Gates
 
 Date: 2026-05-22
-Status: production `record_only` is enabled for `mashbean` observation; production outbound rollout is still gated
+Status: first bounded `mashbean` production `Create` delivered; production outbound rollout is still gated
 
 This is the current gate list after the staging Cloudflare crawler bypass,
 canonical `matters.town` pilot deployment, Threads diagnostic rerun,
@@ -35,8 +35,9 @@ and the post-change production preflight.
 | Production audit-row query | Cleared for record-only observation | Read-only production workflow run 26079277083 returned one `federation_export_event` row for article `1225211`: `trigger=publish_article`, `mode=record_only`, `status=recorded`, `eligible=true`, `reason=eligible`, `author_setting=enabled`, and `effective_article_setting=inherit`. No production ActivityPub outbound delivery was enabled. |
 | Production audit repeat query | Cleared after release | Read-only workflow run 26269962135 passed on 2026-05-22 with `include_decision_report=false` after the v5.23.0 release. It returned row `id=399` for article `1225211` with `trigger=publish_article`, `mode=record_only`, `status=recorded`, `eligible=true`, `reason=eligible`, `author_setting=enabled`, `effective_article_setting=inherit`, and redacted `decision_report`. |
 | Production public discovery repeat | Cleared as public check | `npm run check:threads-discovery` returned `ok=true` on 2026-05-22 for canonical WebFinger, actor, outbox, and NodeInfo probes across default, `facebookexternalua`, `facebookexternalhit`, and `meta-externalagent` user agents. |
-| Pilot outbound runbook | Prepared, not executed | `03-ops/production-pilot-outbound-runbook.md` defines the narrow `mashbean` pilot sequence, stop conditions, rollback, evidence archive, and release branch policy constraints. |
+| Pilot outbound runbook | First bounded `Create` executed | `03-ops/production-pilot-outbound-runbook.md` defines the narrow `mashbean` pilot sequence, stop conditions, rollback, evidence archive, and release branch policy constraints. |
 | Pilot final gate checklist | Partially cleared | `03-ops/production-pilot-final-gates-20260522.md` separates closed gates, blocking open gates, AWS verification commands, owner recommendations, and the go/no-go rule. On 2026-05-22, AWS CLI auth was restored, private S3 pilot storage was created, the live origin SQLite backup succeeded, and the consistency scan returned only explained SQLite-primary diffs. |
+| First bounded production `Create` | Cleared for Mastodon and Misskey | `03-ops/production-pilot-create-run-20260522.md` records the approved 2026-05-22 16:43-20:43 CST pilot window, private S3 bundle prefix, gateway-origin `Create`, delivery to g0v.social and gyutte.site with HTTP 202, Mastodon readback success, Misskey visual readback, queue `pending=0` / `deadLetter=0`, and post-send SQLite scan with no SQLite omissions or value mismatches. |
 | Deployed-Lambda staging workflow | Cleared as repeatable path | `lambda-handlers` workflow run 26017383955 selected public article `23525`, skipped paywalled article `23522` as `article_not_public`, returned one eligible bundle, and kept `dryRun=true`. Direct `articleIds` Lambda invocation is not the validated path because the Lambda environment does not include DB connection variables. |
 
 ## Still Open Before Production
@@ -52,12 +53,13 @@ and the post-change production preflight.
 | Privacy notice | Approve user-facing copy that explains external server caching and replication. | Matters current General Manager; product/legal supports. |
 | Key exposure / rotation | Approve severity, rotation, actor update/delete, and external notice rules. | Matters current General Manager; CTO/security supports. |
 | Rollback rehearsal | Prove the rollback sequence: disable author opt-in, stop export trigger, preserve evidence, pause delivery, and remove public routing if needed. | Matters current General Manager; gateway operator executes. |
-| Production public delivery | Although approved in principle, only enable `Create` / `Update` / `Delete` after the gates above pass. | Matters current General Manager. |
+| Next bounded production action | Decide whether to keep observing the first `Create` or approve one pilot `Update` for article `1225211`; do not expand to broad delivery yet. | Matters current General Manager. |
 
 ## Do Not Do Automatically
 
 - Do not expand canonical `acct:user@matters.town` beyond the approved pilot handle before the canonical identity gate is expanded.
-- Do not enable production outbound delivery while legal/privacy/rollback gates are open.
+- Do not enable broad production outbound delivery while legal/privacy/rollback
+  gates are open. The first bounded `Create` does not imply broad rollout.
 - Treat Matters current General Manager as the owner for all remaining pilot
   gate decisions unless a decision is explicitly delegated in writing.
 - Do not expose actor private keys, Lambda secrets, S3 credentials, or Cloudflare production routing changes in repo or chat logs.

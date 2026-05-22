@@ -1,19 +1,23 @@
 # Production Pilot Outbound Runbook
 
 Date: 2026-05-22
-Status: prepared; do not execute until the release branch and final gates are
-cleared
+Status: first bounded `Create` executed; broad rollout still gated
 
 ## Purpose
 
-Move from production `record_only` observation to a narrow production outbound
-pilot for the approved author `mashbean`.
+Move from production `record_only` observation to narrow production outbound
+pilots for the approved author `mashbean`.
 
 This runbook is intentionally not a full rollout. It allows one pilot author,
 one known public article sequence, and known accepted followers only. It must
 not enable default-on federation, broad author rollout, crawler-style discovery,
 or delivery for private, paid, encrypted, circle-only, archived, draft, or
 message-like content.
+
+The first bounded production `Create` was executed on 2026-05-22 during the
+approved 16:43-20:43 CST (+0800) pilot window. See
+`production-pilot-create-run-20260522.md`. `matters-server-prod-new` remained in
+`record_only`; broad server-triggered outbound was not enabled.
 
 ## Branch And Release Policy
 
@@ -42,16 +46,18 @@ Follow `/Users/mashbean/Documents/AI-Agent/docs/ops/matters-release-branch-polic
 | Mastodon / Misskey follow baseline | g0v.social and gyutte.site follow state converge through the AWS `gateway-core` origin. |
 | Misskey interaction return | Reply, like/reaction, and renote returned to `gateway-core` and persisted in SQLite. |
 | Production pilot gate owner | Matters current General Manager is assigned as the decision owner for rollback, legal takedown, privacy notice, key exposure/rotation, and Lambda/gateway ingestion secrets. |
+| First bounded production `Create` | `production-pilot-create-run-20260522.md` records delivery to the two accepted Mastodon/Misskey pilot followers, Mastodon readback success, Misskey visual readback, and post-send queue/SQLite evidence. |
 
-## Still Required Before Executing
+## Still Required Before Next Pilot Action
 
-Do not start outbound until these are true:
+Do not send another outbound activity until these are true:
 
 - `matters-server` v5.23.0 release is on `master` through PR #4814.
 - Production record-only audit repeat query works with
   `include_decision_report=false` after the v5.23.0 release.
 - The final gate checklist in
-  `production-pilot-final-gates-20260522.md` has no blocking open items.
+  `production-pilot-final-gates-20260522.md` has no blocking open item for the
+  next bounded action.
 - Private production S3 bundle bucket/prefix, IAM role, lifecycle, access logs,
   and retention are confirmed.
 - Matters current General Manager approves the Lambda and gateway ingestion
@@ -212,11 +218,12 @@ Do not delete evidence or rotate keys before preserving logs and SQLite backup.
 - Matters current General Manager go/no-go timestamp and any delegated operator
   name.
 
-## Next Step After Pilot Passes
+## Next Step After Create Pilot Passes
 
-If the pilot Create and Update pass:
+If the pilot Create evidence is accepted:
 
 1. keep production in pilot mode for observation;
-2. do not open all authors automatically;
-3. prepare a separate expansion decision for broader opt-in availability;
-4. keep Threads follow debugging separate from Mastodon/Misskey launch readiness.
+2. decide whether to approve one bounded `Update` for the same public article;
+3. do not open all authors automatically;
+4. prepare a separate expansion decision for broader opt-in availability;
+5. keep Threads follow debugging separate from Mastodon/Misskey launch readiness.
