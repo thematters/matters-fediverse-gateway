@@ -49,6 +49,8 @@ Do not start outbound until these are true:
 - `matters-server` v5.23.0 release is on `master` through PR #4814.
 - Production record-only audit repeat query works with
   `include_decision_report=false` after the v5.23.0 release.
+- The final gate checklist in
+  `production-pilot-final-gates-20260522.md` has no blocking open items.
 - Private production S3 bundle bucket/prefix, IAM role, lifecycle, access logs,
   and retention are confirmed.
 - Lambda and gateway ingestion secret owners are named, with a rotation path.
