@@ -119,6 +119,8 @@ Updated: 2026-05-22
 4. Keep production in record-only observation until the release branch path is
    complete. The pilot outbound sequence is prepared in
    `03-ops/production-pilot-outbound-runbook.md`, but not yet executed.
+   The blocking pre-outbound gates are separated in
+   `03-ops/production-pilot-final-gates-20260522.md`.
 5. Keep using `npm run check:production-record-only` after production
    configuration changes. This is read-only and must keep passing while the
    system remains in observation mode.
