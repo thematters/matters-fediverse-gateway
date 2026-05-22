@@ -138,10 +138,13 @@ Updated: 2026-05-22
 
 1. Confirm production gateway hosting, SQLite backup/restore path, scheduler
    boundary, monitoring, and direct-origin fallback outside Cloudflare.
-2. Confirm production storage owner and S3 bucket/prefix policy.
+2. Treat Matters current General Manager as the decision owner for production
+   storage, rollback, legal takedown, privacy notice, key exposure/rotation,
+   and Lambda/gateway ingestion secrets. Infra, CTO/security, legal/policy, and
+   gateway operator roles support execution and advice.
 3. Confirm production outbound delivery mode and rollback window after
    record-only observation, not before.
-4. Confirm legal takedown owner, privacy notice text, and key
-   exposure/rotation owner.
+4. Confirm legal takedown response path, privacy notice text, and key
+   exposure/rotation path under the General Manager owner model.
 5. Confirm launch copy and whether the first rollout is silent beta,
    limited pilot, or public announcement.

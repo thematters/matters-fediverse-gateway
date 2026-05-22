@@ -8,7 +8,7 @@ pilot for `acct:mashbeanmatters@matters.town`.
 
 It is not approval to send production ActivityPub `Create`, `Update`, or
 `Delete`. Production outbound remains disabled until every blocking item in this
-document is closed and the launch commander gives an explicit go.
+document is closed and Matters current General Manager gives an explicit go.
 
 ## Current Safe Baseline
 
@@ -23,26 +23,28 @@ document is closed and the launch commander gives an explicit go.
 
 ## Blocking Gates Before Outbound
 
-| Gate | Required result | Current state | Recommended owner |
+| Gate | Required result | Current state | Decision owner |
 | --- | --- | --- | --- |
-| Production private S3 bundle storage | Private bucket or prefix exists, bucket policy blocks public access, lifecycle/retention is documented, and access logging or audit trail is known. | Cleared for pilot storage on 2026-05-22. Bucket `matters-fediverse-prod-bundles` exists in `ap-southeast-1`, blocks public access, uses SSE-S3 encryption, has versioning enabled, and expires the `pilot/` prefix after 90 days. | Infra owner, with product/legal input on retention. |
-| Gateway SQLite backup | Fresh backup exists for the live AWS origin SQLite database and has a manifest. | Cleared on 2026-05-22 through SSM command `732401b2-f577-499b-8387-20e6b736f361`. Backup manifest reports schema version 6 and WAL mode. | Gateway operator. |
-| Gateway SQLite consistency scan | Latest production-origin scan has no unexplained diffs. | Cleared with explained diffs on 2026-05-22. The scan reported `totalDiffs=5`, all `missing_in_file`: 2 followers, 1 Misskey inbound object, and 2 Misskey engagements exist in SQLite but not legacy file state. There were no `missing_in_sqlite` or value mismatches; this matches the SQLite-primary runtime direction. | Gateway operator. |
-| Rollback owner and window | Named owner, reachable during pilot window, with authority to stop delivery and disable author federation. | Open. | Launch commander plus gateway operator. |
-| Legal takedown owner | Named owner and response path for external takedown requests. | Open. | Legal/policy owner. |
-| Privacy notice | Product/legal approved copy about external caching, replication, and deletion limits. | Open. Draft exists in `08-production-rollout-human-approval.md`. | Product owner plus legal/policy. |
-| Key exposure / rotation owner | Named severity decision owner and execution owner for rotation, actor update/delete, and external notice decisions. | Open. | CTO/security owner plus gateway operator. |
-| Lambda and gateway ingestion secrets | Owners and rotation path named. | Open. | CTO/infra. |
+| Production private S3 bundle storage | Private bucket or prefix exists, bucket policy blocks public access, lifecycle/retention is documented, and access logging or audit trail is known. | Cleared for pilot storage on 2026-05-22. Bucket `matters-fediverse-prod-bundles` exists in `ap-southeast-1`, blocks public access, uses SSE-S3 encryption, has versioning enabled, and expires the `pilot/` prefix after 90 days. | Matters current General Manager; infra supports execution and audit details. |
+| Gateway SQLite backup | Fresh backup exists for the live AWS origin SQLite database and has a manifest. | Cleared on 2026-05-22 through SSM command `732401b2-f577-499b-8387-20e6b736f361`. Backup manifest reports schema version 6 and WAL mode. | Matters current General Manager; gateway operator executes. |
+| Gateway SQLite consistency scan | Latest production-origin scan has no unexplained diffs. | Cleared with explained diffs on 2026-05-22. The scan reported `totalDiffs=5`, all `missing_in_file`: 2 followers, 1 Misskey inbound object, and 2 Misskey engagements exist in SQLite but not legacy file state. There were no `missing_in_sqlite` or value mismatches; this matches the SQLite-primary runtime direction. | Matters current General Manager; gateway operator executes. |
+| Rollback owner and window | Named owner, reachable during pilot window, with authority to stop delivery and disable author federation. | Owner assigned to Matters current General Manager. Pilot window still needs a concrete time. | Matters current General Manager; gateway operator executes rollback steps. |
+| Legal takedown owner | Named owner and response path for external takedown requests. | Owner assigned to Matters current General Manager. Legal/policy may advise, but the pilot decision owner is GM. | Matters current General Manager. |
+| Privacy notice | Product/legal approved copy about external caching, replication, and deletion limits. | Owner assigned to Matters current General Manager. Draft exists in `08-production-rollout-human-approval.md`. | Matters current General Manager. |
+| Key exposure / rotation owner | Named severity decision owner and execution owner for rotation, actor update/delete, and external notice decisions. | Owner assigned to Matters current General Manager. CTO/security supports severity assessment and gateway operator executes key rotation. | Matters current General Manager. |
+| Lambda and gateway ingestion secrets | Owners and rotation path named. | Owner assigned to Matters current General Manager. CTO/infra supports credential storage and rotation mechanics. | Matters current General Manager. |
 
 ## Recommended Defaults
 
-Use these defaults unless the named owner overrides them before the pilot:
+Use these defaults unless Matters current General Manager overrides them before
+the pilot:
 
 - S3 storage: one private prefix for production generated bundles, not public
   serving. Pilot bucket: `s3://matters-fediverse-prod-bundles/pilot/`.
 - S3 public access: block all public access at bucket level.
 - S3 retention: 90 days for pilot bundle artifacts, then revisit after the
-  pilot. Keep longer only if legal/policy explicitly wants it.
+  pilot. Keep longer only if Matters current General Manager explicitly wants
+  it after legal/policy input.
 - Access logging/audit: CloudTrail data events or equivalent access audit for
   the bucket/prefix before broader rollout.
 - Rollback window: one hour around the first `Create`; no broad delivery during
@@ -54,6 +56,13 @@ Use these defaults unless the named owner overrides them before the pilot:
   suspected exposure. Do not reuse the old Worker demo `#main-key`.
 - Audit query: use `include_decision_report=false` by default and keep full
   decision reports out of public PRs and chat logs.
+
+## Owner Assignment
+
+All pilot gate decision ownership is assigned to Matters current General
+Manager. CTO, infra, legal/policy, security, and gateway operator roles are
+supporting or execution roles unless the General Manager delegates a specific
+decision in writing.
 
 ## AWS Readiness Commands
 
@@ -122,13 +131,17 @@ Go only if all of these are true:
 - S3 private storage gate is closed;
 - fresh SQLite backup exists;
 - latest consistency scan has `totalDiffs=0` or every diff is explained;
-- rollback owner and pilot window are named;
-- legal takedown owner and privacy notice are approved;
-- key exposure / rotation owner is named;
-- Lambda and gateway ingestion secret owners are named;
+- rollback pilot window is named by Matters current General Manager;
+- legal takedown response path and privacy notice are approved by Matters
+  current General Manager;
+- key exposure / rotation decision path is approved by Matters current General
+  Manager;
+- Lambda and gateway ingestion secret rotation path is approved by Matters
+  current General Manager;
 - pilot scope is still only `mashbean`, article `1225211`, and known accepted
   Mastodon/Misskey followers.
 
-No-go if any blocking owner is unnamed, any storage access is public by
-accident, the gateway preflight fails, the audit query no longer shows
-`record_only`, or the follower target set contains unexpected actors.
+No-go if Matters current General Manager has not explicitly approved the
+remaining owner-gated items, any storage access is public by accident, the
+gateway preflight fails, the audit query no longer shows `record_only`, or the
+follower target set contains unexpected actors.
