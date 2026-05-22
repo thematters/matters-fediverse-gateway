@@ -1,6 +1,6 @@
 # Next Steps
 
-Updated: 2026-05-18
+Updated: 2026-05-22
 
 ## Done Baseline
 
@@ -64,7 +64,7 @@ Updated: 2026-05-18
   `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only`. Elastic Beanstalk
   returned to Ready / Green / Ok after the setting change,
   `https://server.matters.town/health` returned 200, production GraphQL exposes
-  `UserFeatures.fediverseBeta`, and the 2026-05-18
+  `UserFeatures.fediverseBeta`, and the 2026-05-22
   `npm run check:production-record-only` preflight passed with
   `fullOutboundEnabled=false`, outbox `totalItems=0`, and followers
   `totalItems=2`. No production ActivityPub outbound delivery was enabled or
@@ -86,10 +86,22 @@ Updated: 2026-05-18
   one eligible generated bundle, and kept `dryRun=true`. Direct Lambda
   `articleIds` invocation is not the validated path because the deployed Lambda
   environment does not include DB connection variables.
-- The first production audit-row query attempt showed a redacted SQL quoting
-  bug when `include_decision_report=false`. `matters-server` PR #4808 fixes that
-  repeat-check path. The successful evidence run used
-  `include_decision_report=true`.
+- The `matters-server` release path for v5.23.0 has completed through PR
+  [#4814](https://github.com/thematters/matters-server/pull/4814). The old
+  #4806 release PR was closed unmerged; the redacted production audit query fix
+  is now on `master`.
+- A 2026-05-22 repeat production audit query passed as read-only workflow run
+  [26269962135](https://github.com/thematters/matters-server/actions/runs/26269962135)
+  with `include_decision_report=false`. It returned the same production
+  `federation_export_event` row for article `1225211`: `id=399`,
+  `trigger=publish_article`, `mode=record_only`, `status=recorded`,
+  `eligible=true`, `reason=eligible`, `author_setting=enabled`,
+  `effective_article_setting=inherit`, and redacted `decision_report`.
+- A 2026-05-22 public discovery diagnostic returned `ok=true` for canonical
+  `acct:mashbeanmatters@matters.town` WebFinger, actor, outbox, and NodeInfo
+  probes across the default, `facebookexternalua`, `facebookexternalhit`, and
+  `meta-externalagent` user agents. This does not prove Threads Follow, but it
+  confirms the public crawler-facing prerequisites still pass.
 
 ## Immediate Engineering Work
 
@@ -100,9 +112,10 @@ Updated: 2026-05-18
 2. Keep Threads as a separate compatibility investigation around Follow
    acceptance. Do not block Mastodon/Misskey pilot preparation on the current
    Threads Follow failure.
-3. Merge the redacted production audit query fix through `matters-server` #4809
-   so future queries work with `include_decision_report=false`. Under the
-   release branch policy, direct master PR #4808 is superseded.
+3. Keep production audit queries on the redacted path by default
+   (`include_decision_report=false`), using workflow run
+   [26269962135](https://github.com/thematters/matters-server/actions/runs/26269962135)
+   as the post-release proof.
 4. Keep production in record-only observation until the release branch path is
    complete. The pilot outbound sequence is prepared in
    `03-ops/production-pilot-outbound-runbook.md`, but not yet executed.

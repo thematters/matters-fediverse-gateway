@@ -1,6 +1,6 @@
 # Production Pilot Outbound Runbook
 
-Date: 2026-05-19
+Date: 2026-05-22
 Status: prepared; do not execute until the release branch and final gates are
 cleared
 
@@ -23,19 +23,21 @@ Follow `/Users/mashbean/Documents/AI-Agent/docs/ops/matters-release-branch-polic
 - Do not open a parallel direct `master` PR for normal release work.
 - Direct `master` PRs are hotfix-only and must be back-merged or cherry-picked
   to `develop`.
-- For the current release batch, the expected path is:
-  1. merge `matters-server` #4809 into `develop`;
-  2. update/recheck release PR #4806 from `develop` to `master`;
-  3. merge #4806 only after conflicts and checks are clear.
+- For the v5.23.0 release batch, the completed path was:
+  1. merge conflict-resolution PRs into `develop`;
+  2. close the stale #4806 release PR unmerged;
+  3. merge `matters-server` #4814 from `develop` to `master`;
+  4. merge follow-up sync PR #4811 back to `develop`.
 
 ## Current Cleared Evidence
 
 | Gate | Evidence |
 | --- | --- |
 | Production record-only backend setting | `matters-server-prod-new` has `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only`. |
-| Gateway production preflight | `npm run check:production-record-only` returned `ok=true`, `fullOutboundEnabled=false`, outbox `totalItems=0`, followers `totalItems=2`. |
+| Gateway production preflight | `npm run check:production-record-only` returned `ok=true`, `fullOutboundEnabled=false`, outbox `totalItems=0`, followers `totalItems=2` on 2026-05-22. |
 | Pilot article eligibility | `https://matters.town/a/3tmz0u0a42qx` / article `1225211` is active, public, owned by `mashbean`, and eligible with effective article setting `inherit`. |
 | Production audit row | Workflow run `26079277083` returned `trigger=publish_article`, `mode=record_only`, `status=recorded`, `eligible=true`, `reason=eligible`, `author_setting=enabled`, and `effective_article_setting=inherit`. |
+| Production audit repeat query | Workflow run `26269962135` passed on 2026-05-22 with `include_decision_report=false` and returned row `id=399` for article `1225211` with redacted `decision_report`. |
 | Canonical actor runtime | `acct:mashbeanmatters@matters.town` resolves through `gateway-core` with versioned key id `#gateway-core-20260517`. |
 | Mastodon / Misskey follow baseline | g0v.social and gyutte.site follow state converge through the AWS `gateway-core` origin. |
 | Misskey interaction return | Reply, like/reaction, and renote returned to `gateway-core` and persisted in SQLite. |
@@ -44,11 +46,9 @@ Follow `/Users/mashbean/Documents/AI-Agent/docs/ops/matters-release-branch-polic
 
 Do not start outbound until these are true:
 
-- `matters-server` #4809 is merged to `develop`.
-- `matters-server` #4806 has been updated and merged from `develop` to
-  `master` under the release branch policy.
+- `matters-server` v5.23.0 release is on `master` through PR #4814.
 - Production record-only audit repeat query works with
-  `include_decision_report=false` after the #4809/#4806 path lands.
+  `include_decision_report=false` after the v5.23.0 release.
 - Private production S3 bundle bucket/prefix, IAM role, lifecycle, access logs,
   and retention are confirmed.
 - Lambda and gateway ingestion secret owners are named, with a rotation path.

@@ -1,6 +1,6 @@
 # Current Production Gates
 
-Date: 2026-05-18
+Date: 2026-05-22
 Status: production `record_only` is enabled for `mashbean` observation; production outbound rollout is still gated
 
 This is the current gate list after the staging Cloudflare crawler bypass,
@@ -29,10 +29,12 @@ and the post-change production preflight.
 | Canonical pilot Article visibility | Cleared for Mastodon and Misskey | Pilot Article `https://matters.town/ap/articles/canonical-pilot-article-20260517t042821z` is visible through Mastodon readback and Misskey `users/notes`. |
 | Canonical Misskey interaction return | Cleared | Misskey reply, reaction/like, and renote returned to gateway-core and were persisted as `reply.stored`, `like.stored`, and `announce.stored`. |
 | Production preparation mode | Approved for narrow pilot | Product approved `mashbean` as the first pilot author, record-only / observation mode, and a fresh versioned key id. Full outbound remains disabled. |
-| Production record-only preflight | Cleared as read-only check | `npm run check:production-record-only` validates canonical gateway health, WebFinger, actor, outbox, followers, `record_only`, pilot author `mashbean`, full outbound disabled, and versioned key id without sending ActivityPub activities. The 2026-05-18 rerun returned `ok=true`, outbox `totalItems=0`, and followers `totalItems=2`. |
+| Production record-only preflight | Cleared as read-only check | `npm run check:production-record-only` validates canonical gateway health, WebFinger, actor, outbox, followers, `record_only`, pilot author `mashbean`, full outbound disabled, and versioned key id without sending ActivityPub activities. The 2026-05-22 rerun returned `ok=true`, outbox `totalItems=0`, and followers `totalItems=2`. |
 | Production `record_only` backend setting | Enabled for pilot observation | `MATTERS_FEDERATION_EXPORT_TRIGGER_MODE=record_only` is set on Elastic Beanstalk environment `matters-server-prod-new`; the update returned to Ready / Green / Ok, `https://server.matters.town/health` returned 200, production schema exposes `UserFeatures.fediverseBeta`, and the 2026-05-18 production preflight passed. No production ActivityPub outbound delivery was sent. |
 | Production pilot article eligibility | Cleared before audit-row query | Real production article `1225211` / `3tmz0u0a42qx` is `active`, `public`, owned by `mashbean`, and a 2026-05-18 production GraphQL check reports `federationEligibility.eligible=true` with effective article setting `inherit`. |
 | Production audit-row query | Cleared for record-only observation | Read-only production workflow run 26079277083 returned one `federation_export_event` row for article `1225211`: `trigger=publish_article`, `mode=record_only`, `status=recorded`, `eligible=true`, `reason=eligible`, `author_setting=enabled`, and `effective_article_setting=inherit`. No production ActivityPub outbound delivery was enabled. |
+| Production audit repeat query | Cleared after release | Read-only workflow run 26269962135 passed on 2026-05-22 with `include_decision_report=false` after the v5.23.0 release. It returned row `id=399` for article `1225211` with `trigger=publish_article`, `mode=record_only`, `status=recorded`, `eligible=true`, `reason=eligible`, `author_setting=enabled`, `effective_article_setting=inherit`, and redacted `decision_report`. |
+| Production public discovery repeat | Cleared as public check | `npm run check:threads-discovery` returned `ok=true` on 2026-05-22 for canonical WebFinger, actor, outbox, and NodeInfo probes across default, `facebookexternalua`, `facebookexternalhit`, and `meta-externalagent` user agents. |
 | Pilot outbound runbook | Prepared, not executed | `03-ops/production-pilot-outbound-runbook.md` defines the narrow `mashbean` pilot sequence, stop conditions, rollback, evidence archive, and release branch policy constraints. |
 | Deployed-Lambda staging workflow | Cleared as repeatable path | `lambda-handlers` workflow run 26017383955 selected public article `23525`, skipped paywalled article `23522` as `article_not_public`, returned one eligible bundle, and kept `dryRun=true`. Direct `articleIds` Lambda invocation is not the validated path because the Lambda environment does not include DB connection variables. |
 
