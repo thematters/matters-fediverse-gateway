@@ -1,7 +1,7 @@
 # Current Production Gates
 
 Date: 2026-05-22
-Status: first bounded `mashbean` production `Create` and `Update` delivered; production outbound rollout is still gated
+Status: first bounded `mashbean` production `Create` and `Update` delivered; bounded withdrawal rehearsal partially passed; production outbound rollout is still gated
 
 This is the current gate list after the staging Cloudflare crawler bypass,
 canonical `matters.town` pilot deployment, Threads diagnostic rerun,
@@ -39,6 +39,7 @@ and the post-change production preflight.
 | Pilot final gate checklist | Partially cleared | `03-ops/production-pilot-final-gates-20260522.md` separates closed gates, blocking open gates, AWS verification commands, owner recommendations, and the go/no-go rule. On 2026-05-22, AWS CLI auth was restored, private S3 pilot storage was created, the live origin SQLite backup succeeded, and the consistency scan returned only explained SQLite-primary diffs. |
 | First bounded production `Create` | Cleared for Mastodon and Misskey | `03-ops/production-pilot-create-run-20260522.md` records the approved 2026-05-22 16:43-20:43 CST pilot window, private S3 bundle prefix, gateway-origin `Create`, delivery to g0v.social and gyutte.site with HTTP 202, Mastodon readback success, Misskey visual readback, queue `pending=0` / `deadLetter=0`, and post-send SQLite scan with no SQLite omissions or value mismatches. |
 | First bounded production `Update` | Cleared for delivery acceptance | `03-ops/production-pilot-update-run-20260528.md` records the gateway-origin `Update`, delivery to g0v.social and gyutte.site with HTTP 202, Mastodon readback success, Misskey visual readback, and queue `pending=0` / `deadLetter=0`. AWS session had expired, so S3/SSM evidence still needs a follow-up after reauthentication. |
+| Bounded production withdrawal | Partial pass | `03-ops/production-pilot-delete-run-20260528.md` records two Delete variants. Mastodon withdrew the real article status and direct lookup returned `Not Found`; Misskey accepted both deliveries with HTTP 202 but still showed the remote note, so Misskey withdrawal is an open compatibility gap. |
 | Deployed-Lambda staging workflow | Cleared as repeatable path | `lambda-handlers` workflow run 26017383955 selected public article `23525`, skipped paywalled article `23522` as `article_not_public`, returned one eligible bundle, and kept `dryRun=true`. Direct `articleIds` Lambda invocation is not the validated path because the Lambda environment does not include DB connection variables. |
 
 ## Still Open Before Production
@@ -54,7 +55,7 @@ and the post-change production preflight.
 | Privacy notice | Approve user-facing copy that explains external server caching and replication. | Matters current General Manager; product/legal supports. |
 | Key exposure / rotation | Approve severity, rotation, actor update/delete, and external notice rules. | Matters current General Manager; CTO/security supports. |
 | Rollback rehearsal | Prove the rollback sequence: disable author opt-in, stop export trigger, preserve evidence, pause delivery, and remove public routing if needed. | Matters current General Manager; gateway operator executes. |
-| Next bounded production action | Keep observing the first `Create` / `Update`, then decide whether to run AWS-backed evidence collection, a bounded withdrawal rehearsal, or a larger pilot expansion. Do not expand to broad delivery yet. | Matters current General Manager. |
+| Next bounded production action | Keep observing the first `Create` / `Update` and the withdrawal rehearsal, then fix or scope the Misskey withdrawal gap before larger pilot expansion. Do not expand to broad delivery yet. | Matters current General Manager. |
 
 ## Do Not Do Automatically
 
