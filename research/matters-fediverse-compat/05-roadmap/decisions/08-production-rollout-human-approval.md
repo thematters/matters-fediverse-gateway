@@ -1,7 +1,7 @@
 # Production Rollout Human Approval Brief
 
 Date: 2026-05-05
-Last updated: 2026-05-22
+Last updated: 2026-05-28
 Status: production preparation approved for pilot; full rollout still pending
 
 This brief is for product settings, legal/privacy, and production rollout decisions that should not be silently automated. Engineering can keep building and staging, but these items need explicit approval before public production enablement.
@@ -52,6 +52,10 @@ Current pilot evidence:
 
 - Canonical pilot Article delivery to Mastodon / g0v.social and Misskey / gyutte.site passed.
 - Misskey reply, reaction/like, and renote/boost returned to gateway-core and were persisted.
+- Bounded withdrawal is best-effort across remote servers: Mastodon removed the
+  pilot Article status, while gyutte.site accepted multiple Delete variants
+  with HTTP 202 but still showed the remote note. Treat external visible
+  removal as non-guaranteed unless a specific remote instance proves it.
 - Mastodon visibility passed; Mastodon interaction return still needs a write-scoped test token or browser-based manual action because the current g0v.social token is read-only.
 - Evidence report: [`canonical-pilot-article-interop-20260517.md`](../../03-ops/canonical-pilot-article-interop-20260517.md).
 
@@ -67,7 +71,7 @@ Use this as the first copy draft for settings UI and release notes.
 
 只有公開文章會被送出。付費、私人、加密、圈子限定、草稿或已封存內容不會被送出。
 
-請注意：Fediverse 是分散式網路。文章送出後，外部站台可能會保存、快取、轉載或顯示你的公開內容與文章資訊；Matters 無法保證所有外部副本都能同步刪除。
+請注意：Fediverse 是分散式網路。文章送出後，外部站台可能會保存、快取、轉載或顯示你的公開內容與文章資訊；即使你之後關閉發布或刪除文章，Matters 也無法保證所有外部副本都能同步刪除。
 
 ### Article Setting
 
@@ -80,7 +84,7 @@ Use this as the first copy draft for settings UI and release notes.
 
 ### Short Release Note
 
-Matters 將開始測試 Fediverse 發布功能。作者可自行選擇是否開啟，開啟後公開文章可被 Fediverse 上的其他服務讀取與互動。付費、私人、加密、圈子限定、草稿與已封存內容不會被送出。
+Matters 將開始測試 Fediverse 發布功能。作者可自行選擇是否開啟，開啟後公開文章可被 Fediverse 上的其他服務讀取與互動。付費、私人、加密、圈子限定、草稿與已封存內容不會被送出。公開內容送出後，外部站台可能保留快取或副本；後續關閉或刪除會盡力通知外部站台，但不保證所有外部副本同步移除。
 
 ## Owner Assignment
 
