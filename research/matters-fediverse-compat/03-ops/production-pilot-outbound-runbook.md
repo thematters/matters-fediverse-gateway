@@ -1,7 +1,7 @@
 # Production Pilot Outbound Runbook
 
 Date: 2026-05-22
-Status: first bounded `Create` executed; broad rollout still gated
+Status: bounded `Create` and `Update` executed; broad rollout still gated
 
 ## Purpose
 
@@ -15,8 +15,10 @@ or delivery for private, paid, encrypted, circle-only, archived, draft, or
 message-like content.
 
 The first bounded production `Create` was executed on 2026-05-22 during the
-approved 16:43-20:43 CST (+0800) pilot window. See
-`production-pilot-create-run-20260522.md`. `matters-server-prod-new` remained in
+approved 16:43-20:43 CST (+0800) pilot window. The first bounded production
+`Update` was executed on 2026-05-28. See
+`production-pilot-create-run-20260522.md` and
+`production-pilot-update-run-20260528.md`. `matters-server-prod-new` remained in
 `record_only`; broad server-triggered outbound was not enabled.
 
 ## Branch And Release Policy
@@ -47,6 +49,7 @@ Follow `/Users/mashbean/Documents/AI-Agent/docs/ops/matters-release-branch-polic
 | Misskey interaction return | Reply, like/reaction, and renote returned to `gateway-core` and persisted in SQLite. |
 | Production pilot gate owner | Matters current General Manager is assigned as the decision owner for rollback, legal takedown, privacy notice, key exposure/rotation, and Lambda/gateway ingestion secrets. |
 | First bounded production `Create` | `production-pilot-create-run-20260522.md` records delivery to the two accepted Mastodon/Misskey pilot followers, Mastodon readback success, Misskey visual readback, and post-send queue/SQLite evidence. |
+| First bounded production `Update` | `production-pilot-update-run-20260528.md` records delivery to the same two accepted pilot followers, Mastodon readback success, Misskey visual readback, and post-send queue health. |
 
 ## Still Required Before Next Pilot Action
 
@@ -218,12 +221,12 @@ Do not delete evidence or rotate keys before preserving logs and SQLite backup.
 - Matters current General Manager go/no-go timestamp and any delegated operator
   name.
 
-## Next Step After Create Pilot Passes
+## Next Step After Create / Update Pilot Passes
 
-If the pilot Create evidence is accepted:
+If the pilot Create and Update evidence is accepted:
 
 1. keep production in pilot mode for observation;
-2. decide whether to approve one bounded `Update` for the same public article;
+2. rerun AWS-backed S3/SQLite evidence collection after AWS reauthentication;
 3. do not open all authors automatically;
 4. prepare a separate expansion decision for broader opt-in availability;
 5. keep Threads follow debugging separate from Mastodon/Misskey launch readiness.

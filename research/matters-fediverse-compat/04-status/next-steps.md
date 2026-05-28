@@ -117,6 +117,14 @@ Updated: 2026-05-22
   `58e14af3-becb-4626-8e52-f0656de548c4`. The scan reported
   `totalDiffs=5`, all `missing_in_file`, with `missing_in_sqlite=0` and
   `value_mismatch=0`, which matches the SQLite-primary runtime direction.
+- On 2026-05-28, a bounded production pilot `Update` for the same public article
+  delivered through gateway-core origin. Preflight still returned `ok=true`,
+  `record_only`, `fullOutboundEnabled=false`, and `followers.totalItems=2`.
+  The gateway-origin `Update` returned HTTP 202 and delivered to both accepted
+  pilot followers. Queue health after send was `pending=0`, `deadLetter=0`.
+  Mastodon readback still found `https://matters.town/a/3tmz0u0a42qx`, and
+  Misskey UI readback still showed the canonical actor and Matters Fediverse
+  article.
 
 ## Immediate Engineering Work
 
@@ -131,12 +139,13 @@ Updated: 2026-05-22
    (`include_decision_report=false`), using workflow run
    [26269962135](https://github.com/thematters/matters-server/actions/runs/26269962135)
    as the post-release proof.
-4. Keep production in pilot observation after the first bounded `Create`.
+4. Keep production in pilot observation after the first bounded `Create` and
+   `Update`.
    The pilot outbound sequence is tracked in
    `03-ops/production-pilot-outbound-runbook.md`, and the first run evidence is
-   archived in `03-ops/production-pilot-create-run-20260522.md`. Do not expand
-   beyond the `mashbean` pilot or send a bounded `Update` until that next
-   action is explicitly approved.
+   archived in `03-ops/production-pilot-create-run-20260522.md` and
+   `03-ops/production-pilot-update-run-20260528.md`. Do not expand beyond the
+   `mashbean` pilot.
 5. Keep using `npm run check:production-record-only` after production
    configuration changes. This is read-only and must keep passing while the
    system remains in observation mode.
@@ -154,9 +163,9 @@ Updated: 2026-05-22
    storage, rollback, legal takedown, privacy notice, key exposure/rotation,
    and Lambda/gateway ingestion secrets. Infra, CTO/security, legal/policy, and
    gateway operator roles support execution and advice.
-3. Confirm whether the next bounded action is observation-only or one pilot
-   `Update` for article `1225211`; do not interpret the successful `Create` as
-   broad rollout approval.
+3. Reauthenticate AWS before the next evidence pass so S3 bundle readback and
+   SSM SQLite backup/consistency scan can run again after the 2026-05-28
+   `Update`.
 4. Confirm legal takedown response path, privacy notice text, and key
    exposure/rotation path under the General Manager owner model.
 5. Confirm launch copy and whether the first rollout is silent beta,
