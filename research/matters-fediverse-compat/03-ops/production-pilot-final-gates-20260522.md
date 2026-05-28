@@ -1,7 +1,7 @@
 # Production Pilot Final Gates
 
 Date: 2026-05-22
-Status: first bounded `Create` pilot delivered; production server remains
+Status: first bounded `Create` and `Update` pilots delivered; production server remains
 `record_only`
 
 This checklist narrows the remaining work around the first production outbound
@@ -9,8 +9,9 @@ pilot for `acct:mashbeanmatters@matters.town`.
 
 It is not approval for broad production ActivityPub `Create`, `Update`, or
 `Delete`. One bounded gateway-origin `Create` was sent during the approved
-2026-05-22 pilot window. Server-triggered production outbound remains disabled
-because `matters-server-prod-new` stays in `record_only`.
+2026-05-22 pilot window, and one bounded gateway-origin `Update` was sent on
+2026-05-28. Server-triggered production outbound remains disabled because
+`matters-server-prod-new` stays in `record_only`.
 
 ## Current Safe Baseline
 
@@ -22,6 +23,7 @@ because `matters-server-prod-new` stays in `record_only`.
 | Gateway public preflight | Cleared | `npm run check:production-record-only` passed on 2026-05-22 with `outbox.totalItems=0`, `followers.totalItems=2`, and `fullOutboundEnabled=false`. |
 | Public discovery | Cleared | `npm run check:threads-discovery` passed on 2026-05-22 for default, `facebookexternalua`, `facebookexternalhit`, and `meta-externalagent` probes. |
 | Bounded production pilot `Create` | Cleared | One gateway-origin `Create` for article `1225211` was sent during the approved 2026-05-22 window and delivered to the two accepted pilot followers. See `production-pilot-create-run-20260522.md`. |
+| Bounded production pilot `Update` | Cleared | One gateway-origin `Update` for article `1225211` was sent on 2026-05-28 and delivered to the same two accepted pilot followers. See `production-pilot-update-run-20260528.md`. |
 | Broad production outbound | Still disabled | `matters-server-prod-new` remains `record_only`; no default-on or server-triggered broad delivery has been enabled. |
 
 ## Blocking Gates Before Outbound
@@ -146,6 +148,23 @@ result, and `totalDiffs`.
 - Post-send SSM backup command: `58e14af3-becb-4626-8e52-f0656de548c4`.
 - Post-send consistency result: `totalDiffs=5`, all `missing_in_file`;
   `missing_in_sqlite=0`, `value_mismatch=0`.
+
+## 2026-05-28 First Update Pilot Evidence
+
+- Pilot run report:
+  `research/matters-fediverse-compat/03-ops/production-pilot-update-run-20260528.md`
+- Gateway send endpoint:
+  `https://gateway-core-origin.matters.town/users/mashbeanmatters/outbox/update`
+- Activity id:
+  `https://matters.town/ap/activities/1779975201732-update-mashbeanmatters`
+- Delivery result: g0v.social and gyutte.site both accepted with HTTP 202.
+- Post-send queue: `pending=0`, `deadLetter=0`.
+- Mastodon readback: `npm run check:mastodon-readback` found
+  `https://matters.town/a/3tmz0u0a42qx`.
+- Misskey readback: gyutte.site profile and notes tab show the
+  `@mashbeanmatters@matters.town` actor and the Matters Fediverse article.
+- AWS-backed S3 readback and SSM SQLite backup/scan were not run because the
+  AWS CLI session had expired.
 
 ## Go / No-Go Rule
 
