@@ -248,12 +248,103 @@ Validation:
   `Tombstone`; Misskey's documented internal pattern is also
   `Delete(Tombstone)`.
 
-Next retry should deploy this gateway-core change, send one bounded
-Delete-with-Tombstone to the two existing pilot followers, then re-check:
+## 2026-05-28 Tombstone Retry Result
 
-- Mastodon direct status stays `Not Found`;
-- gyutte.site note `https://gyutte.site/notes/819e3a978d76f0c651155240`
-  disappears or becomes unavailable;
-- queue remains `pending=0` and `deadLetter=0`;
-- SQLite backup and consistency scan remain clean except known SQLite-primary
-  file-state diffs.
+Deployment:
+
+- PR: `https://github.com/thematters/matters-fediverse-gateway/pull/78`
+- Deployed commit on AWS origin: `397c568`
+- Deploy SSM command: `e26204b4-1d6a-4696-8932-1f98780d6105`
+- Service state after deploy: `matters-gateway-core.service` active.
+- `npm run check:production-record-only`: `ok=true`,
+  `triggerMode=record_only`, `fullOutboundEnabled=false`,
+  `followers.totalItems=2`.
+
+Pre-retry backup and consistency scan:
+
+- SSM command: `c5ad0adc-818f-495f-b1ff-7258231722f3`
+- backup:
+  `/var/lib/matters-gateway/runtime/backups/matters-gateway-2026-05-28-145403002Z-pre-tombstone-delete-pilot-20260528.sqlite`
+- manifest:
+  `/var/lib/matters-gateway/runtime/backups/matters-gateway-2026-05-28-145403002Z-pre-tombstone-delete-pilot-20260528.sqlite.json`
+- consistency report:
+  `/var/lib/matters-gateway/runtime/consistency-scans/consistency-scan-2026-05-28-145403348Z-pre-tombstone-delete-pilot-20260528.md`
+- `totalDiffs=5`, all `missing_in_file`; no `missing_in_sqlite` and no
+  `value_mismatch`.
+
+Delete Attempt 3 used a structured Tombstone object:
+
+```json
+{
+  "objectId": "https://matters.town/1225211-matters-守望相助隊幕後-猩猩-打掃-強大/",
+  "object": {
+    "id": "https://matters.town/1225211-matters-守望相助隊幕後-猩猩-打掃-強大/",
+    "type": "Tombstone"
+  }
+}
+```
+
+- activity id:
+  `https://matters.town/ap/activities/1779980059143-delete-mashbeanmatters`
+- delivery result: g0v.social and gyutte.site both `delivered` with HTTP 202.
+- Misskey readback after 30 seconds: `notes/show` for
+  `819e3a978d76f0c651155240` still returned HTTP 200.
+
+Delete Attempt 4 used a structured Tombstone with explicit former type:
+
+```json
+{
+  "objectId": "https://matters.town/1225211-matters-守望相助隊幕後-猩猩-打掃-強大/",
+  "object": {
+    "id": "https://matters.town/1225211-matters-守望相助隊幕後-猩猩-打掃-強大/",
+    "type": "Tombstone",
+    "formerType": "Article",
+    "deleted": "2026-05-28T14:55:30.000Z"
+  }
+}
+```
+
+- activity id:
+  `https://matters.town/ap/activities/1779980221227-delete-mashbeanmatters`
+- delivery result: g0v.social and gyutte.site both `delivered` with HTTP 202.
+- Gateway queue after retry: `total=31`, `pending=0`, `delivered=31`,
+  `deadLetter=0`.
+- Misskey readback after 30 seconds: `notes/show` for
+  `819e3a978d76f0c651155240` still returned HTTP 200.
+- Misskey API still maps the note to
+  `uri=https://matters.town/1225211-matters-守望相助隊幕後-猩猩-打掃-強大/` and
+  user `mashbeanmatters@matters.town`.
+
+Post-retry backup and consistency scan:
+
+- SSM command: `338629cb-922e-416e-a293-8a2842abe3fa`
+- backup:
+  `/var/lib/matters-gateway/runtime/backups/matters-gateway-2026-05-28-145933271Z-post-tombstone-delete-pilot-20260528.sqlite`
+- manifest:
+  `/var/lib/matters-gateway/runtime/backups/matters-gateway-2026-05-28-145933271Z-post-tombstone-delete-pilot-20260528.sqlite.json`
+- consistency report:
+  `/var/lib/matters-gateway/runtime/consistency-scans/consistency-scan-2026-05-28-145933584Z-post-tombstone-delete-pilot-20260528.md`
+- `totalDiffs=5`, all `missing_in_file`; no `missing_in_sqlite` and no
+  `value_mismatch`.
+
+Current conclusion:
+
+- Gateway delivery, signing, queue health, and SQLite state are not the failing
+  layer.
+- Misskey / gyutte.site accepts the Delete HTTP delivery but does not remove
+  the imported Article note.
+- Further repeated Delete delivery is unlikely to help without Misskey-side
+  processing logs or a workaround.
+
+Next recommended fix path:
+
+- keep normal ActivityPub Delete for Mastodon and other receivers;
+- treat Misskey withdrawal as "best-effort remote delete accepted but not
+  guaranteed" until verified per instance;
+- add a gateway-side compatibility note / audit flag for Misskey Delete
+  acceptance without visible removal;
+- if gyutte.site admin cooperation is available, request inbox processing logs
+  around `2026-05-28T14:54:20Z` and `2026-05-28T14:57:02Z`;
+- for product rollback, do not rely on remote Misskey removal as a hard
+  guarantee. Use legal/privacy copy that external servers may retain cached or
+  replicated copies after withdrawal.
