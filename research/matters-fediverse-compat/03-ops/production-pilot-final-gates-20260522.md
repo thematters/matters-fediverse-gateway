@@ -1,7 +1,8 @@
 # Production Pilot Final Gates
 
 Date: 2026-05-22
-Status: first bounded `Create` and `Update` pilots delivered; production server remains
+Status: first bounded `Create` and `Update` pilots delivered; withdrawal
+rehearsal partially passed; production server remains
 `record_only`
 
 This checklist narrows the remaining work around the first production outbound
@@ -10,7 +11,9 @@ pilot for `acct:mashbeanmatters@matters.town`.
 It is not approval for broad production ActivityPub `Create`, `Update`, or
 `Delete`. One bounded gateway-origin `Create` was sent during the approved
 2026-05-22 pilot window, and one bounded gateway-origin `Update` was sent on
-2026-05-28. Server-triggered production outbound remains disabled because
+2026-05-28. A bounded withdrawal rehearsal was also sent on 2026-05-28 and
+partially passed: Mastodon withdrew the article, but Misskey still showed the
+remote note. Server-triggered production outbound remains disabled because
 `matters-server-prod-new` stays in `record_only`.
 
 ## Current Safe Baseline
@@ -24,6 +27,7 @@ It is not approval for broad production ActivityPub `Create`, `Update`, or
 | Public discovery | Cleared | `npm run check:threads-discovery` passed on 2026-05-22 for default, `facebookexternalua`, `facebookexternalhit`, and `meta-externalagent` probes. |
 | Bounded production pilot `Create` | Cleared | One gateway-origin `Create` for article `1225211` was sent during the approved 2026-05-22 window and delivered to the two accepted pilot followers. See `production-pilot-create-run-20260522.md`. |
 | Bounded production pilot `Update` | Cleared | One gateway-origin `Update` for article `1225211` was sent on 2026-05-28 and delivered to the same two accepted pilot followers. See `production-pilot-update-run-20260528.md`. |
+| Bounded production withdrawal | Partial pass | Two gateway-origin `Delete` variants were sent on 2026-05-28. Mastodon withdrew the status; Misskey accepted both deliveries but still showed the remote note. See `production-pilot-delete-run-20260528.md`. |
 | Broad production outbound | Still disabled | `matters-server-prod-new` remains `record_only`; no default-on or server-triggered broad delivery has been enabled. |
 
 ## Blocking Gates Before Outbound
@@ -165,6 +169,28 @@ result, and `totalDiffs`.
   `@mashbeanmatters@matters.town` actor and the Matters Fediverse article.
 - AWS-backed S3 readback and SSM SQLite backup/scan were not run because the
   AWS CLI session had expired.
+
+## 2026-05-28 Withdrawal Rehearsal Evidence
+
+- Pilot run report:
+  `research/matters-fediverse-compat/03-ops/production-pilot-delete-run-20260528.md`
+- Delete activity ids:
+  - `https://matters.town/ap/activities/1779976408559-delete-mashbeanmatters`
+  - `https://matters.town/ap/activities/1779976594905-delete-mashbeanmatters`
+- Delivery result: g0v.social and gyutte.site both accepted both Delete
+  activities with HTTP 202.
+- Post-send queue: `pending=0`, `deadLetter=0`.
+- Mastodon result: article status withdrawn; direct status lookup returned
+  `Not Found`.
+- Misskey result: gyutte.site still showed
+  `https://gyutte.site/notes/819e3a978d76f0c651155240` after both Delete
+  variants, so Misskey withdrawal is open.
+- Pre/post/final SSM backup commands:
+  - `a0769384-da5f-40ff-aabe-dc5618ec62bb`
+  - `16ccdb6b-23f4-4cfe-af0a-cf074de371f4`
+  - `e216b4b3-39f4-4c20-a903-4befeb0312a2`
+- All three consistency scans had `missing_in_sqlite=0` and
+  `value_mismatch=0`.
 
 ## Go / No-Go Rule
 

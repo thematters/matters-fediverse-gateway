@@ -1,7 +1,8 @@
 # Production Pilot Outbound Runbook
 
 Date: 2026-05-22
-Status: bounded `Create` and `Update` executed; broad rollout still gated
+Status: bounded `Create`, `Update`, and withdrawal rehearsal executed; broad
+rollout still gated
 
 ## Purpose
 
@@ -16,10 +17,13 @@ message-like content.
 
 The first bounded production `Create` was executed on 2026-05-22 during the
 approved 16:43-20:43 CST (+0800) pilot window. The first bounded production
-`Update` was executed on 2026-05-28. See
+`Update` was executed on 2026-05-28. The bounded withdrawal rehearsal also ran
+on 2026-05-28 and partially passed: Mastodon withdrew the article, but Misskey
+accepted delivery while still showing the remote note. See
 `production-pilot-create-run-20260522.md` and
-`production-pilot-update-run-20260528.md`. `matters-server-prod-new` remained in
-`record_only`; broad server-triggered outbound was not enabled.
+`production-pilot-update-run-20260528.md` and
+`production-pilot-delete-run-20260528.md`. `matters-server-prod-new` remained
+in `record_only`; broad server-triggered outbound was not enabled.
 
 ## Branch And Release Policy
 
@@ -50,6 +54,7 @@ Follow `/Users/mashbean/Documents/AI-Agent/docs/ops/matters-release-branch-polic
 | Production pilot gate owner | Matters current General Manager is assigned as the decision owner for rollback, legal takedown, privacy notice, key exposure/rotation, and Lambda/gateway ingestion secrets. |
 | First bounded production `Create` | `production-pilot-create-run-20260522.md` records delivery to the two accepted Mastodon/Misskey pilot followers, Mastodon readback success, Misskey visual readback, and post-send queue/SQLite evidence. |
 | First bounded production `Update` | `production-pilot-update-run-20260528.md` records delivery to the same two accepted pilot followers, Mastodon readback success, Misskey visual readback, and post-send queue health. |
+| Bounded withdrawal rehearsal | `production-pilot-delete-run-20260528.md` records two Delete variants. Mastodon withdrew the status; Misskey accepted both deliveries but still showed the remote note. |
 
 ## Still Required Before Next Pilot Action
 
@@ -223,10 +228,11 @@ Do not delete evidence or rotate keys before preserving logs and SQLite backup.
 
 ## Next Step After Create / Update Pilot Passes
 
-If the pilot Create and Update evidence is accepted:
+If the pilot Create / Update / Delete evidence is accepted:
 
 1. keep production in pilot mode for observation;
-2. rerun AWS-backed S3/SQLite evidence collection after AWS reauthentication;
+2. treat Misskey withdrawal as an open compatibility blocker before broader
+   rollout;
 3. do not open all authors automatically;
 4. prepare a separate expansion decision for broader opt-in availability;
 5. keep Threads follow debugging separate from Mastodon/Misskey launch readiness.

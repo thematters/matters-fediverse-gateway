@@ -125,6 +125,14 @@ Updated: 2026-05-22
   Mastodon readback still found `https://matters.town/a/3tmz0u0a42qx`, and
   Misskey UI readback still showed the canonical actor and Matters Fediverse
   article.
+- On 2026-05-28, the bounded production withdrawal rehearsal ran with pre/post
+  AWS SSM SQLite backups and consistency scans. Two Delete variants were sent:
+  the ActivityPub object id and the canonical article URL. Both delivered to
+  g0v.social and gyutte.site with HTTP 202, and the gateway queue stayed at
+  `pending=0` and `deadLetter=0`. Mastodon withdrew the real article status and
+  direct status lookup returned `Not Found`. Misskey accepted delivery but still
+  showed the remote note in Safari, so Misskey withdrawal remains an open
+  compatibility gap.
 
 ## Immediate Engineering Work
 
@@ -140,11 +148,12 @@ Updated: 2026-05-22
    [26269962135](https://github.com/thematters/matters-server/actions/runs/26269962135)
    as the post-release proof.
 4. Keep production in pilot observation after the first bounded `Create` and
-   `Update`.
+   `Update`, and the bounded withdrawal rehearsal.
    The pilot outbound sequence is tracked in
    `03-ops/production-pilot-outbound-runbook.md`, and the first run evidence is
    archived in `03-ops/production-pilot-create-run-20260522.md` and
-   `03-ops/production-pilot-update-run-20260528.md`. Do not expand beyond the
+   `03-ops/production-pilot-update-run-20260528.md` and
+   `03-ops/production-pilot-delete-run-20260528.md`. Do not expand beyond the
    `mashbean` pilot.
 5. Keep using `npm run check:production-record-only` after production
    configuration changes. This is read-only and must keep passing while the
@@ -163,9 +172,9 @@ Updated: 2026-05-22
    storage, rollback, legal takedown, privacy notice, key exposure/rotation,
    and Lambda/gateway ingestion secrets. Infra, CTO/security, legal/policy, and
    gateway operator roles support execution and advice.
-3. Reauthenticate AWS before the next evidence pass so S3 bundle readback and
-   SSM SQLite backup/consistency scan can run again after the 2026-05-28
-   `Update`.
+3. Fix or explicitly scope the Misskey withdrawal compatibility gap before any
+   broader production rollout. Mastodon withdrawal passed; Misskey delivery
+   accepted but visible note removal did not happen in the test window.
 4. Confirm legal takedown response path, privacy notice text, and key
    exposure/rotation path under the General Manager owner model.
 5. Confirm launch copy and whether the first rollout is silent beta,
