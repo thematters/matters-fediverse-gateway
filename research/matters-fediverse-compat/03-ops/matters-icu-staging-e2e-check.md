@@ -392,6 +392,19 @@ Next Threads action: keep the exact canonical profile search and Follow attempt
 as a compatibility track, but do not block production record-only / `mashbean`
 pilot preparation on Threads.
 
+2026-05-28 canonical live rerun:
+
+- Command: `npm run check:threads-discovery -- --base-url https://matters.town --canonical-domain matters.town --canonical-base-url https://matters.town --actor-path-prefix /ap`
+- Report: `research/matters-fediverse-compat/03-ops/threads-discovery-live-20260528.json`
+- Result: `ok=true`, no failures, no warnings.
+- WebFinger, actor, outbox, NodeInfo, and canonical WebFinger all returned
+  HTTP 200 for default, `facebookexternalua`, `facebookexternalhit`, and
+  `meta-externalagent` user agents.
+- Current interpretation: Threads discovery prerequisites pass on the
+  canonical public surface. The remaining Threads failure is the UI Follow
+  flow or Threads-side compatibility/cache behavior, not a direct Cloudflare
+  crawler block on these endpoints.
+
 Follow-up permission check:
 
 - The available Cloudflare token verifies successfully and can read cache rules.

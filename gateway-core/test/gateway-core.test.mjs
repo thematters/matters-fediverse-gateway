@@ -5976,6 +5976,46 @@ test("outbox Delete fans out to accepted followers", async () => {
   assert.equal(deliveries[0].activity.object, "https://matters.example/articles/hello-fediverse");
 });
 
+test("outbox Delete can include the original object for stricter receivers", async () => {
+  const { app, store, deliveries } = await createHarness();
+  await store.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    inbox: "https://remote.example/users/zoe/inbox",
+    sharedInbox: "https://remote.example/inbox",
+    status: "accepted",
+    followedAt: "2026-03-21T00:00:00.000Z",
+    lastActivityId: "https://remote.example/activities/follow-1",
+  });
+
+  const response = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/delete", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        objectId: "https://matters.example/articles/hello-fediverse",
+        object: {
+          id: "https://matters.example/articles/hello-fediverse",
+          type: "Article",
+          url: "https://matters.example/a/hello",
+          name: "Hello Fediverse",
+        },
+      }),
+    }),
+  );
+
+  assert.equal(response.status, 202);
+  assert.equal(deliveries[0].activity.type, "Delete");
+  assert.deepEqual(deliveries[0].activity.object, {
+    id: "https://matters.example/articles/hello-fediverse",
+    type: "Article",
+    url: "https://matters.example/a/hello",
+    name: "Hello Fediverse",
+    attributedTo: "https://matters.example/users/alice",
+  });
+});
+
 test("manual approval actor returns Reject and does not persist follower", async () => {
   const { app, store, deliveries, remoteKeys } = await createHarness();
   const activity = {

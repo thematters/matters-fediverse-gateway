@@ -4192,6 +4192,7 @@ export function createGatewayApp({
         const activity = buildDeleteActivity({
           actor,
           objectId: payload.objectId,
+          object: payload.object,
           now: clock(),
           instance: config.instance,
         });

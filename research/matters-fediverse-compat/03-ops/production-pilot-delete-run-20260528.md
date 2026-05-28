@@ -223,3 +223,37 @@ path. Likely investigation points:
 - whether Misskey handles Article deletes differently from Note deletes;
 - whether gateway-core should persist remote platform object mappings after
   Create so Delete can target the exact remote-stored URI per platform.
+
+## 2026-05-28 Follow-Up Implementation
+
+`gateway-core` now supports an optional structured `object` on
+`POST /users/<handle>/outbox/delete` while preserving the original string-only
+payload. This enables a bounded Misskey retry using a stricter ActivityPub
+shape such as:
+
+```json
+{
+  "objectId": "https://matters.town/1225211-matters-守望相助隊幕後-猩猩-打掃-強大/",
+  "object": {
+    "id": "https://matters.town/1225211-matters-守望相助隊幕後-猩猩-打掃-強大/",
+    "type": "Tombstone"
+  }
+}
+```
+
+Validation:
+
+- `npm test` in `gateway-core`: 138 passed.
+- ActivityPub reference check: receivers may replace a deleted object with a
+  `Tombstone`; Misskey's documented internal pattern is also
+  `Delete(Tombstone)`.
+
+Next retry should deploy this gateway-core change, send one bounded
+Delete-with-Tombstone to the two existing pilot followers, then re-check:
+
+- Mastodon direct status stays `Not Found`;
+- gyutte.site note `https://gyutte.site/notes/819e3a978d76f0c651155240`
+  disappears or becomes unavailable;
+- queue remains `pending=0` and `deadLetter=0`;
+- SQLite backup and consistency scan remain clean except known SQLite-primary
+  file-state diffs.
