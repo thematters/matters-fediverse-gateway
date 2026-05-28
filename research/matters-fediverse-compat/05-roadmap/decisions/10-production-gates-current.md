@@ -46,7 +46,7 @@ and the post-change production preflight.
 
 | Gate | Required decision or proof | Decision owner |
 | --- | --- | --- |
-| Threads Follow compatibility | Threads crawler diagnostics pass on canonical `matters.town`, but Threads UI still cannot complete Follow; keep investigating platform-specific Follow behavior without blocking Mastodon/Misskey pilot preparation. | Matters current General Manager; product and gateway operator support. |
+| Threads Follow compatibility | Threads crawler diagnostics pass on canonical `matters.town`, but Threads UI still cannot complete Follow. See `03-ops/threads-follow-compatibility-20260528.md`; current evidence points to Threads-side beta eligibility / UI / cache behavior unless an inbound Follow reaches gateway-core and is rejected. Keep investigating without blocking Mastodon/Misskey pilot preparation. | Matters current General Manager; product and gateway operator support. |
 | Mastodon interaction return | Current g0v.social token is read-only, so reply / favourite / boost write tests require a write-scoped token or manual browser action. | Matters current General Manager; gateway operator executes. |
 | Production gateway hosting | Confirm long-running gateway host, SQLite backup path, restore drill, monitoring, and direct-origin fallback outside Cloudflare. | Matters current General Manager; infra and gateway operator support. |
 | Production private S3 | Pilot bucket `matters-fediverse-prod-bundles` now exists with public access blocked, SSE-S3 encryption, versioning, and 90-day `pilot/` lifecycle. Before broader rollout, confirm IAM role wiring and whether CloudTrail data events or another access audit path is required. | Matters current General Manager; infra and security/legal support. |
@@ -55,7 +55,7 @@ and the post-change production preflight.
 | Privacy notice | Approve user-facing copy that explains external server caching and replication. | Matters current General Manager; product/legal supports. |
 | Key exposure / rotation | Approve severity, rotation, actor update/delete, and external notice rules. | Matters current General Manager; CTO/security supports. |
 | Rollback rehearsal | Prove the rollback sequence: disable author opt-in, stop export trigger, preserve evidence, pause delivery, and remove public routing if needed. | Matters current General Manager; gateway operator executes. |
-| Next bounded production action | Keep observing the first `Create` / `Update` and the withdrawal rehearsal, then fix or scope the Misskey withdrawal gap before larger pilot expansion. Do not expand to broad delivery yet. | Matters current General Manager. |
+| Next bounded production action | Keep observing the first `Create` / `Update` and record Misskey visible withdrawal as best-effort remote retention unless a receiver proves removal. Do not expand to broad delivery yet; the next engineering work is legal/privacy copy finalization, rollback rehearsal, and Threads/Mastodon compatibility checks. | Matters current General Manager. |
 
 ## Do Not Do Automatically
 
@@ -65,6 +65,6 @@ and the post-change production preflight.
 - Treat Matters current General Manager as the owner for all remaining pilot
   gate decisions unless a decision is explicitly delegated in writing.
 - Do not expose actor private keys, Lambda secrets, S3 credentials, or Cloudflare production routing changes in repo or chat logs.
-- Do not treat Threads UI failure as a backend regression now that direct crawler diagnostics pass.
+- Do not treat Threads UI failure as a backend regression now that direct crawler diagnostics pass; only escalate it to gateway bug if a signed Threads Follow reaches gateway-core and is rejected.
 - Do not treat Worker edge-demo inbox 202 responses as successful canonical
   follows; follow proof requires a persistent gateway-core origin.

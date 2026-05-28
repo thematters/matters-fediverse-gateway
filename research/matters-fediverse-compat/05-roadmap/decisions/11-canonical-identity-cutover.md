@@ -25,9 +25,11 @@ identity `acct:mashbeanmatters@matters.town`.
   the narrow staging and canonical federation paths.
 - Live probes for `acct:mashbeanmatters@matters.town` now return `200` for
   default and Meta-style user agents.
-- Threads web UI search still does not show the profile as of the first
-  post-bypass retest. Treat this as a Threads indexing/UI compatibility item,
-  not a WebFinger or Cloudflare challenge failure.
+- Threads can now discover the canonical profile, but the UI Follow flow still
+  does not complete. Treat this as a Threads beta eligibility / UI / cache
+  compatibility item unless a signed Threads Follow reaches gateway-core and is
+  rejected. See
+  `research/matters-fediverse-compat/03-ops/threads-follow-compatibility-20260528.md`.
 - Read-only remote discovery works from g0v.social Mastodon and gyutte.site
   Misskey for `mashbeanmatters@matters.town`; visible follow proof now also
   converges on both platforms.
@@ -110,8 +112,8 @@ actors for the same author.
    - Search from Threads after the canonical surface is visible and no longer
      challenged by Cloudflare.
    - Status: machine probes pass; Mastodon and Misskey discovery and follow
-     proof pass; Threads discovery passes but follow is still unresolved and is
-     not a launch blocker.
+  proof pass; Threads discovery passes but follow is still unresolved and is
+  not a launch blocker.
 
 5. **Staging follower boundary**
    - Treat existing `staging-gateway.matters.town` followers as test-only.
@@ -220,7 +222,8 @@ ActivityPub behavior second.
   returns `ok: true` before any canonical follow proof is attempted.
 - Threads can discover the canonical pilot profile, but follow still does not
   complete. Record it as a Follow compatibility problem unless WebFinger or
-  actor probes regress.
+  actor probes regress, or unless a signed Threads Follow reaches gateway-core
+  and is rejected.
 - SQLite consistency scan returns `totalDiffs=0`.
 - Delivery queue returns to zero pending and zero dead letters after the first
   approved pilot delivery.
@@ -261,6 +264,8 @@ After outbound delivery:
 
 Prepare production record-only / observation for the `mashbean` pilot author,
 keep canonical identity stable, and continue Threads Follow plus Mastodon
-write-scope interaction checks as compatibility work. Do not enable production
+write-scope interaction checks as compatibility work. For Threads, the next
+useful test is a fediverse-enabled Threads account search / Follow attempt
+while gateway-core watches for inbound Follow POSTs. Do not enable production
 full outbound delivery until the remaining production gates are closed and
 launch approval is recorded.
