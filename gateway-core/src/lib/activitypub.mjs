@@ -170,7 +170,20 @@ export function buildRejectActivity({ actor, follow, now, instance }) {
   return activity;
 }
 
-export function buildDeleteActivity({ actor, objectId, now, instance }) {
+function normalizeDeleteObject({ objectId, object, actor }) {
+  if (!object || typeof object !== "object" || Array.isArray(object)) {
+    return objectId;
+  }
+
+  const normalizedId = typeof object.id === "string" && object.id.trim() ? object.id.trim() : objectId;
+  return {
+    ...object,
+    id: normalizedId,
+    attributedTo: object.attributedTo ?? actor.actorUrl,
+  };
+}
+
+export function buildDeleteActivity({ actor, objectId, object = null, now, instance }) {
   const baseUrl = activityBaseUrl(instance);
 
   return {
@@ -180,7 +193,7 @@ export function buildDeleteActivity({ actor, objectId, now, instance }) {
     actor: actor.actorUrl,
     to: [PUBLIC_AUDIENCE],
     cc: [actor.followersUrl],
-    object: objectId,
+    object: normalizeDeleteObject({ objectId, object, actor }),
   };
 }
 
