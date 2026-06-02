@@ -133,7 +133,7 @@ export function buildNodeInfo({ instance, actors }) {
 export function buildAcceptActivity({ actor, follow, now, instance }) {
   const baseUrl = activityBaseUrl(instance);
   const followActor = typeof follow.actor === "string" ? follow.actor : follow.actor?.id;
-  const followObject = typeof follow.id === "string" ? follow.id : follow;
+  const followObject = typeof follow === "object" && follow !== null ? follow : follow?.id ?? follow;
 
   const activity = {
     "@context": ACTIVITY_STREAMS,
@@ -153,7 +153,7 @@ export function buildAcceptActivity({ actor, follow, now, instance }) {
 export function buildRejectActivity({ actor, follow, now, instance }) {
   const baseUrl = activityBaseUrl(instance);
   const followActor = typeof follow.actor === "string" ? follow.actor : follow.actor?.id;
-  const followObject = typeof follow.id === "string" ? follow.id : follow;
+  const followObject = typeof follow === "object" && follow !== null ? follow : follow?.id ?? follow;
 
   const activity = {
     "@context": ACTIVITY_STREAMS,

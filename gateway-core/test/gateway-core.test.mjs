@@ -2738,7 +2738,7 @@ test("signed Follow is accepted, persisted, and queued for delivery", async () =
   assert.equal(payload.status, "accepted");
   assert.equal(deliveries.length, 1);
   assert.equal(deliveries[0].activity.type, "Accept");
-  assert.equal(deliveries[0].activity.object, "https://remote.example/activities/follow-1");
+  assert.deepEqual(deliveries[0].activity.object, activity);
   assert.deepEqual(deliveries[0].activity.to, ["https://remote.example/users/zoe"]);
   assert.equal(deliveries[0].targetInbox, "https://remote.example/inbox");
 
@@ -2788,6 +2788,9 @@ test("signed Follow can resolve a complete actor document from Signature keyId w
             id: actorId,
             type: "Person",
             inbox: "https://threads.example/ap/users/17841401579146452/inbox",
+            endpoints: {
+              sharedInbox: "https://threads.example/ap/inbox",
+            },
             publicKey: {
               id: keyId,
               owner: actorId,
@@ -2856,6 +2859,9 @@ test("remote actor discovery signs actor and key document fetches when local act
             id: actorId,
             type: "Person",
             inbox: "https://threads.example/ap/users/17841401579146452/inbox",
+            endpoints: {
+              sharedInbox: "https://threads.example/ap/inbox",
+            },
             publicKey: {
               id: keyId,
               owner: actorId,
@@ -2895,7 +2901,7 @@ test("remote actor discovery signs actor and key document fetches when local act
   for (const fetchEntry of fetches) {
     assert.ok(fetchEntry.accept.includes("application/activity+json"));
     assert.ok(fetchEntry.signature.includes('keyId="https://matters.example/users/alice#main-key"'));
-    assert.match(fetchEntry.signature, /headers="\\(request-target\\) host date"/);
+    assert.match(fetchEntry.signature, /headers="\(request-target\) host date"/);
     assert.ok(fetchEntry.date);
   }
 });
@@ -6271,7 +6277,7 @@ test("manual approval actor returns Reject and does not persist follower", async
   assert.equal(payload.status, "rejected");
   assert.equal(deliveries.length, 1);
   assert.equal(deliveries[0].activity.type, "Reject");
-  assert.equal(deliveries[0].activity.object, "https://remote.example/activities/follow-2");
+  assert.deepEqual(deliveries[0].activity.object, activity);
   assert.deepEqual(deliveries[0].activity.to, ["https://remote.example/users/zoe"]);
   assert.equal(deliveries[0].targetInbox, "https://remote.example/inbox");
 
