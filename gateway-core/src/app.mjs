@@ -38,7 +38,7 @@ import {
   buildUniqueContentDeliveryActivities,
 } from "./lib/content-delivery-ops.mjs";
 import { createStaticOutboxBridge } from "./lib/static-outbox-bridge.mjs";
-import { readHttpSignatureKeyId, verifyHttpSignature } from "./security/http-signatures.mjs";
+import { readHttpSignatureKeyId, signHttpGetRequest, verifyHttpSignature } from "./security/http-signatures.mjs";
 
 const PUBLIC_AUDIENCE = "https://www.w3.org/ns/activitystreams#Public";
 const DEFAULT_MENTION_FAILURE_RETRY_MS = 5 * 60 * 1000;
@@ -101,6 +101,23 @@ function getFollowTargetHandle(config, activity) {
 
 function getActivityActorId(activity) {
   return typeof activity.actor === "string" ? activity.actor : activity.actor?.id ?? null;
+}
+
+function getSignedFetchActor(config) {
+  return Object.values(config.actors ?? {}).find((actor) => actor.keyId?.trim() && actor.privateKeyPem?.trim()) ?? null;
+}
+
+function createSignedFetchHeadersFactory(config) {
+  const actor = getSignedFetchActor(config);
+  if (!actor) {
+    return null;
+  }
+
+  return (url) => signHttpGetRequest({
+    url,
+    keyId: actor.keyId,
+    privateKeyPem: actor.privateKeyPem,
+  });
 }
 
 function normalizeAudience(value) {
@@ -1639,7 +1656,9 @@ export function createGatewayApp({
   remoteActorDirectory = createRemoteActorDirectory({
     seedActors: config.remoteActors,
     store,
-    actorDocumentLoader: (actorId) => loadRemoteActorDocument(actorId, fetchImpl),
+    actorDocumentLoader: (actorId) => loadRemoteActorDocument(actorId, fetchImpl, {
+      signedFetchHeaders: createSignedFetchHeadersFactory(config),
+    }),
     cacheTtlMs: config.remoteDiscovery?.cacheTtlMs ?? 60 * 60 * 1000,
   }),
   outboxBridge = null,

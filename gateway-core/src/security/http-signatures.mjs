@@ -113,6 +113,38 @@ export function signHttpRequest({ method, url, body, keyId, privateKeyPem }) {
   };
 }
 
+export function signHttpGetRequest({ url, keyId, privateKeyPem }) {
+  const targetUrl = new URL(url);
+  const date = new Date().toUTCString();
+  const headers = ["(request-target)", "host", "date"];
+  const signingString = buildSigningString({
+    method: "GET",
+    pathnameWithQuery: `${targetUrl.pathname}${targetUrl.search}`,
+    headers: new Headers({
+      host: targetUrl.host,
+      date,
+    }),
+    headerNames: headers,
+  });
+
+  const signer = createSign("RSA-SHA256");
+  signer.update(signingString);
+  signer.end();
+
+  const signature = signer.sign(privateKeyPem, "base64");
+
+  return {
+    Host: targetUrl.host,
+    Date: date,
+    Signature: [
+      `keyId=${quote(keyId)}`,
+      `algorithm=${quote("rsa-sha256")}`,
+      `headers=${quote(headers.join(" "))}`,
+      `signature=${quote(signature)}`,
+    ].join(","),
+  };
+}
+
 export function verifyHttpSignature({ method, pathnameWithQuery, headers, body, publicKeyPem, expectedKeyId }) {
   const signatureAttributes = parseSignatureHeader(headers.get("signature"));
   const digestHeader = headers.get("digest");

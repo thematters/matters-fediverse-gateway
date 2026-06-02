@@ -176,17 +176,19 @@ function normalizeRemoteActorFromSignatureKey({ actorId, keyId, keyDocument, sou
   return normalized;
 }
 
-export async function loadRemoteActorDocument(actorId, fetchImpl = fetch) {
+export async function loadRemoteActorDocument(actorId, fetchImpl = fetch, { signedFetchHeaders = null } = {}) {
   let response;
+  const headers = {
+    accept: [
+      "application/activity+json",
+      'application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
+    ].join(", "),
+    ...(signedFetchHeaders ? signedFetchHeaders(actorId) : {}),
+  };
 
   try {
     response = await fetchImpl(actorId, {
-      headers: {
-        accept: [
-          "application/activity+json",
-          'application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
-        ].join(", "),
-      },
+      headers,
     });
   } catch (error) {
     throw createRemoteActorResolutionError(`Failed to load remote actor ${actorId}`, {
