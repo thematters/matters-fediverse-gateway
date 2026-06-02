@@ -3707,7 +3707,7 @@ export function createGatewayApp({
       attempts: 0,
       actorHandle: targetHandle,
       targetActorId: verification.remoteActorId,
-      targetInbox: verification.remoteActor.inbox,
+      targetInbox: verification.remoteActor.sharedInbox ?? verification.remoteActor.inbox,
       activity: responseActivity,
       createdAt: clock().toISOString(),
     });
