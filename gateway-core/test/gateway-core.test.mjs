@@ -2740,7 +2740,7 @@ test("signed Follow is accepted, persisted, and queued for delivery", async () =
   assert.equal(deliveries[0].activity.type, "Accept");
   assert.equal(deliveries[0].activity.object, "https://remote.example/activities/follow-1");
   assert.deepEqual(deliveries[0].activity.to, ["https://remote.example/users/zoe"]);
-  assert.equal(deliveries[0].targetInbox, "https://remote.example/users/zoe/inbox");
+  assert.equal(deliveries[0].targetInbox, "https://remote.example/inbox");
 
   const acceptResponse = await app.handle(
     new Request(deliveries[0].activity.id, {
@@ -2823,7 +2823,7 @@ test("signed Follow can resolve a complete actor document from Signature keyId w
 
   assert.equal(response.status, 202);
   assert.equal(deliveries.length, 1);
-  assert.equal(deliveries[0].targetInbox, "https://threads.example/ap/users/17841401579146452/inbox");
+  assert.equal(deliveries[0].targetInbox, "https://threads.example/ap/inbox");
   const snapshot = store.getSnapshot();
   assert.equal(snapshot.actors.alice.followers[actorId].status, "accepted");
   assert.equal(snapshot.remoteActors[actorId].source, "signature-key");
@@ -6273,7 +6273,7 @@ test("manual approval actor returns Reject and does not persist follower", async
   assert.equal(deliveries[0].activity.type, "Reject");
   assert.equal(deliveries[0].activity.object, "https://remote.example/activities/follow-2");
   assert.deepEqual(deliveries[0].activity.to, ["https://remote.example/users/zoe"]);
-  assert.equal(deliveries[0].targetInbox, "https://remote.example/users/zoe/inbox");
+  assert.equal(deliveries[0].targetInbox, "https://remote.example/inbox");
 
   const snapshot = store.getSnapshot();
   assert.equal(snapshot.actors.bob?.followers?.["https://remote.example/users/zoe"], undefined);
