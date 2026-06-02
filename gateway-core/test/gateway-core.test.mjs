@@ -2769,6 +2769,126 @@ test("signed Follow is accepted, persisted, and queued for delivery", async () =
   assert.equal(snapshot.outboundQueue[0].status, "delivered");
 });
 
+test("signed Follow can resolve a complete actor document from Signature keyId when actor URL returns 404", async () => {
+  const actorId = "https://threads.example/ap/users/17841401579146452/";
+  const keyId = "https://threads.example/ap/keys/17841401579146452#main-key";
+  const { app, store, deliveries, remoteKeys } = await createHarness({
+    fetchImpl: async (url) => {
+      const href = String(url);
+      if (href === actorId) {
+        return new Response(JSON.stringify({ success: false, error: "Not found" }), {
+          status: 404,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (href === keyId) {
+        return new Response(
+          JSON.stringify({
+            "@context": "https://www.w3.org/ns/activitystreams",
+            id: actorId,
+            type: "Person",
+            inbox: "https://threads.example/ap/users/17841401579146452/inbox",
+            publicKey: {
+              id: keyId,
+              owner: actorId,
+              publicKeyPem: remoteKeys.publicKeyPem,
+            },
+          }),
+          {
+            status: 200,
+            headers: { "content-type": "application/activity+json" },
+          },
+        );
+      }
+      return new Response("Not found", { status: 404 });
+    },
+  });
+  const activity = {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    id: "https://threads.example/ap/activities/follow-1",
+    type: "Follow",
+    actor: actorId,
+    object: "https://matters.example/users/alice",
+  };
+  const body = JSON.stringify(activity);
+  const response = await app.handle(
+    signedRequest({
+      method: "POST",
+      url: "https://matters.example/users/alice/inbox",
+      body,
+      keyId,
+      privateKeyPem: remoteKeys.privateKeyPem,
+    }),
+  );
+
+  assert.equal(response.status, 202);
+  assert.equal(deliveries.length, 1);
+  assert.equal(deliveries[0].targetInbox, "https://threads.example/ap/users/17841401579146452/inbox");
+  const snapshot = store.getSnapshot();
+  assert.equal(snapshot.actors.alice.followers[actorId].status, "accepted");
+  assert.equal(snapshot.remoteActors[actorId].source, "signature-key");
+});
+
+test("signed Follow rejects Signature keyId fallback when key owner does not match activity actor", async () => {
+  const actorId = "https://threads.example/ap/users/17841401579146452/";
+  const keyId = "https://threads.example/ap/keys/17841401579146452#main-key";
+  const { app, store, deliveries, remoteKeys } = await createHarness({
+    fetchImpl: async (url) => {
+      const href = String(url);
+      if (href === actorId) {
+        return new Response(JSON.stringify({ success: false, error: "Not found" }), {
+          status: 404,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (href === keyId) {
+        return new Response(
+          JSON.stringify({
+            "@context": "https://www.w3.org/ns/activitystreams",
+            id: actorId,
+            type: "Person",
+            inbox: "https://threads.example/ap/users/17841401579146452/inbox",
+            publicKey: {
+              id: keyId,
+              owner: "https://evil.example/users/not-threads",
+              publicKeyPem: remoteKeys.publicKeyPem,
+            },
+          }),
+          {
+            status: 200,
+            headers: { "content-type": "application/activity+json" },
+          },
+        );
+      }
+      return new Response("Not found", { status: 404 });
+    },
+  });
+  const activity = {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    id: "https://threads.example/ap/activities/follow-owner-mismatch",
+    type: "Follow",
+    actor: actorId,
+    object: "https://matters.example/users/alice",
+  };
+  const body = JSON.stringify(activity);
+  const response = await app.handle(
+    signedRequest({
+      method: "POST",
+      url: "https://matters.example/users/alice/inbox",
+      body,
+      keyId,
+      privateKeyPem: remoteKeys.privateKeyPem,
+    }),
+  );
+
+  assert.equal(response.status, 401);
+  assert.equal(deliveries.length, 0);
+  const snapshot = store.getSnapshot();
+  assert.equal(snapshot.actors.alice.followers[actorId], undefined);
+  assert.equal(snapshot.traces.at(-1).event, "signature.rejected");
+  assert.match(snapshot.traces.at(-1).reason, /signature key fallback failed/);
+});
+
 test("public Create reply is stored as inbound reply state", async () => {
   const { app, store, remoteKeys } = await createHarness();
   const activity = {

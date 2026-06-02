@@ -119,6 +119,63 @@ function normalizeRemoteActor({ actorId, actorDocument, source, discoveredAt }) 
   return normalized;
 }
 
+function normalizeRemoteActorFromSignatureKey({ actorId, keyId, keyDocument, source, discoveredAt }) {
+  const documentKey =
+    keyDocument.id === keyId && keyDocument.publicKeyPem?.trim()
+      ? keyDocument
+      : normalizePublicKeyEntry(keyDocument.publicKey);
+  const owner = documentKey?.owner ?? documentKey?.controller ?? keyDocument.owner ?? keyDocument.controller ?? null;
+  const documentActorId = keyDocument.type === "Person" || keyDocument.type === "Service" || keyDocument.inbox
+    ? keyDocument.id
+    : owner;
+
+  if (documentActorId !== actorId) {
+    throw createRemoteActorResolutionError(`Signature key document actor mismatch for ${actorId}`, {
+      code: "signature_key_actor_mismatch",
+      stage: "signature_key_document",
+      temporary: false,
+    });
+  }
+
+  if (owner && owner !== actorId) {
+    throw createRemoteActorResolutionError(`Signature key owner mismatch for ${actorId}`, {
+      code: "signature_key_owner_mismatch",
+      stage: "signature_key_document",
+      temporary: false,
+    });
+  }
+
+  if (documentKey?.id !== keyId) {
+    throw createRemoteActorResolutionError(`Signature key id mismatch for ${actorId}`, {
+      code: "signature_key_id_mismatch",
+      stage: "signature_key_document",
+      temporary: false,
+    });
+  }
+
+  const normalized = {
+    actorId,
+    keyId,
+    inbox: keyDocument.inbox ?? "",
+    sharedInbox: keyDocument.endpoints?.sharedInbox ?? null,
+    publicKeyPem: documentKey.publicKeyPem ?? "",
+    previousKeyId: null,
+    previousPublicKeyPem: null,
+    source,
+    discoveredAt,
+  };
+
+  if (!isUsableRecord(normalized)) {
+    throw createRemoteActorResolutionError(`Signature key document for ${actorId} is incomplete`, {
+      code: "signature_key_document_invalid",
+      stage: "signature_key_document",
+      temporary: false,
+    });
+  }
+
+  return normalized;
+}
+
 export async function loadRemoteActorDocument(actorId, fetchImpl = fetch) {
   let response;
 
@@ -293,6 +350,18 @@ export function createRemoteActorDirectory({
     return saveRecord(record);
   }
 
+  async function discoverBySignatureKey(actorId, keyId) {
+    const keyDocument = await actorDocumentLoader(keyId);
+    const record = normalizeRemoteActorFromSignatureKey({
+      actorId,
+      keyId,
+      keyDocument,
+      source: "signature-key",
+      discoveredAt: clock().toISOString(),
+    });
+    return saveRecord(record);
+  }
+
   return {
     async resolve(actorId) {
       if (!actorId?.trim()) {
@@ -323,6 +392,27 @@ export function createRemoteActorDirectory({
     async resolveAccount(account) {
       const actorId = await accountResolver(account);
       return this.resolve(actorId);
+    },
+
+    async resolveBySignatureKey(actorId, keyId) {
+      if (!actorId?.trim()) {
+        throw new Error("Remote actor ID is required");
+      }
+      if (!keyId?.trim()) {
+        throw new Error("Signature key ID is required");
+      }
+
+      const cached = getCachedRecord(actorId);
+      if (cached?.keyId === keyId || cached?.previousKeyId === keyId) {
+        return cached;
+      }
+
+      const seeded = getSeedRecord(actorId);
+      if (seeded?.keyId === keyId || seeded?.previousKeyId === keyId) {
+        return seeded;
+      }
+
+      return discoverBySignatureKey(actorId, keyId);
     },
   };
 }

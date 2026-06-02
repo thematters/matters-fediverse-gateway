@@ -14,7 +14,7 @@ import {
   buildWebFinger,
 } from "./lib/activitypub.mjs";
 import { createDeliveryProcessor, createFetchDeliveryClient } from "./lib/delivery.mjs";
-import { classifyRemoteActorResolutionError, createRemoteActorDirectory } from "./lib/remote-actors.mjs";
+import { classifyRemoteActorResolutionError, createRemoteActorDirectory, loadRemoteActorDocument } from "./lib/remote-actors.mjs";
 import {
   buildRuntimeAlertBundle,
   buildRuntimeLogsBundle,
@@ -1566,9 +1566,42 @@ async function verifySignatureWithRemoteActor({ request, bodyText, remoteActor }
   throw lastError ?? new Error("No usable remote actor key");
 }
 
+function appendSignatureKeyFallbackMessage(error, fallbackError) {
+  if (!fallbackError) {
+    return error;
+  }
+
+  const combined = new Error(`${error.message}; signature key fallback failed: ${fallbackError.message}`);
+  combined.cause = fallbackError;
+  return combined;
+}
+
+async function resolveRemoteActorForInboundSignature({ remoteActorDirectory, remoteActorId, signatureKeyId, refresh = false }) {
+  try {
+    return refresh
+      ? await remoteActorDirectory.refresh(remoteActorId)
+      : await remoteActorDirectory.resolve(remoteActorId);
+  } catch (error) {
+    if (!signatureKeyId || typeof remoteActorDirectory.resolveBySignatureKey !== "function") {
+      throw error;
+    }
+
+    try {
+      return await remoteActorDirectory.resolveBySignatureKey(remoteActorId, signatureKeyId);
+    } catch (fallbackError) {
+      throw appendSignatureKeyFallbackMessage(error, fallbackError);
+    }
+  }
+}
+
 async function verifyInboundFollow({ request, bodyText, activity, remoteActorDirectory }) {
   const remoteActorId = getActivityActorId(activity);
-  let remoteActor = await remoteActorDirectory.resolve(remoteActorId);
+  const signatureKeyId = readHttpSignatureKeyId(request.headers.get("signature"));
+  let remoteActor = await resolveRemoteActorForInboundSignature({
+    remoteActorDirectory,
+    remoteActorId,
+    signatureKeyId,
+  });
   let verification;
 
   try {
@@ -1578,7 +1611,12 @@ async function verifyInboundFollow({ request, bodyText, activity, remoteActorDir
       remoteActor,
     });
   } catch (error) {
-    remoteActor = await remoteActorDirectory.refresh(remoteActorId);
+    remoteActor = await resolveRemoteActorForInboundSignature({
+      remoteActorDirectory,
+      remoteActorId,
+      signatureKeyId,
+      refresh: true,
+    });
     verification = await verifySignatureWithRemoteActor({
       request,
       bodyText,
@@ -1597,13 +1635,14 @@ export function createGatewayApp({
   config,
   store,
   deliveryClient = createFetchDeliveryClient({ userAgent: config.delivery.userAgent }),
+  fetchImpl = fetch,
   remoteActorDirectory = createRemoteActorDirectory({
     seedActors: config.remoteActors,
     store,
+    actorDocumentLoader: (actorId) => loadRemoteActorDocument(actorId, fetchImpl),
     cacheTtlMs: config.remoteDiscovery?.cacheTtlMs ?? 60 * 60 * 1000,
   }),
   outboxBridge = null,
-  fetchImpl = fetch,
   clock = () => new Date(),
 }) {
   const deliveryProcessor = createDeliveryProcessor({
