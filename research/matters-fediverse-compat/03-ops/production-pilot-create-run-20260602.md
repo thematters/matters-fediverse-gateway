@@ -125,18 +125,31 @@ completion.
 Remote delivery was accepted by both known recipients, but receiver-visible
 readback is still split:
 
-- Mastodon public HTML grep did not find the article text on
-  `https://g0v.social/@mashbean`.
-- Misskey public HTML grep did not find the article text on
-  `https://gyutte.site/@mashbean`.
+- Human visual readback confirmed Mastodon can see the production pilot article.
+- Human visual readback confirmed Misskey can see the production pilot article.
 - Prior Mastodon API readback requires an access token; unauthenticated API
   search returns `401`.
 - Prior Misskey ActivityPub readback requires an access token;
   unauthenticated `api/ap/show` returns `401`.
 
-This means delivery acceptance is proven, but receiver UI visibility for this
-specific 2026-06-02 article still needs logged-in browser or token-based
-readback.
+This means delivery acceptance and receiver UI visibility are proven for
+Mastodon and Misskey.
+
+Threads browser readback is more nuanced:
+
+- Threads search for `mashbeanmatters@matters.town` returned unrelated results.
+- Threads profile-filter search for `@mashbeanmatters@matters.town` returned
+  `查無結果`.
+- Direct Threads profile route resolved:
+  `https://www.threads.com/fediverse_profile/@mashbeanmatters@matters.town`.
+- The direct profile showed the `mashbeanmatters@matters.town` fediverse
+  profile and a follow button.
+- The direct profile showed `尚無任何串文`.
+- Gateway logs did not show a fresh Threads / Meta crawler hit during the
+  direct-profile check.
+
+This narrows the Threads state to: profile route resolution works, but Threads
+search indexing and post ingestion/display are not proven.
 
 ## Result
 
@@ -166,7 +179,6 @@ state.
 
 Remaining work before broader outbound remains:
 
-- confirm receiver-visible Mastodon and Misskey readback for the new article;
-- continue Threads indexing/follow investigation;
+- continue Threads indexing / follow / post ingestion investigation;
 - keep production server-triggered outbound disabled until a separate rollout
   decision.
