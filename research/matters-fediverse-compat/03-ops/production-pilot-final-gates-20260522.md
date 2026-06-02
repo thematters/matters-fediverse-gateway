@@ -208,8 +208,11 @@ result, and `totalDiffs`.
 - Threads dedicated discovery diagnostic:
   `research/matters-fediverse-compat/03-ops/threads-dedicated-validation-20260602.json`
   returned `ok=true` with no warnings or failures.
-- Receiver-visible readback for this new article still needs logged-in or
-  token-based Mastodon/Misskey confirmation.
+- Human visual readback confirmed Mastodon and Misskey can see the new article.
+- Threads direct profile route resolves
+  `https://www.threads.com/fediverse_profile/@mashbeanmatters@matters.town`,
+  but Threads search still returns no profile result and the direct profile
+  shows no posts.
 
 ## Go / No-Go Rule
 
