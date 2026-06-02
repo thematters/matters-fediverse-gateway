@@ -166,6 +166,23 @@ search indexing and post ingestion/display are not proven; follow delivery
 reaches the gateway but cannot be safely accepted until Threads exposes a
 dereferenceable actor document with a public key.
 
+Follow rejection diagnostics were then deployed in gateway-core PR #85:
+
+- PR: <https://github.com/thematters/matters-fediverse-gateway/pull/85>
+- AWS origin deployment command:
+  `0cb35ae2-3530-4501-a028-5309ee0b7c96`
+- The deployment command returned nonzero because the immediate post-restart
+  local health check hit port `8787` before the service was ready.
+- Follow-up checks showed the systemd service active, port `127.0.0.1:8787`
+  listening, `https://gateway-core-origin.matters.town/healthz` healthy, and
+  `https://matters.town/ap/healthz` healthy with
+  `inboxMode=persistent` / `followReadiness=ready`.
+- The live canonical outbox still returned `totalItems=1` for the pilot Article.
+
+The gateway now records the inbound activity actor and HTTP signature key id
+inside `signature.rejected` traces, so a future Threads retry can be diagnosed
+without relaxing signature verification.
+
 ## Result
 
 The 2026-06-02 bounded production `Create` passed gateway-side preflight,
