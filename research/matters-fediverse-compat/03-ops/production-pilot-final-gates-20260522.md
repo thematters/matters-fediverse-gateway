@@ -1,19 +1,18 @@
 # Production Pilot Final Gates
 
 Date: 2026-05-22
-Status: first bounded `Create` and `Update` pilots delivered; withdrawal
-rehearsal partially passed; production server remains
-`record_only`
+Status: bounded `Create` and `Update` pilots delivered; withdrawal rehearsal
+partially passed; production server remains `record_only`
 
 This checklist narrows the remaining work around the first production outbound
 pilot for `acct:mashbeanmatters@matters.town`.
 
 It is not approval for broad production ActivityPub `Create`, `Update`, or
-`Delete`. One bounded gateway-origin `Create` was sent during the approved
-2026-05-22 pilot window, and one bounded gateway-origin `Update` was sent on
-2026-05-28. A bounded withdrawal rehearsal was also sent on 2026-05-28 and
-partially passed: Mastodon withdrew the article, but Misskey still showed the
-remote note. Server-triggered production outbound remains disabled because
+`Delete`. Bounded gateway-origin `Create` pilots were sent on 2026-05-22 and
+2026-06-02, and one bounded gateway-origin `Update` was sent on 2026-05-28. A
+bounded withdrawal rehearsal was also sent on 2026-05-28 and partially passed:
+Mastodon withdrew the article, but Misskey still showed the remote note.
+Server-triggered production outbound remains disabled because
 `matters-server-prod-new` stays in `record_only`.
 
 ## Current Safe Baseline
@@ -25,7 +24,7 @@ remote note. Server-triggered production outbound remains disabled because
 | Redacted audit query | Cleared | Workflow run `26269962135` passed with `include_decision_report=false` and returned row `id=399` for article `1225211`. |
 | Gateway public preflight | Cleared | `npm run check:production-record-only` passed on 2026-05-22 with `outbox.totalItems=0`, `followers.totalItems=2`, and `fullOutboundEnabled=false`. |
 | Public discovery | Cleared | `npm run check:threads-discovery` passed on 2026-05-22 for default, `facebookexternalua`, `facebookexternalhit`, and `meta-externalagent` probes. |
-| Bounded production pilot `Create` | Cleared | One gateway-origin `Create` for article `1225211` was sent during the approved 2026-05-22 window and delivered to the two accepted pilot followers. See `production-pilot-create-run-20260522.md`. |
+| Bounded production pilot `Create` | Cleared | Gateway-origin `Create` pilots for article `1225211` on 2026-05-22 and article `1228008` on 2026-06-02 delivered to the two accepted pilot followers. See `production-pilot-create-run-20260522.md` and `production-pilot-create-run-20260602.md`. |
 | Bounded production pilot `Update` | Cleared | One gateway-origin `Update` for article `1225211` was sent on 2026-05-28 and delivered to the same two accepted pilot followers. See `production-pilot-update-run-20260528.md`. |
 | Bounded production withdrawal | Partial pass | Two gateway-origin `Delete` variants were sent on 2026-05-28. Mastodon withdrew the status; Misskey accepted both deliveries but still showed the remote note. See `production-pilot-delete-run-20260528.md`. |
 | Broad production outbound | Still disabled | `matters-server-prod-new` remains `record_only`; no default-on or server-triggered broad delivery has been enabled. |
@@ -192,6 +191,26 @@ result, and `totalDiffs`.
 - All three consistency scans had `missing_in_sqlite=0` and
   `value_mismatch=0`.
 
+## 2026-06-02 Fresh Create Pilot Evidence
+
+- Pilot run report:
+  `research/matters-fediverse-compat/03-ops/production-pilot-create-run-20260602.md`
+- Article:
+  `https://matters.town/a/n0wacr6zgyyq`
+- Activity id:
+  `https://matters.town/ap/activities/1780361487400-create-mashbeanmatters`
+- Delivery result: g0v.social and gyutte.site both accepted with HTTP 202.
+- AWS origin deployed gateway-core commit `d676a817`, which exposes delivered
+  runtime `Create` activities in actor outbox.
+- Public outbox readback:
+  `https://matters.town/ap/users/mashbeanmatters/outbox` returned
+  `totalItems=1` with an `Article` object for the new Matters article.
+- Threads dedicated discovery diagnostic:
+  `research/matters-fediverse-compat/03-ops/threads-dedicated-validation-20260602.json`
+  returned `ok=true` with no warnings or failures.
+- Receiver-visible readback for this new article still needs logged-in or
+  token-based Mastodon/Misskey confirmation.
+
 ## Go / No-Go Rule
 
 Go only if all of these are true for the next bounded pilot action:
@@ -208,8 +227,8 @@ Go only if all of these are true for the next bounded pilot action:
   Manager;
 - Lambda and gateway ingestion secret rotation path is approved by Matters
   current General Manager;
--- pilot scope is still only `mashbean`, article `1225211`, and known accepted
-  Mastodon/Misskey followers.
+- pilot scope is still only `mashbean`, explicitly selected pilot articles,
+  and known accepted Mastodon/Misskey followers.
 
 No-go if Matters current General Manager has not explicitly approved the
 remaining owner-gated items, any storage access is public by accident, the

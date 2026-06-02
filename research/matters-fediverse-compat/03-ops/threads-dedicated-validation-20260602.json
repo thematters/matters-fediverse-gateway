@@ -1,0 +1,757 @@
+{
+  "ok": true,
+  "generatedAt": "2026-06-02T01:01:05.620Z",
+  "scope": {
+    "baseUrl": "https://matters.town",
+    "handle": "mashbeanmatters",
+    "actorPathPrefix": "/ap",
+    "stagingAcct": "acct:mashbeanmatters@matters.town",
+    "canonicalAcct": "acct:mashbeanmatters@matters.town",
+    "canonicalBaseUrl": "https://matters.town",
+    "actorUrl": "https://matters.town/ap/users/mashbeanmatters",
+    "note": "This diagnoses public discovery preconditions only; it does not query Threads private APIs or prove Threads indexing."
+  },
+  "evaluation": {
+    "ok": true,
+    "failures": [],
+    "warnings": []
+  },
+  "probes": [
+    {
+      "name": "webfinger-staging",
+      "userAgentName": "default",
+      "url": "https://matters.town/.well-known/webfinger?resource=acct%3Amashbeanmatters%40matters.town",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/jrd+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a05286181afaa609-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "subject",
+          "aliases",
+          "links"
+        ],
+        "subject": "acct:mashbeanmatters@matters.town",
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "webfinger-staging",
+      "userAgentName": "facebookexternalua",
+      "url": "https://matters.town/.well-known/webfinger?resource=acct%3Amashbeanmatters%40matters.town",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/jrd+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a0528618ff4ccb7a-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "subject",
+          "aliases",
+          "links"
+        ],
+        "subject": "acct:mashbeanmatters@matters.town",
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "webfinger-staging",
+      "userAgentName": "facebookexternalhit",
+      "url": "https://matters.town/.well-known/webfinger?resource=acct%3Amashbeanmatters%40matters.town",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/jrd+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a0528619683da609-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "subject",
+          "aliases",
+          "links"
+        ],
+        "subject": "acct:mashbeanmatters@matters.town",
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "webfinger-staging",
+      "userAgentName": "meta-externalagent",
+      "url": "https://matters.town/.well-known/webfinger?resource=acct%3Amashbeanmatters%40matters.town",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/jrd+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a0528619a9e3cb7a-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "subject",
+          "aliases",
+          "links"
+        ],
+        "subject": "acct:mashbeanmatters@matters.town",
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "actor",
+      "userAgentName": "default",
+      "url": "https://matters.town/ap/users/mashbeanmatters",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/activity+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-cache-status": "DYNAMIC",
+        "cf-ray": "a0528619e9f7a609-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "@context",
+          "id",
+          "type",
+          "preferredUsername",
+          "name",
+          "summary",
+          "url",
+          "inbox",
+          "outbox",
+          "followers",
+          "following",
+          "alsoKnownAs",
+          "discoverable",
+          "indexable",
+          "manuallyApprovesFollowers",
+          "endpoints",
+          "publicKey"
+        ],
+        "subject": null,
+        "id": "https://matters.town/ap/users/mashbeanmatters",
+        "type": "Person",
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "actor",
+      "userAgentName": "facebookexternalua",
+      "url": "https://matters.town/ap/users/mashbeanmatters",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/activity+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-cache-status": "DYNAMIC",
+        "cf-ray": "a052861e3b7ecb7a-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "@context",
+          "id",
+          "type",
+          "preferredUsername",
+          "name",
+          "summary",
+          "url",
+          "inbox",
+          "outbox",
+          "followers",
+          "following",
+          "alsoKnownAs",
+          "discoverable",
+          "indexable",
+          "manuallyApprovesFollowers",
+          "endpoints",
+          "publicKey"
+        ],
+        "subject": null,
+        "id": "https://matters.town/ap/users/mashbeanmatters",
+        "type": "Person",
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "actor",
+      "userAgentName": "facebookexternalhit",
+      "url": "https://matters.town/ap/users/mashbeanmatters",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/activity+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-cache-status": "DYNAMIC",
+        "cf-ray": "a05286363ffaa609-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "@context",
+          "id",
+          "type",
+          "preferredUsername",
+          "name",
+          "summary",
+          "url",
+          "inbox",
+          "outbox",
+          "followers",
+          "following",
+          "alsoKnownAs",
+          "discoverable",
+          "indexable",
+          "manuallyApprovesFollowers",
+          "endpoints",
+          "publicKey"
+        ],
+        "subject": null,
+        "id": "https://matters.town/ap/users/mashbeanmatters",
+        "type": "Person",
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "actor",
+      "userAgentName": "meta-externalagent",
+      "url": "https://matters.town/ap/users/mashbeanmatters",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/activity+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-cache-status": "DYNAMIC",
+        "cf-ray": "a0528637b831cb7a-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "@context",
+          "id",
+          "type",
+          "preferredUsername",
+          "name",
+          "summary",
+          "url",
+          "inbox",
+          "outbox",
+          "followers",
+          "following",
+          "alsoKnownAs",
+          "discoverable",
+          "indexable",
+          "manuallyApprovesFollowers",
+          "endpoints",
+          "publicKey"
+        ],
+        "subject": null,
+        "id": "https://matters.town/ap/users/mashbeanmatters",
+        "type": "Person",
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "outbox",
+      "userAgentName": "default",
+      "url": "https://matters.town/ap/users/mashbeanmatters/outbox",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/activity+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-cache-status": "DYNAMIC",
+        "cf-ray": "a0528647eef2a609-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "@context",
+          "id",
+          "type",
+          "totalItems",
+          "orderedItems"
+        ],
+        "subject": null,
+        "id": "https://matters.town/ap/users/mashbeanmatters/outbox",
+        "type": "OrderedCollection",
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "outbox",
+      "userAgentName": "facebookexternalua",
+      "url": "https://matters.town/ap/users/mashbeanmatters/outbox",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/activity+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-cache-status": "DYNAMIC",
+        "cf-ray": "a05286499a39cb7a-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "@context",
+          "id",
+          "type",
+          "totalItems",
+          "orderedItems"
+        ],
+        "subject": null,
+        "id": "https://matters.town/ap/users/mashbeanmatters/outbox",
+        "type": "OrderedCollection",
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "outbox",
+      "userAgentName": "facebookexternalhit",
+      "url": "https://matters.town/ap/users/mashbeanmatters/outbox",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/activity+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-cache-status": "DYNAMIC",
+        "cf-ray": "a0528656bf29a609-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "@context",
+          "id",
+          "type",
+          "totalItems",
+          "orderedItems"
+        ],
+        "subject": null,
+        "id": "https://matters.town/ap/users/mashbeanmatters/outbox",
+        "type": "OrderedCollection",
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "outbox",
+      "userAgentName": "meta-externalagent",
+      "url": "https://matters.town/ap/users/mashbeanmatters/outbox",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/activity+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-cache-status": "DYNAMIC",
+        "cf-ray": "a052865838e3cb7a-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "@context",
+          "id",
+          "type",
+          "totalItems",
+          "orderedItems"
+        ],
+        "subject": null,
+        "id": "https://matters.town/ap/users/mashbeanmatters/outbox",
+        "type": "OrderedCollection",
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "nodeinfo-discovery",
+      "userAgentName": "default",
+      "url": "https://matters.town/.well-known/nodeinfo",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a052865a8924a609-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "links"
+        ],
+        "subject": null,
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "nodeinfo-discovery",
+      "userAgentName": "facebookexternalua",
+      "url": "https://matters.town/.well-known/nodeinfo",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a052865aeae6a609-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "links"
+        ],
+        "subject": null,
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "nodeinfo-discovery",
+      "userAgentName": "facebookexternalhit",
+      "url": "https://matters.town/.well-known/nodeinfo",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a052865b2c1aa609-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "links"
+        ],
+        "subject": null,
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "nodeinfo-discovery",
+      "userAgentName": "meta-externalagent",
+      "url": "https://matters.town/.well-known/nodeinfo",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a052865b7d56a609-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "links"
+        ],
+        "subject": null,
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "webfinger-canonical-on-staging",
+      "userAgentName": "default",
+      "url": "https://matters.town/.well-known/webfinger?resource=acct%3Amashbeanmatters%40matters.town",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/jrd+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a052865bcea1a609-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "subject",
+          "aliases",
+          "links"
+        ],
+        "subject": "acct:mashbeanmatters@matters.town",
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "webfinger-canonical-on-staging",
+      "userAgentName": "facebookexternalua",
+      "url": "https://matters.town/.well-known/webfinger?resource=acct%3Amashbeanmatters%40matters.town",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/jrd+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a052865c194dcb7a-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "subject",
+          "aliases",
+          "links"
+        ],
+        "subject": "acct:mashbeanmatters@matters.town",
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "webfinger-canonical-on-staging",
+      "userAgentName": "facebookexternalhit",
+      "url": "https://matters.town/.well-known/webfinger?resource=acct%3Amashbeanmatters%40matters.town",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/jrd+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a052865c692fa609-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "subject",
+          "aliases",
+          "links"
+        ],
+        "subject": "acct:mashbeanmatters@matters.town",
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "webfinger-canonical-on-staging",
+      "userAgentName": "meta-externalagent",
+      "url": "https://matters.town/.well-known/webfinger?resource=acct%3Amashbeanmatters%40matters.town",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/jrd+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a052865cab99cb7a-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "subject",
+          "aliases",
+          "links"
+        ],
+        "subject": "acct:mashbeanmatters@matters.town",
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "webfinger-canonical",
+      "userAgentName": "default",
+      "url": "https://matters.town/.well-known/webfinger?resource=acct%3Amashbeanmatters%40matters.town",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/jrd+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a052865cfb93a609-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "subject",
+          "aliases",
+          "links"
+        ],
+        "subject": "acct:mashbeanmatters@matters.town",
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "webfinger-canonical",
+      "userAgentName": "facebookexternalua",
+      "url": "https://matters.town/.well-known/webfinger?resource=acct%3Amashbeanmatters%40matters.town",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/jrd+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a052865d4e2dcb7a-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "subject",
+          "aliases",
+          "links"
+        ],
+        "subject": "acct:mashbeanmatters@matters.town",
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "webfinger-canonical",
+      "userAgentName": "facebookexternalhit",
+      "url": "https://matters.town/.well-known/webfinger?resource=acct%3Amashbeanmatters%40matters.town",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/jrd+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a052865d9e08a609-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "subject",
+          "aliases",
+          "links"
+        ],
+        "subject": "acct:mashbeanmatters@matters.town",
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    },
+    {
+      "name": "webfinger-canonical",
+      "userAgentName": "meta-externalagent",
+      "url": "https://matters.town/.well-known/webfinger?resource=acct%3Amashbeanmatters%40matters.town",
+      "status": 200,
+      "ok": true,
+      "redirected": false,
+      "headers": {
+        "content-type": "application/jrd+json; charset=utf-8",
+        "cache-control": "no-store",
+        "cf-ray": "a052865dd8f4cb7a-LAX",
+        "server": "cloudflare",
+        "vary": "accept-encoding"
+      },
+      "body": {
+        "kind": "json",
+        "keys": [
+          "subject",
+          "aliases",
+          "links"
+        ],
+        "subject": "acct:mashbeanmatters@matters.town",
+        "id": null,
+        "type": null,
+        "error": null,
+        "accepted": null
+      }
+    }
+  ]
+}
