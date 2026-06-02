@@ -148,8 +148,23 @@ Threads browser readback is more nuanced:
 - Gateway logs did not show a fresh Threads / Meta crawler hit during the
   direct-profile check.
 
+Follow from Threads was then tested from the direct profile route:
+
+- Threads UI entered a loading state after pressing `追蹤`, then returned to the
+  `追蹤` button.
+- Gateway received repeated inbound `Follow` activities from
+  `https://threads.net/ap/users/17841401579146452/`.
+- Gateway rejected those follows during signature verification because loading
+  that remote actor URL returned HTTP 404.
+- Public fetch checks for the Threads actor URL and common variants also
+  returned HTTP 404.
+- No Threads follower row was created; existing accepted followers remained
+  only g0v.social and gyutte.site.
+
 This narrows the Threads state to: profile route resolution works, but Threads
-search indexing and post ingestion/display are not proven.
+search indexing and post ingestion/display are not proven; follow delivery
+reaches the gateway but cannot be safely accepted until Threads exposes a
+dereferenceable actor document with a public key.
 
 ## Result
 
