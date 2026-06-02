@@ -173,6 +173,91 @@ function buildAcctString(address) {
   return `@${address.handle}@${address.domain}`;
 }
 
+function isLocalOutboxContentVisible(content) {
+  return (
+    content?.visibility === "public" &&
+    content?.status !== "deleted" &&
+    content?.rootMapping === "create"
+  );
+}
+
+function getLocalOutboxContentIds(content) {
+  return dedupeValues([
+    content?.contentId,
+    content?.threadId,
+    content?.threadRootId,
+    content?.rootObjectId,
+    content?.latestObjectId,
+    ...(content?.relations?.identityObjectIds ?? []),
+  ]);
+}
+
+function buildRuntimeOutboxItems({ actorHandle, actor, store }) {
+  const visibleObjectIds = new Set(
+    (store.getLocalContents?.(actorHandle) ?? [])
+      .filter(isLocalOutboxContentVisible)
+      .flatMap((content) => getLocalOutboxContentIds(content)),
+  );
+  if (visibleObjectIds.size === 0) {
+    return [];
+  }
+
+  const itemsByActivityId = new Map();
+  for (const item of store.getOutboundItems?.({ actorHandle }) ?? []) {
+    const activity = item?.activity;
+    const object = activity?.object;
+    if (
+      activity?.type !== "Create" ||
+      !activity?.id ||
+      !object ||
+      typeof object !== "object" ||
+      Array.isArray(object) ||
+      !visibleObjectIds.has(object.id) ||
+      object.inReplyTo
+    ) {
+      continue;
+    }
+
+    const existing = itemsByActivityId.get(activity.id);
+    if (!existing || (item.createdAt ?? "") > (existing.createdAt ?? "")) {
+      itemsByActivityId.set(activity.id, {
+        createdAt: item.createdAt ?? object.published ?? null,
+        activity: {
+          ...activity,
+          actor: actor.actorUrl,
+          object: {
+            ...object,
+            attributedTo: object.attributedTo ?? actor.actorUrl,
+          },
+        },
+      });
+    }
+  }
+
+  return [...itemsByActivityId.values()]
+    .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""))
+    .map((entry) => entry.activity);
+}
+
+async function buildMergedOutbox({ actorHandle, actor, staticOutboxBridge, store }) {
+  const staticOutbox = await staticOutboxBridge.getOutbox(actor);
+  const staticItems = Array.isArray(staticOutbox?.orderedItems) ? staticOutbox.orderedItems : [];
+  const staticActivityIds = new Set(staticItems.map((item) => item?.id).filter(Boolean));
+  const runtimeItems = buildRuntimeOutboxItems({ actorHandle, actor, store }).filter(
+    (item) => !staticActivityIds.has(item.id),
+  );
+  const orderedItems = [...staticItems, ...runtimeItems];
+
+  return {
+    ...staticOutbox,
+    "@context": staticOutbox?.["@context"] ?? "https://www.w3.org/ns/activitystreams",
+    id: actor.outboxUrl,
+    type: staticOutbox?.type ?? "OrderedCollection",
+    totalItems: orderedItems.length,
+    orderedItems,
+  };
+}
+
 function isUsableRemoteDeliveryRecord(record) {
   return Boolean(record?.actorId?.trim() && (record?.sharedInbox?.trim() || record?.inbox?.trim()));
 }
@@ -3670,7 +3755,12 @@ export function createGatewayApp({
       }
 
       if (isReadMethod(request.method) && handle && pathname === `/users/${handle}/outbox` && actor) {
-        const outbox = await effectiveOutboxBridge.getOutbox(actor);
+        const outbox = await buildMergedOutbox({
+          actorHandle: handle,
+          actor,
+          staticOutboxBridge: effectiveOutboxBridge,
+          store,
+        });
         return activityResponse(outbox, 200, DISCOVERY_RESPONSE_HEADERS);
       }
 
