@@ -213,6 +213,11 @@ result, and `totalDiffs`.
   `https://www.threads.com/fediverse_profile/@mashbeanmatters@matters.town`,
   but Threads search still returns no profile result and the direct profile
   shows no posts.
+- Threads `Follow` from the direct profile reached the gateway, but was rejected
+  because the remote actor URL
+  `https://threads.net/ap/users/17841401579146452/` returned HTTP 404 during
+  signature verification. The gateway must not accept this follow without a
+  dereferenceable actor document and public key.
 
 ## Go / No-Go Rule
 

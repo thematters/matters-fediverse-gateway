@@ -38,7 +38,7 @@ import {
   buildUniqueContentDeliveryActivities,
 } from "./lib/content-delivery-ops.mjs";
 import { createStaticOutboxBridge } from "./lib/static-outbox-bridge.mjs";
-import { verifyHttpSignature } from "./security/http-signatures.mjs";
+import { readHttpSignatureKeyId, verifyHttpSignature } from "./security/http-signatures.mjs";
 
 const PUBLIC_AUDIENCE = "https://www.w3.org/ns/activitystreams#Public";
 const DEFAULT_MENTION_FAILURE_RETRY_MS = 5 * 60 * 1000;
@@ -3404,6 +3404,8 @@ export function createGatewayApp({
           direction: "inbound",
           event: "signature.rejected",
           actorHandle: targetHandle,
+          remoteActorId: getActivityActorId(activity),
+          signatureKeyId: readHttpSignatureKeyId(request.headers.get("signature")),
           activityId: activity.id ?? null,
           reason: error.message,
         }),

@@ -30,6 +30,14 @@ function parseSignatureHeader(signatureHeader) {
   return attributes;
 }
 
+export function readHttpSignatureKeyId(signatureHeader) {
+  try {
+    return parseSignatureHeader(signatureHeader).keyId;
+  } catch {
+    return null;
+  }
+}
+
 function createDigest(body) {
   const digest = createHash("sha256").update(body).digest("base64");
   return `SHA-256=${digest}`;

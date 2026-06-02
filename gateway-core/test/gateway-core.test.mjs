@@ -6089,7 +6089,7 @@ test("manual approval actor returns Reject and does not persist follower", async
 });
 
 test("invalid signature is rejected", async () => {
-  const { app } = await createHarness();
+  const { app, store } = await createHarness();
   const wrongKeys = pemPair();
   const activity = {
     "@context": "https://www.w3.org/ns/activitystreams",
@@ -6110,6 +6110,10 @@ test("invalid signature is rejected", async () => {
   );
 
   assert.equal(response.status, 401);
+  const trace = store.getSnapshot().traces.at(-1);
+  assert.equal(trace.event, "signature.rejected");
+  assert.equal(trace.remoteActorId, "https://remote.example/users/zoe");
+  assert.equal(trace.signatureKeyId, "https://remote.example/users/zoe#main-key");
 });
 
 test("proxied inbox signature verification uses original public URL metadata", async () => {
