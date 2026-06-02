@@ -2829,6 +2829,77 @@ test("signed Follow can resolve a complete actor document from Signature keyId w
   assert.equal(snapshot.remoteActors[actorId].source, "signature-key");
 });
 
+test("remote actor discovery signs actor and key document fetches when local actor keys are available", async () => {
+  const actorId = "https://threads.example/ap/users/17841401579146452/";
+  const keyId = "https://threads.example/ap/users/17841401579146452/#main-key";
+  const fetches = [];
+  const { app, remoteKeys } = await createHarness({
+    fetchImpl: async (url, options = {}) => {
+      const href = String(url);
+      const headers = new Headers(options.headers ?? {});
+      fetches.push({
+        href,
+        signature: headers.get("signature"),
+        date: headers.get("date"),
+        accept: headers.get("accept"),
+      });
+      if (href === actorId) {
+        return new Response(JSON.stringify({ success: false, error: "Not found" }), {
+          status: 404,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (href === keyId) {
+        return new Response(
+          JSON.stringify({
+            "@context": "https://www.w3.org/ns/activitystreams",
+            id: actorId,
+            type: "Person",
+            inbox: "https://threads.example/ap/users/17841401579146452/inbox",
+            publicKey: {
+              id: keyId,
+              owner: actorId,
+              publicKeyPem: remoteKeys.publicKeyPem,
+            },
+          }),
+          {
+            status: 200,
+            headers: { "content-type": "application/activity+json" },
+          },
+        );
+      }
+      return new Response("Not found", { status: 404 });
+    },
+  });
+  const activity = {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    id: "https://threads.example/ap/activities/follow-signed-fetch",
+    type: "Follow",
+    actor: actorId,
+    object: "https://matters.example/users/alice",
+  };
+  const body = JSON.stringify(activity);
+  const response = await app.handle(
+    signedRequest({
+      method: "POST",
+      url: "https://matters.example/users/alice/inbox",
+      body,
+      keyId,
+      privateKeyPem: remoteKeys.privateKeyPem,
+    }),
+  );
+
+  assert.equal(response.status, 202);
+  assert.equal(fetches.length, 2);
+  assert.deepEqual(fetches.map((entry) => entry.href), [actorId, keyId]);
+  for (const fetchEntry of fetches) {
+    assert.ok(fetchEntry.accept.includes("application/activity+json"));
+    assert.ok(fetchEntry.signature.includes('keyId="https://matters.example/users/alice#main-key"'));
+    assert.match(fetchEntry.signature, /headers="\\(request-target\\) host date"/);
+    assert.ok(fetchEntry.date);
+  }
+});
+
 test("signed Follow rejects Signature keyId fallback when key owner does not match activity actor", async () => {
   const actorId = "https://threads.example/ap/users/17841401579146452/";
   const keyId = "https://threads.example/ap/keys/17841401579146452#main-key";
