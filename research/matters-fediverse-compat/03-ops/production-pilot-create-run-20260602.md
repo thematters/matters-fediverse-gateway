@@ -143,6 +143,27 @@ readback.
 The 2026-06-02 bounded production `Create` passed gateway-side preflight,
 delivery, public discovery, and public outbox readback.
 
+## Post-Refresh Runtime Evidence
+
+After PR #81 was deployed and PR #82 recorded the run, the AWS origin received a
+fresh backup and consistency scan:
+
+- SSM command: `f1e20136-373d-44ea-b5f8-3fc8c2ca63ce`
+- backup:
+  `/var/lib/matters-gateway/runtime/backups/matters-gateway-2026-06-02-010624924Z-post-create-refresh-20260602.sqlite`
+- manifest:
+  `/var/lib/matters-gateway/runtime/backups/matters-gateway-2026-06-02-010624924Z-post-create-refresh-20260602.sqlite.json`
+- consistency report:
+  `/var/lib/matters-gateway/runtime/consistency-scans/consistency-scan-2026-06-02-010625309Z-post-create-refresh-20260602.md`
+- result: `totalDiffs=5`, all `missing_in_file`; `missing_in_sqlite=0`,
+  `value_mismatch=0`
+- outbound queue status: `delivered=33`; no `pending`, `processing`, or
+  `deadLetter` rows
+
+The remaining diffs are the known SQLite-primary migration deltas: followers,
+one inbound object, and inbound engagements exist in SQLite but not legacy file
+state.
+
 Remaining work before broader outbound remains:
 
 - confirm receiver-visible Mastodon and Misskey readback for the new article;
