@@ -3611,6 +3611,19 @@ test("outbox Create normalizes public Article before fanout", async () => {
   assert.equal(resolvedObject.id, "https://matters.example/articles/normalized-create");
   assert.equal(resolvedObject.type, "Article");
   assert.equal(resolvedObject.name, "Normalized Create");
+
+  const outboxResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox", {
+      headers: {
+        accept: "application/activity+json",
+      },
+    }),
+  );
+  assert.equal(outboxResponse.status, 200);
+  const outbox = await outboxResponse.json();
+  assert.equal(outbox.totalItems, 1);
+  assert.equal(outbox.orderedItems[0].type, "Create");
+  assert.equal(outbox.orderedItems[0].object.id, "https://matters.example/articles/normalized-create");
 });
 
 test("outbox Create reply fans out to followers, explicit targets, and mention recipients", async () => {
@@ -5956,6 +5969,28 @@ test("outbox Delete fans out to accepted followers", async () => {
     lastActivityId: "https://remote.example/activities/follow-1",
   });
 
+  const createResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: "https://matters.example/articles/hello-fediverse",
+          type: "Article",
+          name: "Hello Fediverse",
+          url: "https://matters.example/a/hello",
+          content: "<p>Hello Fediverse</p>",
+        },
+      }),
+    }),
+  );
+  assert.equal(createResponse.status, 202);
+  const initialOutboxResponse = await app.handle(new Request("https://matters.example/users/alice/outbox"));
+  const initialOutbox = await initialOutboxResponse.json();
+  assert.equal(initialOutbox.totalItems, 1);
+
   const response = await app.handle(
     new Request("https://matters.example/users/alice/outbox/delete", {
       method: "POST",
@@ -5972,8 +6007,12 @@ test("outbox Delete fans out to accepted followers", async () => {
   const payload = await response.json();
   assert.equal(payload.mapping, "delete");
   assert.equal(payload.deliveries.length, 1);
-  assert.equal(deliveries[0].activity.type, "Delete");
-  assert.equal(deliveries[0].activity.object, "https://matters.example/articles/hello-fediverse");
+  assert.equal(deliveries.at(-1).activity.type, "Delete");
+  assert.equal(deliveries.at(-1).activity.object, "https://matters.example/articles/hello-fediverse");
+
+  const finalOutboxResponse = await app.handle(new Request("https://matters.example/users/alice/outbox"));
+  const finalOutbox = await finalOutboxResponse.json();
+  assert.equal(finalOutbox.totalItems, 0);
 });
 
 test("outbox Delete can include the original object for stricter receivers", async () => {
