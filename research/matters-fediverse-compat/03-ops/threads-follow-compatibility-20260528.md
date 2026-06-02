@@ -1,7 +1,8 @@
 # Threads Follow Compatibility Check
 
 Date: 2026-05-28
-Status: discovery passes; Follow remains unresolved and non-blocking
+Updated: 2026-06-02
+Status: discovery passes; Follow now completes after embedded-Follow Accept compatibility fix
 
 ## Scope
 
@@ -43,19 +44,27 @@ Archived report:
 
 - `research/matters-fediverse-compat/03-ops/threads-discovery-live-20260528.json`
 
-## What Still Fails
+## 2026-06-02 Follow Update
 
-Threads can discover the canonical pilot profile, but the Threads UI Follow
-flow still does not complete.
+Threads can discover the canonical pilot profile, send signed Follow activities
+to gateway-core, and receive delivered Accept responses after PR #90.
 
-Current interpretation:
+The failure mode changed:
 
-- This is not a direct WebFinger, actor, NodeInfo, outbox, Cloudflare WAF, or
-  gateway health failure.
-- Threads federation remains a beta surface with product-side constraints and
-  platform-specific indexing / eligibility behavior.
-- The current project should keep Threads as a compatibility track, not a
-  launch blocker for the Mastodon / Misskey pilot.
+- Before PR #90, Threads Follow reached gateway-core, but outbound Accept
+  delivery to Threads returned HTTP 500.
+- PR #90 changed Follow responses so `Accept.object` / `Reject.object` embed
+  the original Follow object when available.
+- Existing pending Threads Accept queue items were replayed with the embedded
+  Follow object and all delivered.
+- The latest public Article Create also delivered to the Threads shared inbox.
+
+Updated evidence:
+
+- `research/matters-fediverse-compat/03-ops/threads-follow-and-delivery-regression-20260602.md`
+
+Remaining work is receiver-visible UI validation: confirm the follow state,
+Article visibility, reply return, and like return from Threads.
 
 ## External Context
 
@@ -74,50 +83,38 @@ Relevant public Threads federation notes:
   beta and that some posts from other servers might not be visible:
   `https://www.engadget.com/social-media/threads-now-allows-users-to-follow-accounts-from-mastodon-and-other-fediverse-services-directly-in-threads-183517197.html/`
 
-These constraints are consistent with the current evidence: Matters' public
-ActivityPub surface is reachable, but Threads has not completed the Follow.
+These constraints were useful during debugging, but the current evidence shows
+the concrete gateway-side incompatibility was the Follow response object shape.
+Threads accepted the replayed Accept once the full Follow object was embedded.
 
 ## Fixability Assessment
 
-Likely fixable from the Matters side if a concrete failing precondition is
-identified:
+The concrete gateway-side Follow blocker was fixed from the Matters side:
 
-- missing actor profile field that Threads requires;
-- Threads cannot dereference a specific activity, actor, image, or profile URL;
-- Threads sends a signed Follow that gateway-core rejects;
-- Cloudflare blocks a Threads POST to the inbox;
-- Threads requires prior interaction with a federated Threads profile and the
-  gateway actor has not performed one.
+- signed Threads Follow reaches gateway-core;
+- remote actor/key discovery succeeds;
+- gateway-core accepts the follower;
+- outbound Accept delivers when it embeds the full Follow object;
+- latest public Article Create delivers to Threads shared inbox.
 
-Not directly fixable from the Matters side without Threads feedback:
+Still not directly verifiable from gateway logs alone:
 
-- Threads UI suppresses Follow for a beta eligibility rule;
-- Threads has a cached stale actor/key state;
-- Threads only surfaces certain remote server/software classes;
-- Threads accepts discovery but silently blocks Follow for policy or ranking
-  reasons.
+- whether Threads UI surfaces the delivered Article immediately;
+- whether Threads replies / likes are returned to gateway-core;
+- whether Threads caches stale remote Article state.
 
 ## Next Practical Tests
 
-1. Use a Threads account with fediverse sharing enabled.
-2. Search the exact handle `@mashbeanmatters@matters.town`.
-3. If a profile appears but Follow cannot be pressed, record:
-   - screenshot;
-   - whether the profile has a fediverse icon;
-   - whether the UI says unavailable, pending, or no action.
-4. From the gateway side, watch for inbound POSTs to
-   `https://matters.town/ap/users/mashbeanmatters/inbox`.
-5. If no inbound Follow reaches gateway-core, the blocker is upstream in
-   Threads UI / eligibility / cache.
-6. If a Follow reaches gateway-core and is rejected, inspect the signature and
-   actor resolution path.
-7. If Threads requires prior interaction, test a bounded gateway-origin
-   interaction with a fediverse-enabled Threads actor only after the target
-   Threads profile and action are explicitly approved.
+1. Confirm Threads UI follow state is no longer pending.
+2. Confirm the latest delivered public Article appears in Threads.
+3. Reply to the Article from Threads and check gateway-core inbound traces.
+4. Like the Article from Threads and check gateway-core inbound traces.
+5. If either interaction does not return, inspect inbound POST traces before
+   changing payload shape.
 
 ## Launch Decision
 
-Threads Follow remains non-blocking.
+Threads Follow is no longer a gateway-side blocker.
 
 Mastodon and Misskey already prove the core canonical path:
 
@@ -129,5 +126,6 @@ Mastodon and Misskey already prove the core canonical path:
 - gateway queue health;
 - SQLite backup and consistency.
 
-Broader rollout should not wait for Threads unless product decides Threads is a
-launch-critical distribution channel.
+Broader rollout still should not depend solely on Threads until receiver-visible
+Article, reply, and like checks pass. Mastodon and Misskey remain the primary
+passed interop baseline.
