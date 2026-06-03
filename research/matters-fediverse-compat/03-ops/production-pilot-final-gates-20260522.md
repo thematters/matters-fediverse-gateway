@@ -217,7 +217,12 @@ result, and `totalDiffs`.
   `Accept`, and appears as followed in the Threads UI.
 - Threads receiver-visible Article display is still open: the latest public
   Article delivered to the Threads shared inbox, but the Threads profile/feed
-  has not yet shown the post.
+  has not yet shown the post. A follow-up check found that the delivered
+  `Create` activity is ActivityPub-readable, but the embedded Article
+  `object.id` is still an ordinary Matters article page URL that returns HTML
+  when fetched with `Accept: application/activity+json`. PR #98 deployed the
+  Worker route needed for future canonical `/ap/articles/*` object ids; the
+  gateway/Lambda object-id migration remains open.
 
 ## Go / No-Go Rule
 
