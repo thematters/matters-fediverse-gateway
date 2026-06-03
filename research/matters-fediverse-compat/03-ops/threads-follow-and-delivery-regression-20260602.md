@@ -102,3 +102,36 @@ These checks require the Threads UI or a receiving account view:
 Mastodon and Misskey should remain in the passed baseline while these Threads
 checks continue.
 
+## Article-vs-Note Visibility Probe
+
+The gateway canonical long-form object remains ActivityPub `Article`. Do not
+change the main Matters article pipeline just to satisfy one receiver.
+
+To diagnose whether Threads accepts delivery but only renders short-form
+`Note` objects in its UI, use the bounded probe script in dry-run mode first:
+
+```bash
+cd gateway-core
+npm run check:threads-note-visibility -- \
+  --config /etc/matters-gateway/staging.instance.json
+```
+
+Dry-run mode only validates the accepted Threads follower, builds the public
+`Create(Note)` payload, and prints the selected shared inbox. It does not
+enqueue or deliver anything.
+
+Sending the probe is a public ActivityPub `Create` to Threads. It must be an
+explicit human-approved test and requires both flags:
+
+```bash
+cd gateway-core
+npm run check:threads-note-visibility -- \
+  --config /etc/matters-gateway/staging.instance.json \
+  --send \
+  --confirm-public-create
+```
+
+If the `Note` appears in Threads while the canonical `Article` does not, treat
+that as receiver-specific display behavior. The next implementation should be a
+documented compatibility projection for Threads delivery, not a replacement of
+the canonical Matters `Article` model.
