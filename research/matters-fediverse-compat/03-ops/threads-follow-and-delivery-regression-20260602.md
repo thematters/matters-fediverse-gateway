@@ -166,3 +166,19 @@ A dry builder check before that final cleanup returned
 `objectUrl=https://matters.town/a/n0wacr6zgyyq`, and
 `atomUri=https://matters.town/1228008-test-article/`. Existing already-queued
 outbox items keep their old ids; this affects new Create/Update activities.
+
+Post-PR #102 live proof: SSM command
+`e647462a-bd45-4898-b54a-b2bccd4b7e93` sent a bounded public Article probe
+through the gateway-origin `outbox/create` endpoint using a non-canonical
+Matters article-page `id`. The gateway canonicalized it to
+`https://matters.town/ap/articles/1228008-threads-article-atomuri-cleanup-20260603T232529Z`,
+preserved `https://matters.town/a/n0wacr6zgyyq` as `object.url`, kept
+`published`, `updated`, and `mediaType: "text/html"`, and omitted public
+`atomUri`. The `Create` activity
+`https://matters.town/ap/activities/1780529129484-create-mashbeanmatters`
+reported delivered delivery rows for g0v.social, gyutte.site, and Threads.
+The public Article object returns HTTP 200 with `application/activity+json`
+and `cache-control: no-store`. The delivery job also moved the earlier
+missing-fields/atomUri Threads test item to dead-letter after its final
+HTTP 500 retry; the live queue then reported `pending=0`, `retryPending=0`,
+`delivered=48`, and `deadLetter=1`.
