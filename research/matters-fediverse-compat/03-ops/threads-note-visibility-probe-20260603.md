@@ -74,9 +74,20 @@ Threads with successful HTTP responses. The `Note` probe did not immediately
 appear in Threads UI, so the current failure is not explained by `Article` vs
 `Note` alone.
 
+Follow-up routing check: immediately after the probe, the AWS
+`gateway-core-origin` could dereference both the `Create` activity and embedded
+`Note` object, but the public `matters.town/ap/notes/*` route returned 404
+because the Cloudflare Worker only proxied `/ap/activities/*` to `gateway-core`.
+PR #95 added the narrow `/ap/notes/*` proxy route and was deployed to
+Cloudflare Worker version `14739dc4-4405-431a-a44c-c351b132e7b0`. After
+deployment, the public object URL returned HTTP 200 with `type: "Note"` and
+`cache-control: no-store`.
+
 Keep the next investigation focused on Threads receiver behavior:
 
 - delayed remote-post indexing or feed refresh behavior;
+- whether Threads had already cached the earlier public 404 for the `Note`
+  object;
 - whether Threads only displays inbound posts from a narrower set of supported
   remote software profiles;
 - whether Threads requires additional object or actor fields beyond successful
