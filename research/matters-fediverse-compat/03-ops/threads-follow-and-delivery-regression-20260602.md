@@ -151,7 +151,12 @@ ordinary Matters article page URL. Fetching that URL with
 `Accept: application/activity+json` follows the main-site path and returns HTML,
 not ActivityPub JSON. PR #98 prepared the Worker side by proxying non-demo
 `/ap/articles/*` reads to `gateway-core`, while keeping the static demo article
-served by the Worker. The remaining implementation work is to move future
-Article object ids to a canonical `/ap/articles/*` URL while preserving the
-original Matters article URL in `object.url` and content identity aliases so
-Update/Delete still target the same article.
+served by the Worker. PR #100 then moved future gateway-origin outbound
+`Article` object ids to canonical `/ap/articles/*` URLs while preserving the
+original Matters article URL in `object.url` and `atomUri` identity aliases so
+Update/Delete can still target the same article. The AWS origin was deployed to
+commit `fe3d155`, and a dry builder check returned
+`objectId=https://matters.town/ap/articles/1228008-test-article`,
+`objectUrl=https://matters.town/a/n0wacr6zgyyq`, and
+`atomUri=https://matters.town/1228008-test-article/`. Existing already-queued
+outbox items keep their old ids; this affects new Create/Update activities.
