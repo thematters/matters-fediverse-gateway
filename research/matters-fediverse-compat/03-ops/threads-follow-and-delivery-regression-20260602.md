@@ -144,3 +144,14 @@ receiver-visible gap is not explained by `Article` vs `Note` alone. A follow-up
 Worker fix in PR #95 also made public `matters.town/ap/notes/*` object
 dereferencing proxy to `gateway-core`; the probe `Note` URL now returns HTTP
 200 publicly instead of the earlier Worker 404.
+
+Follow-up Article routing check: the latest public Article `Create` activity is
+publicly dereferenceable, but its embedded `Article.object.id` is still the
+ordinary Matters article page URL. Fetching that URL with
+`Accept: application/activity+json` follows the main-site path and returns HTML,
+not ActivityPub JSON. PR #98 prepared the Worker side by proxying non-demo
+`/ap/articles/*` reads to `gateway-core`, while keeping the static demo article
+served by the Worker. The remaining implementation work is to move future
+Article object ids to a canonical `/ap/articles/*` URL while preserving the
+original Matters article URL in `object.url` and content identity aliases so
+Update/Delete still target the same article.
