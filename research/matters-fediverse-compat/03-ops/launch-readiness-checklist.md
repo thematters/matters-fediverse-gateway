@@ -68,9 +68,10 @@
 
 ## Current Pre-Production Gaps
 
-- Threads can discover the canonical pilot profile, but Follow still does not
-  complete. Treat this as compatibility work, not as proof that the gateway
-  ActivityPub core failed or as a launch blocker.
+- Threads can discover the canonical pilot profile, signed Follow reaches
+  gateway-core, embedded-Follow Accept delivery succeeds, and the Threads UI
+  shows the profile as followed. The remaining Threads compatibility work is
+  receiver-visible Article display plus reply / like return.
 - Canonical Mastodon follow proof for `mashbeanmatters@matters.town` has passed
   on g0v.social. Misskey canonical Follow now also converges on gyutte.site
   after the actor key id moved to the versioned gateway-core key id
@@ -104,8 +105,9 @@
   `production-record-only-observation-runbook.md`.
 - Production gateway hosting, private S3 bundle storage, production secrets
   ownership, legal takedown owner, privacy notice, key exposure/rotation owner,
-  live rollback rehearsal, and launch communication remain explicit human
-  rollout gates. Offline AWS origin backup/restore proof has passed.
+  live rollback rehearsal, Threads receiver-visible Article diagnosis, and
+  launch communication remain explicit human rollout gates. Offline AWS origin
+  backup/restore proof has passed.
 - Production outbound `Create` / `Update` / `Delete` remains disabled until
   launch approval is recorded.
 - Production record-only / `mashbean` pilot is the current allowable production

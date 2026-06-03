@@ -52,7 +52,7 @@ Follow `/Users/mashbean/Documents/AI-Agent/docs/ops/matters-release-branch-polic
 | Mastodon / Misskey follow baseline | g0v.social and gyutte.site follow state converge through the AWS `gateway-core` origin. |
 | Misskey interaction return | Reply, like/reaction, and renote returned to `gateway-core` and persisted in SQLite. |
 | Production pilot gate owner | Matters current General Manager is assigned as the decision owner for rollback, legal takedown, privacy notice, key exposure/rotation, and Lambda/gateway ingestion secrets. |
-| First bounded production `Create` | `production-pilot-create-run-20260522.md` records delivery to the two accepted Mastodon/Misskey pilot followers, Mastodon readback success, Misskey visual readback, and post-send queue/SQLite evidence. |
+| First bounded production `Create` | `production-pilot-create-run-20260522.md` records delivery to the two accepted Mastodon/Misskey pilot followers, Mastodon readback success, Misskey visual readback, and post-send queue/SQLite evidence. The 2026-06-02 fresh `Create` later delivered to the accepted Threads follower after the embedded-Follow Accept compatibility fix. |
 | First bounded production `Update` | `production-pilot-update-run-20260528.md` records delivery to the same two accepted pilot followers, Mastodon readback success, Misskey visual readback, and post-send queue health. |
 | Bounded withdrawal rehearsal | `production-pilot-delete-run-20260528.md` records two Delete variants. Mastodon withdrew the status; Misskey accepted both deliveries but still showed the remote note. |
 

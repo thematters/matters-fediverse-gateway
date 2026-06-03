@@ -1,7 +1,7 @@
 # Canonical Identity Cutover Plan
 
-Date: 2026-05-16
-Status: canonical pilot identity and Mastodon/Misskey follow proof complete; production outbound delivery remains gated
+Date: 2026-06-02
+Status: canonical pilot identity and Mastodon/Misskey/Threads follow proof complete; production outbound delivery remains gated
 
 This note plans the cutover from the staging test account
 `acct:mashbeanmatters@staging-gateway.matters.town` to the canonical Matters
@@ -25,11 +25,11 @@ identity `acct:mashbeanmatters@matters.town`.
   the narrow staging and canonical federation paths.
 - Live probes for `acct:mashbeanmatters@matters.town` now return `200` for
   default and Meta-style user agents.
-- Threads can now discover the canonical profile, but the UI Follow flow still
-  does not complete. Treat this as a Threads beta eligibility / UI / cache
-  compatibility item unless a signed Threads Follow reaches gateway-core and is
-  rejected. See
-  `research/matters-fediverse-compat/03-ops/threads-follow-compatibility-20260528.md`.
+- Threads can now discover the canonical profile, signed Follow reaches
+  gateway-core, embedded-Follow Accept delivery succeeds, and the Threads UI
+  shows the canonical profile as followed. The remaining Threads checks are
+  receiver-visible Article display plus reply / like return. See
+  `research/matters-fediverse-compat/03-ops/threads-follow-and-delivery-regression-20260602.md`.
 - Read-only remote discovery works from g0v.social Mastodon and gyutte.site
   Misskey for `mashbeanmatters@matters.town`; visible follow proof now also
   converges on both platforms.
@@ -111,9 +111,9 @@ actors for the same author.
    - Search `mashbeanmatters@matters.town` from Mastodon and Misskey.
    - Search from Threads after the canonical surface is visible and no longer
      challenged by Cloudflare.
-   - Status: machine probes pass; Mastodon and Misskey discovery and follow
-  proof pass; Threads discovery passes but follow is still unresolved and is
-  not a launch blocker.
+   - Status: machine probes pass; Mastodon, Misskey, and Threads discovery and
+     follow proof pass. Threads receiver-visible Article display and
+     interaction return are still open compatibility checks.
 
 5. **Staging follower boundary**
    - Treat existing `staging-gateway.matters.town` followers as test-only.
@@ -220,10 +220,9 @@ ActivityPub behavior second.
   the demo key.
 - `npm run check:follow-readiness -- --base-url https://matters.town --handle mashbeanmatters`
   returns `ok: true` before any canonical follow proof is attempted.
-- Threads can discover the canonical pilot profile, but follow still does not
-  complete. Record it as a Follow compatibility problem unless WebFinger or
-  actor probes regress, or unless a signed Threads Follow reaches gateway-core
-  and is rejected.
+- Threads can discover the canonical pilot profile and Follow now completes
+  after embedded-Follow Accept delivery. Record Threads Article visibility and
+  interaction return separately from gateway-side Follow/delivery health.
 - SQLite consistency scan returns `totalDiffs=0`.
 - Delivery queue returns to zero pending and zero dead letters after the first
   approved pilot delivery.
@@ -263,9 +262,9 @@ After outbound delivery:
 ## Next Engineering Step
 
 Prepare production record-only / observation for the `mashbean` pilot author,
-keep canonical identity stable, and continue Threads Follow plus Mastodon
-write-scope interaction checks as compatibility work. For Threads, the next
-useful test is a fediverse-enabled Threads account search / Follow attempt
-while gateway-core watches for inbound Follow POSTs. Do not enable production
-full outbound delivery until the remaining production gates are closed and
-launch approval is recorded.
+keep canonical identity stable, and continue Threads receiver-visible Article
+plus Mastodon write-scope interaction checks as compatibility work. For Threads,
+the next useful test is a bounded Article-vs-Note visibility diagnosis after
+gateway-core confirms Article delivery to the accepted Threads follower. Do not
+enable production full outbound delivery until the remaining production gates
+are closed and launch approval is recorded.

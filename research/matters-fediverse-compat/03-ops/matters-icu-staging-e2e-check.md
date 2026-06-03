@@ -258,7 +258,9 @@ node src/server.mjs --config ./runtime/matters-icu-staging/gateway.instance.json
   proof.
 - This historical staging-domain Threads result is superseded by the canonical
   `matters.town` pilot checks: Threads can now discover the canonical profile,
-  while Follow still remains a non-blocking compatibility issue.
+  Follow now completes after the 2026-06-02 embedded-Follow Accept fix, and the
+  remaining Threads compatibility issue is receiver-visible Article display
+  plus reply / like return.
 - Local AWS CLI is not configured with a usable profile, region, or credentials
   on this Mac, so fresh `federation-export-dev` invocation from the local
   staging script is blocked until AWS CLI access is configured. Existing
@@ -382,15 +384,18 @@ Current Threads hypothesis:
 
 1. Cloudflare WAF/Bot blocking for `meta-externalagent` on staging federation
    paths is cleared.
-2. Threads can discover the canonical pilot profile but Follow still fails,
-   likely because of platform-specific Follow / actor-key / inbox behavior or
-   cached remote actor state.
-3. This does not invalidate Mastodon/Misskey evidence because those paths
+2. Threads can discover and follow the canonical pilot profile after the
+   embedded-Follow Accept fix.
+3. Threads receiver-visible Article display is still unproven even though the
+   latest public Article `Create` delivered to the accepted Threads shared
+   inbox.
+4. This does not invalidate Mastodon/Misskey evidence because those paths
    already pass discovery and delivery.
 
-Next Threads action: keep the exact canonical profile search and Follow attempt
-as a compatibility track, but do not block production record-only / `mashbean`
-pilot preparation on Threads.
+Next Threads action: keep receiver-visible Article display and reply / like
+return as a compatibility track, including an Article-vs-Note visibility
+diagnosis if approved. Do not block production record-only / `mashbean` pilot
+preparation on Threads.
 
 2026-05-28 canonical live rerun:
 
