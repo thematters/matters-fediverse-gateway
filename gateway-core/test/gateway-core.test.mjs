@@ -3823,6 +3823,94 @@ test("outbox Create normalizes public Article before fanout", async () => {
   assert.equal(outbox.orderedItems[0].object.id, "https://matters.example/articles/normalized-create");
 });
 
+test("outbox Create canonicalizes same-domain Article ids behind public ActivityPub prefix", async () => {
+  const { app, config, store, deliveries } = await createHarness();
+  config.instance.activityBaseUrl = "https://matters.example/ap";
+  await store.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    inbox: "https://remote.example/users/zoe/inbox",
+    sharedInbox: "https://remote.example/inbox",
+    status: "accepted",
+    followedAt: "2026-03-21T00:00:00.000Z",
+    lastActivityId: "https://remote.example/activities/follow-1",
+  });
+
+  const originalObjectId = "https://matters.example/1228008-test-article/";
+  const articleUrl = "https://matters.example/a/n0wacr6zgyyq";
+  const canonicalObjectId = "https://matters.example/ap/articles/1228008-test-article";
+  const response = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: originalObjectId,
+          type: "Article",
+          name: "Canonical Article",
+          url: articleUrl,
+          content: "<p>Create body</p>",
+        },
+      }),
+    }),
+  );
+
+  assert.equal(response.status, 202);
+  const object = deliveries[0].activity.object;
+  assert.equal(object.id, canonicalObjectId);
+  assert.equal(object.url, articleUrl);
+  assert.equal(object.atomUri, originalObjectId);
+
+  const objectResponse = await app.handle(
+    new Request("https://matters.example/articles/1228008-test-article", {
+      headers: {
+        accept: "application/activity+json",
+        "x-original-url": canonicalObjectId,
+      },
+    }),
+  );
+  assert.equal(objectResponse.status, 200);
+  const resolvedObject = await objectResponse.json();
+  assert.equal(resolvedObject.id, canonicalObjectId);
+  assert.equal(resolvedObject.type, "Article");
+
+  const outboxResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox", {
+      headers: {
+        accept: "application/activity+json",
+      },
+    }),
+  );
+  const outbox = await outboxResponse.json();
+  assert.equal(outbox.orderedItems[0].object.id, canonicalObjectId);
+
+  const deleteResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/delete", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        objectId: originalObjectId,
+      }),
+    }),
+  );
+  assert.equal(deleteResponse.status, 202);
+
+  const localContentResponse = await app.handle(
+    new Request(`https://matters.example/admin/local-content?actorHandle=alice&contentId=${encodeURIComponent(canonicalObjectId)}`),
+  );
+  assert.equal(localContentResponse.status, 200);
+  const localContent = await localContentResponse.json();
+  assert.equal(localContent.item.status, "deleted");
+  assert.deepEqual(localContent.item.relations.identityObjectIds, [
+    canonicalObjectId,
+    articleUrl,
+    originalObjectId,
+  ]);
+});
+
 test("outbox Create reply fans out to followers, explicit targets, and mention recipients", async () => {
   const { config, store, deliveries } = await createHarness();
   config.remoteActors["https://elsewhere.example/users/mia"] = {
