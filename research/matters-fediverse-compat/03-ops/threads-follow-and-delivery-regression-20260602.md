@@ -135,3 +135,9 @@ If the `Note` appears in Threads while the canonical `Article` does not, treat
 that as receiver-specific display behavior. The next implementation should be a
 documented compatibility projection for Threads delivery, not a replacement of
 the canonical Matters `Article` model.
+
+The 2026-06-03 probe delivered a public `Create(Note)` to the accepted Threads
+shared inbox with HTTP 200, but the probe was not observed in the Threads
+profile, fediverse feed, or exact-text search immediately after delivery. See
+`threads-note-visibility-probe-20260603.md`. This means the current
+receiver-visible gap is not explained by `Article` vs `Note` alone.

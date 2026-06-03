@@ -47,7 +47,7 @@ Accept compatibility fix.
 
 | Gate | Required decision or proof | Decision owner |
 | --- | --- | --- |
-| Threads receiver-visible Article and interaction checks | Threads crawler diagnostics pass on canonical `matters.town`, signed Follow reaches gateway-core, embedded-Follow Accept delivery succeeds, and the Threads UI shows the canonical profile as followed. The latest public Article `Create` delivered to `https://threads.net/ap/inbox/`, but the Article has not yet been observed in Threads profile/feed UI. Reply and like return from Threads are therefore still unproven. See `03-ops/threads-follow-and-delivery-regression-20260602.md`. | Matters current General Manager; product and gateway operator support. |
+| Threads receiver-visible post and interaction checks | Threads crawler diagnostics pass on canonical `matters.town`, signed Follow reaches gateway-core, embedded-Follow Accept delivery succeeds, and the Threads UI shows the canonical profile as followed. The latest public Article `Create` and the bounded Note visibility probe both delivered to `https://threads.net/ap/inbox/`, but neither was observed in Threads profile/feed/search UI immediately after delivery. Reply and like return from Threads are therefore still unproven. See `03-ops/threads-follow-and-delivery-regression-20260602.md`. | Matters current General Manager; product and gateway operator support. |
 | Mastodon interaction return | Current g0v.social token is read-only, so reply / favourite / boost write tests require a write-scoped token or manual browser action. | Matters current General Manager; gateway operator executes. |
 | Production gateway hosting | Confirm long-running gateway host, SQLite backup path, restore drill, monitoring, and direct-origin fallback outside Cloudflare. | Matters current General Manager; infra and gateway operator support. |
 | Production private S3 | Pilot bucket `matters-fediverse-prod-bundles` now exists with public access blocked, SSE-S3 encryption, versioning, and 90-day `pilot/` lifecycle. Before broader rollout, confirm IAM role wiring and whether CloudTrail data events or another access audit path is required. | Matters current General Manager; infra and security/legal support. |
@@ -56,7 +56,7 @@ Accept compatibility fix.
 | Privacy notice | Approve user-facing copy that explains external server caching and replication. | Matters current General Manager; product/legal supports. |
 | Key exposure / rotation | Approve severity, rotation, actor update/delete, and external notice rules. | Matters current General Manager; CTO/security supports. |
 | Rollback rehearsal | Prove the rollback sequence: disable author opt-in, stop export trigger, preserve evidence, pause delivery, and remove public routing if needed. | Matters current General Manager; gateway operator executes. |
-| Next bounded production action | Keep Mastodon/Misskey as passed baselines, keep Misskey visible withdrawal as best-effort remote retention unless a receiver proves removal, and continue Threads receiver-visible compatibility checks. Do not expand to broad delivery yet; the next engineering work is legal/privacy copy finalization, rollback rehearsal, Threads Article-vs-Note visibility diagnosis, and Mastodon write-scope interaction checks. | Matters current General Manager. |
+| Next bounded production action | Keep Mastodon/Misskey as passed baselines, keep Misskey visible withdrawal as best-effort remote retention unless a receiver proves removal, and continue Threads receiver-visible compatibility checks. Do not expand to broad delivery yet; the next engineering work is legal/privacy copy finalization, rollback rehearsal, Threads receiver-visible post display diagnosis, and Mastodon write-scope interaction checks. | Matters current General Manager. |
 
 ## Do Not Do Automatically
 
@@ -66,6 +66,6 @@ Accept compatibility fix.
 - Treat Matters current General Manager as the owner for all remaining pilot
   gate decisions unless a decision is explicitly delegated in writing.
 - Do not expose actor private keys, Lambda secrets, S3 credentials, or Cloudflare production routing changes in repo or chat logs.
-- Do not treat Threads receiver-visible Article absence as a backend delivery failure by itself while gateway-side delivery is accepted. Diagnose it as a receiver compatibility question first, especially the difference between canonical `Article` delivery and possible Threads `Note` display expectations.
+- Do not treat Threads receiver-visible Article absence as a backend delivery failure by itself while gateway-side delivery is accepted. Diagnose it as a receiver compatibility question first, especially Threads indexing, object-shape, and receiver display behavior after accepted inbox delivery.
 - Do not treat Worker edge-demo inbox 202 responses as successful canonical
   follows; follow proof requires a persistent gateway-core origin.
