@@ -221,8 +221,11 @@ result, and `totalDiffs`.
   `Create` activity is ActivityPub-readable, but the embedded Article
   `object.id` is still an ordinary Matters article page URL that returns HTML
   when fetched with `Accept: application/activity+json`. PR #98 deployed the
-  Worker route needed for future canonical `/ap/articles/*` object ids; the
-  gateway/Lambda object-id migration remains open.
+  Worker route needed for future canonical `/ap/articles/*` object ids. PR #100
+  deployed the gateway-origin side on AWS commit `fe3d155`; future
+  gateway-origin `Create`/`Update` activities now use canonical `/ap/articles/*`
+  Article object ids while preserving the original Matters URL as `object.url`
+  and `atomUri`. Existing already-queued outbox items keep their old ids.
 
 ## Go / No-Go Rule
 
