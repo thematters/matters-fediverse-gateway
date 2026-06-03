@@ -706,7 +706,7 @@ export default {
     if (actorHandle && actorSubpath === "inbox") {
       return respond(activityResponse(collection(`${actorUrl(base, prefix, actorHandle)}/inbox`)));
     }
-    if (path.startsWith(`${prefix}/activities/`)) {
+    if (path.startsWith(`${prefix}/activities/`) || path.startsWith(`${prefix}/notes/`)) {
       const proxied = await proxyToGatewayCore(request, env);
       if (proxied) {
         return respond(proxied);
