@@ -60,11 +60,12 @@ function canonicalizeArticleObjectId({ object, instance }) {
     return object;
   }
 
+  const { atomUri: _atomUri, ...publicObject } = object;
+
   return {
-    ...object,
+    ...publicObject,
     id: `${articleBase}${token}`,
     url: sourceUrl ?? object.url,
-    atomUri: object.atomUri ?? currentId ?? sourceUrl,
   };
 }
 
