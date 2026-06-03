@@ -222,10 +222,13 @@ result, and `totalDiffs`.
   `object.id` is still an ordinary Matters article page URL that returns HTML
   when fetched with `Accept: application/activity+json`. PR #98 deployed the
   Worker route needed for future canonical `/ap/articles/*` object ids. PR #100
-  deployed the gateway-origin side on AWS commit `fe3d155`; future
+  deployed the gateway-origin side on AWS commit `fe3d155`; PR #102 was then
+  merged and deployed on AWS commit `3f2acc8` to keep the public Article payload
+  close to the successful Threads probe by omitting non-required `atomUri`.
+  Future
   gateway-origin `Create`/`Update` activities now use canonical `/ap/articles/*`
-  Article object ids while preserving the original Matters URL as `object.url`
-  and `atomUri`. Existing already-queued outbox items keep their old ids.
+  Article object ids while preserving the Matters article URL as `object.url`.
+  Existing already-queued outbox items keep their old ids.
 
 ## Go / No-Go Rule
 

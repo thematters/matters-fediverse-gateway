@@ -153,9 +153,15 @@ not ActivityPub JSON. PR #98 prepared the Worker side by proxying non-demo
 `/ap/articles/*` reads to `gateway-core`, while keeping the static demo article
 served by the Worker. PR #100 then moved future gateway-origin outbound
 `Article` object ids to canonical `/ap/articles/*` URLs while preserving the
-original Matters article URL in `object.url` and `atomUri` identity aliases so
-Update/Delete can still target the same article. The AWS origin was deployed to
-commit `fe3d155`, and a dry builder check returned
+Matters article URL in `object.url` so Update/Delete can still target the same
+article through the Lambda/sourceUri short URL. The AWS origin was deployed to
+commit `fe3d155`. A first canonical Article probe with missing
+`published`/`updated`/`mediaType` fields and an injected `atomUri` delivered to
+Mastodon and Misskey but stayed pending for Threads with HTTP 500. A full
+canonical Article probe with `published`, `updated`, `mediaType: "text/html"`,
+canonical `object.id`, and no `atomUri` delivered to Threads. PR #102 then
+removed the `atomUri` injection and deployed AWS origin commit `3f2acc8`.
+A dry builder check before that final cleanup returned
 `objectId=https://matters.town/ap/articles/1228008-test-article`,
 `objectUrl=https://matters.town/a/n0wacr6zgyyq`, and
 `atomUri=https://matters.town/1228008-test-article/`. Existing already-queued
