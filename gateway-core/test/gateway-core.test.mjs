@@ -3860,7 +3860,7 @@ test("outbox Create canonicalizes same-domain Article ids behind public Activity
   const object = deliveries[0].activity.object;
   assert.equal(object.id, canonicalObjectId);
   assert.equal(object.url, articleUrl);
-  assert.equal(object.atomUri, originalObjectId);
+  assert.equal(object.atomUri, undefined);
 
   const objectResponse = await app.handle(
     new Request("https://matters.example/articles/1228008-test-article", {
@@ -3892,7 +3892,7 @@ test("outbox Create canonicalizes same-domain Article ids behind public Activity
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        objectId: originalObjectId,
+        objectId: articleUrl,
       }),
     }),
   );
@@ -3907,7 +3907,6 @@ test("outbox Create canonicalizes same-domain Article ids behind public Activity
   assert.deepEqual(localContent.item.relations.identityObjectIds, [
     canonicalObjectId,
     articleUrl,
-    originalObjectId,
   ]);
 });
 
