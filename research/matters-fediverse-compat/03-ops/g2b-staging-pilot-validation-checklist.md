@@ -143,9 +143,10 @@ Stop and record the blocker if:
   `acct:mashbeanmatters@matters.town`.
 - Misskey canonical follow has passed after the actor key id was moved to the
   versioned gateway-core key id and gyutte.site remote-user state was refreshed.
-- Threads can discover the canonical pilot profile but Follow still does not
-  complete. Keep this as a non-blocking Threads Follow compatibility
-  investigation.
+- Threads can discover the canonical pilot profile and Follow now completes
+  after the 2026-06-02 embedded-Follow Accept fix. Keep receiver-visible
+  Article display plus reply / like return as the remaining non-blocking
+  Threads compatibility investigation.
 - Cloudflare Meta crawler diagnostics now pass on the narrow staging and
   canonical federation paths. If Threads regresses, re-check WebFinger, actor,
   outbox, and NodeInfo with `meta-externalagent/1.1` before changing gateway

@@ -24,7 +24,7 @@ Server-triggered production outbound remains disabled because
 | Redacted audit query | Cleared | Workflow run `26269962135` passed with `include_decision_report=false` and returned row `id=399` for article `1225211`. |
 | Gateway public preflight | Cleared | `npm run check:production-record-only` passed on 2026-05-22 with `outbox.totalItems=0`, `followers.totalItems=2`, and `fullOutboundEnabled=false`. |
 | Public discovery | Cleared | `npm run check:threads-discovery` passed on 2026-05-22 for default, `facebookexternalua`, `facebookexternalhit`, and `meta-externalagent` probes. |
-| Bounded production pilot `Create` | Cleared | Gateway-origin `Create` pilots for article `1225211` on 2026-05-22 and article `1228008` on 2026-06-02 delivered to the two accepted pilot followers. See `production-pilot-create-run-20260522.md` and `production-pilot-create-run-20260602.md`. |
+| Bounded production pilot `Create` | Cleared | Gateway-origin `Create` pilots for article `1225211` on 2026-05-22 and article `1228008` on 2026-06-02 delivered to the accepted Mastodon/Misskey pilot followers; after the Threads Follow fix, the latest public Article `Create` also delivered to the accepted Threads shared inbox. See `production-pilot-create-run-20260522.md`, `production-pilot-create-run-20260602.md`, and `threads-follow-and-delivery-regression-20260602.md`. |
 | Bounded production pilot `Update` | Cleared | One gateway-origin `Update` for article `1225211` was sent on 2026-05-28 and delivered to the same two accepted pilot followers. See `production-pilot-update-run-20260528.md`. |
 | Bounded production withdrawal | Partial pass | Two gateway-origin `Delete` variants were sent on 2026-05-28. Mastodon withdrew the status; Misskey accepted both deliveries but still showed the remote note. See `production-pilot-delete-run-20260528.md`. |
 | Broad production outbound | Still disabled | `matters-server-prod-new` remains `record_only`; no default-on or server-triggered broad delivery has been enabled. |
@@ -142,7 +142,9 @@ result, and `totalDiffs`.
   `https://gateway-core-origin.matters.town/users/mashbeanmatters/outbox/create`
 - Activity id:
   `https://matters.town/ap/activities/1779439823202-create-mashbeanmatters`
-- Delivery result: g0v.social and gyutte.site both accepted with HTTP 202.
+- Delivery result: g0v.social and gyutte.site accepted with HTTP 202; after the
+  Threads embedded-Follow Accept fix, the same public `Create` also delivered
+  to `https://threads.net/ap/inbox/`.
 - Post-send queue: `pending=0`, `deadLetter=0`.
 - Mastodon readback: `npm run check:mastodon-readback` found
   `https://matters.town/a/3tmz0u0a42qx`.
@@ -210,14 +212,12 @@ result, and `totalDiffs`.
   returned `ok=true` with no warnings or failures.
 - Human visual readback confirmed Mastodon and Misskey can see the new article.
 - Threads direct profile route resolves
-  `https://www.threads.com/fediverse_profile/@mashbeanmatters@matters.town`,
-  but Threads search still returns no profile result and the direct profile
-  shows no posts.
-- Threads `Follow` from the direct profile reached the gateway, but was rejected
-  because the remote actor URL
-  `https://threads.net/ap/users/17841401579146452/` returned HTTP 404 during
-  signature verification. The gateway must not accept this follow without a
-  dereferenceable actor document and public key.
+  `https://www.threads.com/fediverse_profile/@mashbeanmatters@matters.town`.
+- Threads `Follow` now reaches gateway-core, receives an embedded-Follow
+  `Accept`, and appears as followed in the Threads UI.
+- Threads receiver-visible Article display is still open: the latest public
+  Article delivered to the Threads shared inbox, but the Threads profile/feed
+  has not yet shown the post.
 
 ## Go / No-Go Rule
 

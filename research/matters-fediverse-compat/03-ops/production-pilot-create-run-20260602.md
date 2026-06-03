@@ -8,9 +8,11 @@ This records the second bounded production `Create` pilot for the approved
 `mashbean` slice. It was run after the earlier withdrawal rehearsal marked the
 old pilot article as deleted in gateway runtime state.
 
-Important boundary: this was a gateway-origin bounded send to the two already
-accepted pilot followers. It did not enable server-triggered broad production
-outbound delivery.
+Important boundary: this started as a gateway-origin bounded send to the two
+already accepted Mastodon/Misskey pilot followers. After Threads Follow was
+fixed and accepted, the same public Article `Create` was delivered to the
+accepted Threads follower as a bounded replay. It did not enable
+server-triggered broad production outbound delivery.
 
 ## Scope
 
@@ -27,6 +29,8 @@ outbound delivery.
 - Approved delivery targets:
   - `https://g0v.social/users/mashbean`
   - `https://gyutte.site/users/819de678273e9b120fd654b5`
+  - `https://threads.net/ap/users/17841401579146452/` after the Threads
+    embedded-Follow Accept compatibility fix
 
 ## Preflight
 
@@ -71,12 +75,15 @@ Delivery results:
 | --- | --- | --- |
 | g0v.social / Mastodon | delivered | HTTP 202 |
 | gyutte.site / Misskey | delivered | HTTP 202 |
+| Threads | delivered after bounded replay | HTTP 202 |
 
 Delivery trace ids:
 
 - `157` delivered to `https://g0v.social/users/mashbean`
 - `158` delivered to `https://gyutte.site/users/819de678273e9b120fd654b5`
 - `159` recorded `create.fanned-out` with `deliveryCount=2`
+- later bounded replay delivered the same public `Create` to
+  `https://threads.net/ap/inbox/` after Threads Follow accepted
 
 ## Public Discovery
 
@@ -117,8 +124,8 @@ Threads discovery diagnostics:
 - failures: none
 
 The Threads diagnostic checks public discovery preconditions only. It does not
-query Threads private APIs and does not prove Threads indexing or follow
-completion.
+query Threads private APIs and does not prove Threads indexing or
+receiver-visible post display.
 
 ## Readback
 
@@ -135,38 +142,26 @@ readback is still split:
 This means delivery acceptance and receiver UI visibility are proven for
 Mastodon and Misskey.
 
-Threads browser readback is more nuanced:
+Threads browser readback later moved forward:
 
-- Threads search for `mashbeanmatters@matters.town` returned unrelated results.
-- Threads profile-filter search for `@mashbeanmatters@matters.town` returned
-  `查無結果`.
-- Direct Threads profile route resolved:
-  `https://www.threads.com/fediverse_profile/@mashbeanmatters@matters.town`.
-- The direct profile showed the `mashbeanmatters@matters.town` fediverse
-  profile and a follow button.
-- The direct profile showed `尚無任何串文`.
-- Gateway logs did not show a fresh Threads / Meta crawler hit during the
-  direct-profile check.
+- PR #87 added HTTP Signature key id fallback for Threads.
+- PR #88 used signed GET for Threads actor/key discovery.
+- PR #89 sent Follow responses to the Threads shared inbox.
+- PR #90 changed `Accept.object` / `Reject.object` to embed the original
+  Follow activity when available.
+- Existing pending Threads Accept queue items replayed as delivered.
+- Threads UI now shows the canonical profile as followed.
+- The latest public Article `Create` delivered to the accepted Threads shared
+  inbox.
+- The direct Threads profile still showed no visible posts during readback, so
+  receiver-visible Article display, reply return, and like return remain open.
 
-Follow from Threads was then tested from the direct profile route:
+This narrows the Threads state to: profile discovery, Follow, Accept, and
+gateway-side Article delivery work; Threads UI display of canonical
+ActivityPub `Article` remains unproven and may need an Article-vs-Note
+compatibility diagnosis.
 
-- Threads UI entered a loading state after pressing `追蹤`, then returned to the
-  `追蹤` button.
-- Gateway received repeated inbound `Follow` activities from
-  `https://threads.net/ap/users/17841401579146452/`.
-- Gateway rejected those follows during signature verification because loading
-  that remote actor URL returned HTTP 404.
-- Public fetch checks for the Threads actor URL and common variants also
-  returned HTTP 404.
-- No Threads follower row was created; existing accepted followers remained
-  only g0v.social and gyutte.site.
-
-This narrows the Threads state to: profile route resolution works, but Threads
-search indexing and post ingestion/display are not proven; follow delivery
-reaches the gateway but cannot be safely accepted until Threads exposes a
-dereferenceable actor document with a public key.
-
-Follow rejection diagnostics were then deployed in gateway-core PR #85:
+Follow rejection diagnostics were initially deployed in gateway-core PR #85:
 
 - PR: <https://github.com/thematters/matters-fediverse-gateway/pull/85>
 - AWS origin deployment command:
@@ -179,9 +174,8 @@ Follow rejection diagnostics were then deployed in gateway-core PR #85:
   `inboxMode=persistent` / `followReadiness=ready`.
 - The live canonical outbox still returned `totalItems=1` for the pilot Article.
 
-The gateway now records the inbound activity actor and HTTP signature key id
-inside `signature.rejected` traces, so a future Threads retry can be diagnosed
-without relaxing signature verification.
+Those diagnostics remain useful for future regressions, but the earlier Follow
+rejection was superseded by PRs #87-#90 and the embedded-Follow Accept replay.
 
 ## Result
 
@@ -211,6 +205,7 @@ state.
 
 Remaining work before broader outbound remains:
 
-- continue Threads indexing / follow / post ingestion investigation;
+- continue Threads receiver-visible Article / reply / like investigation,
+  including a bounded Article-vs-Note visibility diagnosis if approved;
 - keep production server-triggered outbound disabled until a separate rollout
   decision.
