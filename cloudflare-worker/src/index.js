@@ -715,6 +715,12 @@ export default {
     if (path === `${prefix}/articles/${ARTICLE_SLUG}`) {
       return respond(activityResponse(mattersArticle(base, prefix)));
     }
+    if (path.startsWith(`${prefix}/articles/`)) {
+      const proxied = await proxyToGatewayCore(request, env);
+      if (proxied) {
+        return respond(proxied);
+      }
+    }
     if (path === `${prefix}/seed/activitypub-manifest.json`) {
       return respond(jsonResponse(seedManifest(base, prefix, request, env)));
     }

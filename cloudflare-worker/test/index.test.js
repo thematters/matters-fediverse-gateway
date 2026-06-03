@@ -337,3 +337,69 @@ test("canonical note object reads proxy to gateway-core when origin is configure
     globalThis.fetch = originalFetch;
   }
 });
+
+test("canonical article object reads proxy to gateway-core when origin is configured", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init });
+    return new Response(
+      JSON.stringify({
+        "@context": "https://www.w3.org/ns/activitystreams",
+        id: "https://matters.town/ap/articles/article-1",
+        type: "Article",
+        name: "Public article",
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/activity+json" },
+      },
+    );
+  };
+
+  try {
+    const response = await fetchWorker("/ap/articles/article-1", {
+      ...canonicalEnv,
+      CANONICAL_PILOT_HANDLES: "mashbeanmatters",
+      GATEWAY_CORE_ORIGIN: "https://gateway-origin.example.test/",
+    });
+    const article = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(article.type, "Article");
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, "https://gateway-origin.example.test/articles/article-1");
+    assert.equal(calls[0].init.headers.get("x-forwarded-prefix"), "/ap");
+    assert.equal(calls[0].init.headers.get("x-original-url"), "https://matters.town/ap/articles/article-1");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("static demo article remains served by the Worker", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init });
+    return new Response(JSON.stringify({ error: "should not proxy demo article" }), {
+      status: 500,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  try {
+    const response = await fetchWorker("/ap/articles/matters-main-site-open-social-demo", {
+      ...canonicalEnv,
+      GATEWAY_CORE_ORIGIN: "https://gateway-origin.example.test/",
+    });
+    const article = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(article.type, "Article");
+    assert.equal(calls.length, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
