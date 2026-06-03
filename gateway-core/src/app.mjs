@@ -930,6 +930,15 @@ function getAuthoredObjectActivityRecord(item) {
   };
 }
 
+function getAuthoredObjectIdentityIds(activity) {
+  return dedupeValues([
+    activity.objectId,
+    activity.object?.id,
+    activity.object?.url,
+    activity.object?.atomUri,
+  ]);
+}
+
 function buildLocalAuthoredContentRecords({ config, actorHandle, inboundObjects, outboundItems = [], generatedAt }) {
   const localActorId = config.actors[actorHandle]?.actorUrl ?? null;
   const inboundObjectMap = new Map(inboundObjects.map((record) => [record.objectId, record]));
@@ -952,18 +961,21 @@ function buildLocalAuthoredContentRecords({ config, actorHandle, inboundObjects,
   }
 
   const authoredContentMap = new Map();
+  const authoredIdentityMap = new Map();
   const orderedActivities = [...distinctActivities.values()].sort((left, right) =>
     (left.createdAt ?? "").localeCompare(right.createdAt ?? ""),
   );
 
   for (const activity of orderedActivities) {
-    const existing = authoredContentMap.get(activity.objectId) ?? null;
+    const identityIds = getAuthoredObjectIdentityIds(activity);
+    const contentKey = identityIds.map((identity) => authoredIdentityMap.get(identity)).find(Boolean) ?? activity.objectId;
+    const existing = authoredContentMap.get(contentKey) ?? null;
     if (activity.activityType === "Delete") {
       if (!existing) {
         continue;
       }
 
-      authoredContentMap.set(activity.objectId, {
+      authoredContentMap.set(contentKey, {
         ...existing,
         status: "deleted",
         updatedAt: generatedAt,
@@ -987,8 +999,8 @@ function buildLocalAuthoredContentRecords({ config, actorHandle, inboundObjects,
       normalizeOptionalString(activity.object.conversation) ??
       parentRecord?.threadId ??
       activity.inReplyTo ??
-      activity.objectId;
-    const threadRootId = parentRecord?.threadRootId ?? activity.inReplyTo ?? activity.objectId;
+      contentKey;
+    const threadRootId = parentRecord?.threadRootId ?? activity.inReplyTo ?? contentKey;
     const threadResolved = !activity.inReplyTo || Boolean(parentRecord);
     const participantActorIds = dedupeValues([
       localActorId,
@@ -1008,10 +1020,10 @@ function buildLocalAuthoredContentRecords({ config, actorHandle, inboundObjects,
       generatedAt;
     const nextRecord = {
       actorHandle,
-      contentId: activity.objectId,
+      contentId: contentKey,
       threadId,
       threadRootId,
-      rootObjectId: activity.objectId,
+      rootObjectId: contentKey,
       rootObjectType: normalizeOptionalString(activity.object.type) ?? null,
       rootMapping: activity.inReplyTo ? "reply" : "create",
       visibility: "public",
@@ -1054,11 +1066,14 @@ function buildLocalAuthoredContentRecords({ config, actorHandle, inboundObjects,
         inReplyTo: activity.inReplyTo ?? null,
         replyObjectIds: [],
         engagementIds: [],
-        identityObjectIds: [activity.objectId],
+        identityObjectIds: identityIds,
       },
       updatedAt: generatedAt,
     };
-    authoredContentMap.set(activity.objectId, nextRecord);
+    authoredContentMap.set(contentKey, nextRecord);
+    for (const identity of identityIds) {
+      authoredIdentityMap.set(identity, contentKey);
+    }
   }
 
   return [...authoredContentMap.values()].sort((left, right) =>

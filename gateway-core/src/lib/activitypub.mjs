@@ -9,6 +9,65 @@ function activityBaseUrl(instance) {
   return instance.activityBaseUrl ?? instance.baseUrl;
 }
 
+function normalizeUrl(value) {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+
+  try {
+    return new URL(value.trim());
+  } catch {
+    return null;
+  }
+}
+
+function encodeArticlePathToken(value) {
+  const url = normalizeUrl(value);
+  if (!url) {
+    return null;
+  }
+
+  const pathToken = url.pathname
+    .split("/")
+    .filter(Boolean)
+    .join("-");
+  if (!pathToken) {
+    return null;
+  }
+
+  try {
+    return encodeURIComponent(decodeURIComponent(pathToken));
+  } catch {
+    return encodeURIComponent(pathToken);
+  }
+}
+
+function canonicalizeArticleObjectId({ object, instance }) {
+  if (!object || typeof object !== "object" || Array.isArray(object) || object.type !== "Article") {
+    return object;
+  }
+
+  const baseUrl = activityBaseUrl(instance);
+  const articleBase = `${baseUrl}/articles/`;
+  const currentId = typeof object.id === "string" && object.id.trim() ? object.id.trim() : null;
+  if (currentId?.startsWith(articleBase)) {
+    return object;
+  }
+
+  const sourceUrl = typeof object.url === "string" && object.url.trim() ? object.url.trim() : currentId;
+  const token = encodeArticlePathToken(currentId) ?? encodeArticlePathToken(sourceUrl);
+  if (!token) {
+    return object;
+  }
+
+  return {
+    ...object,
+    id: `${articleBase}${token}`,
+    url: sourceUrl ?? object.url,
+    atomUri: object.atomUri ?? currentId ?? sourceUrl,
+  };
+}
+
 export function buildWebFinger({ instance, actor }) {
   return {
     subject: `acct:${actor.handle}@${instance.domain}`,
@@ -199,7 +258,10 @@ export function buildDeleteActivity({ actor, objectId, object = null, now, insta
 
 export function buildUpdateActivity({ actor, object, now, instance }) {
   const baseUrl = activityBaseUrl(instance);
-  const normalizedObject = normalizeArticleObject({ object, actor });
+  const normalizedObject = normalizeArticleObject({
+    object: canonicalizeArticleObjectId({ object, instance }),
+    actor,
+  });
 
   return {
     "@context": ACTIVITY_STREAMS,
@@ -217,7 +279,10 @@ export function buildUpdateActivity({ actor, object, now, instance }) {
 
 export function buildCreateActivity({ actor, object, now, instance, mentionTags = [], to = null, cc = null }) {
   const baseUrl = activityBaseUrl(instance);
-  const normalizedObject = normalizeArticleObject({ object, actor });
+  const normalizedObject = normalizeArticleObject({
+    object: canonicalizeArticleObjectId({ object, instance }),
+    actor,
+  });
   const existingTags = Array.isArray(normalizedObject.tag) ? normalizedObject.tag : normalizedObject.tag ? [normalizedObject.tag] : [];
   const mergedTags = [...existingTags];
   const seenMentionHrefs = new Set(
