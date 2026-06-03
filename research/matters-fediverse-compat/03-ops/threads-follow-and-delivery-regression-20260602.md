@@ -140,4 +140,7 @@ The 2026-06-03 probe delivered a public `Create(Note)` to the accepted Threads
 shared inbox with HTTP 200, but the probe was not observed in the Threads
 profile, fediverse feed, or exact-text search immediately after delivery. See
 `threads-note-visibility-probe-20260603.md`. This means the current
-receiver-visible gap is not explained by `Article` vs `Note` alone.
+receiver-visible gap is not explained by `Article` vs `Note` alone. A follow-up
+Worker fix in PR #95 also made public `matters.town/ap/notes/*` object
+dereferencing proxy to `gateway-core`; the probe `Note` URL now returns HTTP
+200 publicly instead of the earlier Worker 404.
