@@ -83,6 +83,33 @@ Cloudflare Worker version `14739dc4-4405-431a-a44c-c351b132e7b0`. After
 deployment, the public object URL returned HTTP 200 with `type: "Note"` and
 `cache-control: no-store`.
 
+## Post-Proxy Probe
+
+After PR #95 was deployed, a second bounded public `Create(Note)` probe was
+sent from the AWS origin:
+
+- SSM command id: `7b515410-8e04-4e5e-9fb8-e46e02afb851`
+- generatedAt: `2026-06-03T22:37:43.869Z`
+- Activity id:
+  `https://matters.town/ap/activities/1780526263869-threads-note-visibility-mashbeanmatters`
+- Object id:
+  `https://matters.town/ap/notes/1780526263869-threads-note-visibility-mashbeanmatters`
+- result status: `delivered`
+- lastStatusCode: `200`
+- targetInbox: `https://threads.net/ap/inbox/`
+
+Public dereference checks after delivery:
+
+- The `Create` activity URL returned HTTP 200 through `matters.town`.
+- The embedded `Note` object URL returned HTTP 200 through `matters.town`.
+- Both responses used `cache-control: no-store`.
+- `https://matters.town/ap/healthz` stayed `ok=true`,
+  `mode=gateway-core-proxy`, `followReadiness=ready`, and `storeDriver=sqlite`.
+
+Receiver-visible Threads UI readback for this second probe is still pending.
+ChatGPT Atlas could not be inspected through Computer Use during this check, so
+no UI-visible pass or fail is claimed here.
+
 Keep the next investigation focused on Threads receiver behavior:
 
 - delayed remote-post indexing or feed refresh behavior;
