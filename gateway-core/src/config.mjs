@@ -53,6 +53,24 @@ function normalizeRemoteActorPolicies(rawPolicies) {
   });
 }
 
+function normalizeStringList(values) {
+  return Array.isArray(values)
+    ? values.map((value) => (typeof value === "string" ? value.trim() : "")).filter(Boolean)
+    : [];
+}
+
+function normalizeNoteCompanion(rawNoteCompanion) {
+  return {
+    enabled: rawNoteCompanion?.enabled === true,
+    actorAllowlist: normalizeStringList(rawNoteCompanion?.actorAllowlist),
+    receiverDomainAllowlist: normalizeStringList(rawNoteCompanion?.receiverDomainAllowlist).map((value) => value.toLowerCase()),
+    maxSummaryChars:
+      Number.isFinite(rawNoteCompanion?.maxSummaryChars) && rawNoteCompanion.maxSummaryChars > 0
+        ? Math.floor(rawNoteCompanion.maxSummaryChars)
+        : 240,
+  };
+}
+
 function normalizeRuntimeAlerting(rawAlerting) {
   return {
     backupMaxAgeHours:
@@ -283,6 +301,9 @@ export async function loadGatewayConfig(configPath) {
           ? Math.floor(raw.inboundReconciliation.maxItemsPerRun)
           : 20,
       schedulerBearerToken: inboundReconciliationSchedulerBearerToken || null,
+    },
+    compatibility: {
+      noteCompanion: normalizeNoteCompanion(raw.compatibility?.noteCompanion),
     },
     moderation: {
       domainBlocks: (raw.moderation?.domainBlocks ?? []).map((entry) => {

@@ -1,7 +1,7 @@
 # Threads Article / Note Compatibility
 
 Date: 2026-06-04
-Status: decision needed before implementation
+Status: first bounded implementation slice complete; live pilot enablement still requires operator action
 
 ## Current Evidence
 
@@ -118,6 +118,30 @@ The next implementation slice should be a bounded compatibility adapter that
 can create a Note companion only for explicitly configured pilot cases. It
 should be disabled by default and should not affect broad production outbound.
 
+## Implemented Slice
+
+PR-ready code now implements the recommended bounded adapter:
+
+- `Article` remains the primary object and still delivers to all selected
+  recipients.
+- `compatibility.noteCompanion.enabled` defaults to `false`.
+- Companion delivery requires an explicit actor allowlist and receiver domain
+  allowlist.
+- The companion is emitted only for outbound `Create(Article)`.
+- The companion object is a short `Note` with title/summary and the canonical
+  Matters article URL.
+- The companion receives its own stable `/ap/notes/*-note-companion` id.
+- The outbox create response includes a `noteCompanion` block when a companion
+  was emitted.
+- Automated coverage verifies the adapter only targets `threads.net` recipients
+  when configured and leaves the primary Article fanout intact.
+
+Still intentionally deferred:
+
+- Automatic companion Update/Delete handling.
+- Broad production enablement.
+- Receiver-side Threads proof for the new companion in the live pilot.
+
 Minimum safe slice:
 
 1. Keep canonical `Article` as the primary object.
@@ -128,12 +152,13 @@ Minimum safe slice:
 5. Give the companion its own stable id under `/ap/notes/`.
 6. Record relation metadata linking companion Note to the canonical Article.
 7. Do not send companion Notes to all receivers by default.
-8. Add tests for Create, Update, Delete, delivery records, local-content
-   projection, and dead-letter/replay behavior.
+8. Add tests for Create, delivery records, and primary Article preservation.
+   Update/Delete, local-content projection, and dead-letter/replay behavior are
+   follow-up coverage for broader enablement.
 9. Document that Threads reply remains blocked by UI until Threads changes that
    receiver capability.
 
-## Decision Needed
+## Remaining Decision Needed
 
 Before implementation, choose one:
 
@@ -141,5 +166,6 @@ Before implementation, choose one:
   now.
 - Build the bounded Note companion adapter for pilot testing.
 
-Recommended choice: build the bounded Note companion adapter, disabled by
-default, pilot-only first.
+The bounded adapter has been implemented. The remaining decision is whether to
+enable it for the live `mashbeanmatters` pilot with `receiverDomainAllowlist:
+["threads.net"]` and run one public companion proof.

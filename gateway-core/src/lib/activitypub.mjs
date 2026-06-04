@@ -323,6 +323,28 @@ export function buildCreateActivity({ actor, object, now, instance, mentionTags 
   };
 }
 
+export function buildNoteCompanionCreateActivity({ actor, object, now, instance, to = null, cc = null }) {
+  const baseUrl = activityBaseUrl(instance);
+  const resolvedTo = Array.isArray(to) && to.length ? [...new Set(to)] : [PUBLIC_AUDIENCE];
+  const resolvedCc = Array.isArray(cc) && cc.length ? [...new Set(cc)] : [actor.followersUrl];
+
+  return {
+    "@context": ACTIVITY_STREAMS,
+    id: `${baseUrl}/activities/${now.getTime()}-create-note-companion-${actor.handle}`,
+    type: "Create",
+    actor: actor.actorUrl,
+    to: resolvedTo,
+    cc: resolvedCc,
+    object: {
+      ...object,
+      type: "Note",
+      attributedTo: object.attributedTo ?? actor.actorUrl,
+      to: Array.isArray(object.to) && object.to.length ? object.to : resolvedTo,
+      cc: Array.isArray(object.cc) && object.cc.length ? object.cc : resolvedCc,
+    },
+  };
+}
+
 export function buildLikeActivity({ actor, objectId, now, instance, targetActorIds = [], to = null, cc = null }) {
   const baseUrl = activityBaseUrl(instance);
 
