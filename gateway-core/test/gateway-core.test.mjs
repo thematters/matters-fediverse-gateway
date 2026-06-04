@@ -3972,7 +3972,11 @@ test("outbox Create sends configured Note companion only to allowlisted receiver
   assert.match(deliveries[2].activity.object.id, /^https:\/\/matters\.example\/ap\/notes\//);
   assert.match(deliveries[2].activity.object.content, /Threads Visible Preview/);
   assert.match(deliveries[2].activity.object.content, /https:\/\/matters\.example\/a\/n0wacr6zgyyq/);
+  assert.doesNotMatch(deliveries[2].activity.object.content, /<p>|<a /);
   assert.doesNotMatch(deliveries[2].activity.object.content, /Long-form body/);
+  assert.equal(typeof deliveries[2].activity.object.published, "string");
+  assert.deepEqual(deliveries[2].activity.cc, ["https://matters.example/users/alice/followers"]);
+  assert.deepEqual(deliveries[2].activity.object.cc, ["https://matters.example/users/alice/followers"]);
 });
 
 test("outbox Create reply fans out to followers, explicit targets, and mention recipients", async () => {
