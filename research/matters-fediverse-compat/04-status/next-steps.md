@@ -142,10 +142,12 @@ Updated: 2026-05-22
    operator boundary.
 2. Keep Threads as a separate receiver-visible compatibility investigation.
    Follow / Accept, profile/feed display, and Like return now have evidence.
+   Exact-handle account search also passed on 2026-06-04.
    Use `03-ops/threads-receiver-visible-regression-runbook.md` after bounded
    proof sends or Cloudflare changes. Current public endpoint and Meta-like UA
-   discovery checks pass; remaining open gates are Threads account search,
-   single-post permalink exposure, and remote reply availability.
+   discovery checks pass; remaining open gates are single-post permalink
+   exposure, remote reply availability, and consistent latest companion Note
+   visibility.
 3. Keep production audit queries on the redacted path by default
    (`include_decision_report=false`), using workflow run
    [26269962135](https://github.com/thematters/matters-server/actions/runs/26269962135)
