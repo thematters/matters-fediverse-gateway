@@ -29,11 +29,11 @@ Passed receiver-visible:
   `mashbeanmatters@matters.town`.
 - Threads shows the profile as followed.
 - Threads profile/feed has displayed remote posts from the actor.
+- Threads exact-handle search can find `@mashbeanmatters@matters.town`.
 - A Threads-origin Like returned to `gateway-core` for a visible Note.
 
 Open receiver-visible checks:
 
-- account search indexing;
 - single-post permalink or copyable URL;
 - reply action from Threads to the remote post;
 - consistent display of the latest companion Note proof.
@@ -212,7 +212,6 @@ Treat as receiver-side limitation if:
 - public discovery regression passes;
 - delivery is `delivered`;
 - profile/feed can open;
-- search still does not index the profile;
 - Threads UI says remote reply is unavailable.
 
 Do not block Mastodon / Misskey production pilot work on Threads-only search or

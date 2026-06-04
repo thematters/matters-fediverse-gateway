@@ -123,8 +123,9 @@ Live result on 2026-06-04:
   Cloudflare challenge page
 
 This closes the current Cloudflare / WAF / public dereference hypothesis for
-the tested URLs. Threads account search remains an indexing or product-surface
-issue unless a future regression shows the public probes failing.
+the tested URLs. Threads exact-handle search later converged for
+`@mashbeanmatters@matters.town`; see
+`threads-receiver-visible-regression-20260604.md`.
 
 The outbound queue still contained the prior failed companion retry item and
 one older dead-letter item from an earlier bad test payload. No new stuck item
@@ -142,7 +143,6 @@ checks are:
 
 - whether the new companion post appears consistently in the Threads profile or
   fediverse feed;
-- whether Threads search indexes `mashbeanmatters@matters.town`;
 - whether Threads exposes a single-post permalink for remote ActivityPub
   posts;
 - whether reply return becomes possible after Threads enables remote replies in

@@ -1,7 +1,7 @@
 # Threads Follow And Delivery Regression
 
 Date: 2026-06-02
-Status: gateway-side pass; Threads profile/feed display and Like return confirmed; search, permalink, and reply remain receiver limitations or follow-up checks
+Status: gateway-side pass; Threads profile/feed display, account search, and Like return confirmed; permalink and reply remain receiver limitations or follow-up checks
 
 ## Scope
 
@@ -101,8 +101,8 @@ Manual Threads UI readback on 2026-06-04 confirmed:
   Threads-side product limitation unless the UI changes.
 - The shown remote posts did not expose a single-post permalink or copyable
   Threads URL.
-- Threads search still did not find the account reliably, even though the
-  profile page itself is visible.
+- Threads exact-handle search later found the account on 2026-06-04; see
+  `threads-receiver-visible-regression-20260604.md`.
 
 Gateway readback after the Threads Like action confirmed inbound Like return
 for the visible `Create(Note)` probe:
@@ -125,7 +125,8 @@ specific receiver gates:
 - Feed post display: passed without permalink proof.
 - Like return: passed for the visible Note probe.
 - Article delivery and ActivityPub dereference: passed gateway-side.
-- Account search indexing: open / Threads-side.
+- Account search indexing: passed for exact handle
+  `@mashbeanmatters@matters.town`.
 - Single-post permalink: unavailable in current Threads UI for this remote
   post.
 - Reply return: blocked by current Threads UI notice.
