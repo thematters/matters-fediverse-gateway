@@ -30,13 +30,13 @@ Passed receiver-visible:
 - Threads shows the profile as followed.
 - Threads profile/feed has displayed remote posts from the actor.
 - Threads exact-handle search can find `@mashbeanmatters@matters.town`.
-- A Threads-origin Like returned to `gateway-core` for a visible Note.
+- Threads-origin Likes returned to `gateway-core` for the visible Note probe
+  and the latest companion Note.
 
 Open receiver-visible checks:
 
 - single-post permalink or copyable URL;
 - reply action from Threads to the remote post;
-- consistent display of the latest companion Note proof.
 
 ## External Product Context
 

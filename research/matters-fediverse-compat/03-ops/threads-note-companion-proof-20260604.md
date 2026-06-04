@@ -93,6 +93,10 @@ Public dereference checks after delivery:
 - The companion `Note` object returned ActivityPub JSON through `matters.town`.
 - The companion `Note` is plain text, has `published`, and does not include
   `name` or `summary`.
+- A Threads-origin Like later returned for the companion `Note`:
+  `https://threads.net/ap/users/17841401579146452/#likes/1009601838311603`.
+  Gateway readback reported `metrics.likes=1` and `actionMatrix.inbound.like=1`
+  for the companion `Note`.
 
 ## Discovery Regression
 
@@ -141,8 +145,6 @@ Gateway-side Threads delivery now passes for both:
 This does not close all Threads receiver-visible gates. The remaining Threads
 checks are:
 
-- whether the new companion post appears consistently in the Threads profile or
-  fediverse feed;
 - whether Threads exposes a single-post permalink for remote ActivityPub
   posts;
 - whether reply return becomes possible after Threads enables remote replies in

@@ -28,7 +28,8 @@ Discovery regression: pass
 ## Feed
 
 - Fediverse feed visible: passed in earlier 2026-06-04 UI readback.
-- Latest companion Note visible: not confirmed in this screenshot.
+- Latest companion Note visible / interactable: passed by Threads-origin Like
+  return on 2026-06-04T16:53:24.395Z.
 - Other remote posts visible: passed in earlier 2026-06-04 UI readback.
 
 ## Permalink
@@ -46,12 +47,15 @@ Discovery regression: pass
 
 ## Gateway Return
 
-- Like return: passed for the visible Note probe.
+- Like return: passed for the visible Note probe and the latest companion Note.
 - Reply return: not passed; Threads UI does not currently allow the action.
 - Notification/content evidence:
   `https://threads.net/ap/users/17841401579146452/#likes/869695086184604`
   was stored by `gateway-core` and appears in local notification/content
   readback for the visible Note.
+  `https://threads.net/ap/users/17841401579146452/#likes/1009601838311603`
+  was also stored for
+  `https://matters.town/ap/notes/ap-articles-threads-note-companion-proof-20260604T155626Z-note-companion`.
 
 ## Decision
 
