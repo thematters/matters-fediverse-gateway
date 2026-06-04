@@ -140,9 +140,12 @@ Updated: 2026-05-22
    Add only known public Activity URLs; do not use crawler-style discovery or
    expose the job route without an internal token, Access, mTLS, or equivalent
    operator boundary.
-2. Keep Threads as a separate compatibility investigation around Follow
-   acceptance. Do not block Mastodon/Misskey pilot preparation on the current
-   Threads Follow failure.
+2. Keep Threads as a separate receiver-visible compatibility investigation.
+   Follow / Accept, profile/feed display, and Like return now have evidence.
+   Use `03-ops/threads-receiver-visible-regression-runbook.md` after bounded
+   proof sends or Cloudflare changes. Current public endpoint and Meta-like UA
+   discovery checks pass; remaining open gates are Threads account search,
+   single-post permalink exposure, and remote reply availability.
 3. Keep production audit queries on the redacted path by default
    (`include_decision_report=false`), using workflow run
    [26269962135](https://github.com/thematters/matters-server/actions/runs/26269962135)
