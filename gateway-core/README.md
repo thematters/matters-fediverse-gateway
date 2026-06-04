@@ -121,8 +121,40 @@ See [`../docs/ipns-gateway-cloudflare-plan.md`](../docs/ipns-gateway-cloudflare-
 - `remoteActors`: optional seed data for remote actors
 - `remoteDiscovery`: cache TTL and live discovery behavior
 - `delivery`: retry limits, outbound user agent, and processing lease timeout
+- `compatibility`: disabled-by-default receiver compatibility adapters
 - `moderation`: domain blocks, actor suspensions, remote actor policies, evidence retention, and rate limits
 - `runtime`: store driver, file paths, SQLite path, alerting, metrics dispatch, logs dispatch, and external sinks
+
+### Note Companion Adapter
+
+`compatibility.noteCompanion` can emit a short `Create(Note)` companion for a
+primary `Create(Article)`. It is intended for bounded receiver compatibility
+testing, currently Threads-visible previews, while preserving `Article` as the
+canonical long-form object.
+
+It is disabled by default and requires both an actor allowlist and a receiver
+domain allowlist:
+
+```json
+{
+  "compatibility": {
+    "noteCompanion": {
+      "enabled": false,
+      "actorAllowlist": ["mashbeanmatters"],
+      "receiverDomainAllowlist": ["threads.net"],
+      "maxSummaryChars": 240
+    }
+  }
+}
+```
+
+When enabled, `POST /users/<handle>/outbox/create` still sends the primary
+`Article` to all selected recipients. If the object is an `Article`, the actor is
+allowlisted, and a recipient domain matches, the gateway also sends one
+companion `Note` only to those matched recipients. The response includes a
+`noteCompanion` block with the companion activity id, object id, recipients, and
+delivery rows. Update/Delete companion handling is intentionally not automatic
+in this first slice.
 
 ## Tests
 
@@ -131,7 +163,7 @@ cd gateway-core
 npm test
 ```
 
-The latest recorded local verification snapshot had 123 tests passing.
+The latest recorded local verification snapshot had 144 tests passing.
 
 ## SQLite Backup
 

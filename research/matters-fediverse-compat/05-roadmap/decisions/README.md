@@ -14,4 +14,4 @@
 | [06](06-runtime-state-source-of-truth.md) | Runtime state source of truth | W2 / G1-B3 | SQLite 為主；file state 為輔助 / migration 檢查 |
 | [07](07-g1-human-gates.md) | G1 human gates | G1-A / W1 / W3 / W8 / W6 | G1-A 最小 v1；明確 non-public 才排除；staging / interop / tabletop / production rotation 由真人控管 |
 | [11](11-canonical-identity-cutover.md) | Canonical identity cutover | G2 production gate | 規劃中；目標 `acct:mashbeanmatters@matters.town`，production route 尚未開放 |
-| [13](13-threads-article-note-compatibility.md) | Threads Article / Note 相容性 | Threads product compatibility | 待決策；建議保留 Article 主物件，另做 disabled-by-default / pilot-only Note companion adapter |
+| [13](13-threads-article-note-compatibility.md) | Threads Article / Note 相容性 | Threads product compatibility | 第一版已實作；保留 Article 主物件，Note companion disabled-by-default / pilot-only，待 live pilot 啟用 |

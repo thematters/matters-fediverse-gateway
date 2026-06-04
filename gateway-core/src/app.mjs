@@ -8,6 +8,7 @@ import {
   buildLikeActivity,
   buildNodeInfo,
   buildNodeInfoDirectory,
+  buildNoteCompanionCreateActivity,
   buildOrderedCollection,
   buildRejectActivity,
   buildUpdateActivity,
@@ -134,6 +135,14 @@ function normalizeAudience(value) {
 
 function dedupeValues(values) {
   return [...new Set(values.filter((value) => typeof value === "string" && value.trim()))];
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;");
 }
 
 function normalizeActorIdList(values = []) {
@@ -1490,6 +1499,72 @@ function getDomainFromUri(value) {
   } catch {
     return null;
   }
+}
+
+function matchesNoteCompanionReceiver(config, remoteActor) {
+  const domains = config.compatibility?.noteCompanion?.receiverDomainAllowlist ?? [];
+  if (!domains.length) {
+    return false;
+  }
+
+  const candidateDomains = [
+    getDomainFromUri(remoteActor.remoteActorId),
+    getDomainFromUri(remoteActor.sharedInbox),
+    getDomainFromUri(remoteActor.inbox),
+  ].filter(Boolean);
+
+  return candidateDomains.some((domain) => domains.includes(domain));
+}
+
+function selectNoteCompanionRecipients({ config, actorHandle, object, recipients }) {
+  const noteCompanion = config.compatibility?.noteCompanion;
+  if (
+    noteCompanion?.enabled !== true ||
+    object?.type !== "Article" ||
+    !noteCompanion.actorAllowlist?.includes(actorHandle)
+  ) {
+    return [];
+  }
+
+  return recipients.filter((recipient) => matchesNoteCompanionReceiver(config, recipient));
+}
+
+function buildNoteCompanionId({ instance, articleObject }) {
+  const baseUrl = instance.activityBaseUrl ?? instance.baseUrl;
+  const sourceId = typeof articleObject.id === "string" && articleObject.id.trim() ? articleObject.id.trim() : articleObject.url;
+  const sourceUrl = getDomainFromUri(sourceId) ? new URL(sourceId) : null;
+  const token = sourceUrl
+    ? sourceUrl.pathname.split("/").filter(Boolean).join("-")
+    : String(sourceId ?? Date.now()).replace(/[^a-z0-9_-]+/giu, "-").replace(/^-+|-+$/gu, "");
+  return `${baseUrl}/notes/${encodeURIComponent(token || "article")}-note-companion`;
+}
+
+function truncateText(value, limit) {
+  const text = String(value ?? "").replace(/\s+/gu, " ").trim();
+  if (!text || text.length <= limit) {
+    return text;
+  }
+  return `${text.slice(0, Math.max(0, limit - 3)).trimEnd()}...`;
+}
+
+function buildNoteCompanionObject({ config, actor, articleObject }) {
+  const noteCompanion = config.compatibility?.noteCompanion ?? {};
+  const articleUrl = typeof articleObject.url === "string" && articleObject.url.trim() ? articleObject.url.trim() : articleObject.id;
+  const title = stripHtmlTags(articleObject.name ?? "");
+  const summary = truncateText(stripHtmlTags(articleObject.summary || articleObject.content || title || articleUrl), noteCompanion.maxSummaryChars ?? 240);
+  const titleLine = title ? `<p>${escapeHtml(title)}</p>` : "";
+  const summaryLine = summary && summary !== title ? `<p>${escapeHtml(summary)}</p>` : "";
+  const linkLine = articleUrl ? `<p><a href="${escapeHtml(articleUrl)}" rel="noopener noreferrer ugc">${escapeHtml(articleUrl)}</a></p>` : "";
+
+  return {
+    id: buildNoteCompanionId({ instance: config.instance, articleObject }),
+    type: "Note",
+    name: title || summary || articleUrl,
+    summary: summary || title || articleUrl,
+    content: [titleLine, summaryLine, linkLine].filter(Boolean).join("\n"),
+    url: articleUrl,
+    attributedTo: actor.actorUrl,
+  };
 }
 
 function buildAbuseCaseId(now) {
@@ -4014,6 +4089,48 @@ export function createGatewayApp({
           activity,
           traceEvent: object.inReplyTo ? "reply.fanned-out" : "create.fanned-out",
         });
+        const noteCompanionRecipients = selectNoteCompanionRecipients({
+          config,
+          actorHandle: handle,
+          object: activity.object,
+          recipients,
+        });
+        let noteCompanion = null;
+        if (noteCompanionRecipients.length) {
+          const noteCompanionObject = buildNoteCompanionObject({
+            config,
+            actor,
+            articleObject: activity.object,
+          });
+          const noteCompanionActivity = buildNoteCompanionCreateActivity({
+            actor,
+            object: {
+              ...noteCompanionObject,
+              to: [PUBLIC_AUDIENCE],
+              cc: dedupeValues([actor.followersUrl, ...noteCompanionRecipients.map((entry) => entry.remoteActorId)]),
+            },
+            now: clock(),
+            instance: config.instance,
+            to: [PUBLIC_AUDIENCE],
+            cc: dedupeValues([actor.followersUrl, ...noteCompanionRecipients.map((entry) => entry.remoteActorId)]),
+          });
+          const noteCompanionDeliveries = await fanOutActivity({
+            actorHandle: handle,
+            remoteActors: noteCompanionRecipients,
+            activity: noteCompanionActivity,
+            traceEvent: "note-companion.fanned-out",
+          });
+          noteCompanion = {
+            activityId: noteCompanionActivity.id,
+            objectId: noteCompanionActivity.object.id,
+            recipients: noteCompanionRecipients.map((entry) => entry.remoteActorId),
+            deliveries: noteCompanionDeliveries.map((entry) => ({
+              id: entry.id,
+              status: entry.status,
+              targetActorId: entry.targetActorId,
+            })),
+          };
+        }
 
         return jsonResponse(
           {
@@ -4028,6 +4145,7 @@ export function createGatewayApp({
               status: entry.status,
               targetActorId: entry.targetActorId,
             })),
+            noteCompanion,
           },
           202,
         );

@@ -3910,6 +3910,71 @@ test("outbox Create canonicalizes same-domain Article ids behind public Activity
   ]);
 });
 
+test("outbox Create sends configured Note companion only to allowlisted receivers", async () => {
+  const { app, config, store, deliveries } = await createHarness();
+  config.instance.activityBaseUrl = "https://matters.example/ap";
+  config.compatibility = {
+    noteCompanion: {
+      enabled: true,
+      actorAllowlist: ["alice"],
+      receiverDomainAllowlist: ["threads.net"],
+      maxSummaryChars: 64,
+    },
+  };
+  await store.upsertFollower("alice", {
+    remoteActorId: "https://remote.example/users/zoe",
+    inbox: "https://remote.example/users/zoe/inbox",
+    sharedInbox: "https://remote.example/inbox",
+    status: "accepted",
+    followedAt: "2026-03-21T00:00:00.000Z",
+    lastActivityId: "https://remote.example/activities/follow-1",
+  });
+  await store.upsertFollower("alice", {
+    remoteActorId: "https://threads.net/ap/users/123/",
+    inbox: "https://threads.net/ap/users/123/inbox",
+    sharedInbox: "https://threads.net/ap/inbox/",
+    status: "accepted",
+    followedAt: "2026-03-21T00:00:00.000Z",
+    lastActivityId: "https://threads.net/ap/activities/follow-1",
+  });
+
+  const response = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: "https://matters.example/1228008-test-article/",
+          type: "Article",
+          name: "Threads Visible Preview",
+          summary: "A bounded companion note should link back to the canonical Matters article.",
+          url: "https://matters.example/a/n0wacr6zgyyq",
+          content: "<p>Long-form body</p>",
+        },
+      }),
+    }),
+  );
+
+  assert.equal(response.status, 202);
+  const payload = await response.json();
+  assert.equal(payload.deliveries.length, 2);
+  assert.equal(payload.noteCompanion.recipients.length, 1);
+  assert.deepEqual(payload.noteCompanion.recipients, ["https://threads.net/ap/users/123/"]);
+
+  assert.equal(deliveries.length, 3);
+  assert.equal(deliveries[0].activity.object.type, "Article");
+  assert.equal(deliveries[1].activity.object.type, "Article");
+  assert.equal(deliveries[2].targetActorId, "https://threads.net/ap/users/123/");
+  assert.equal(deliveries[2].activity.type, "Create");
+  assert.equal(deliveries[2].activity.object.type, "Note");
+  assert.match(deliveries[2].activity.object.id, /^https:\/\/matters\.example\/ap\/notes\//);
+  assert.match(deliveries[2].activity.object.content, /Threads Visible Preview/);
+  assert.match(deliveries[2].activity.object.content, /https:\/\/matters\.example\/a\/n0wacr6zgyyq/);
+  assert.doesNotMatch(deliveries[2].activity.object.content, /Long-form body/);
+});
+
 test("outbox Create reply fans out to followers, explicit targets, and mention recipients", async () => {
   const { config, store, deliveries } = await createHarness();
   config.remoteActors["https://elsewhere.example/users/mia"] = {
@@ -8292,6 +8357,50 @@ test("config loader supports a public ActivityPub path prefix behind an edge pro
   assert.equal(config.actors.alice.profileUrl, "https://matters.example/@alice");
   assert.equal(config.actors.alice.inboxUrl, "https://matters.example/ap/users/alice/inbox");
   assert.equal(config.actors.alice.keyId, "https://matters.example/ap/users/alice#main-key");
+});
+
+test("config loader normalizes disabled-by-default Note companion compatibility settings", async () => {
+  const tmpDir = path.join(os.tmpdir(), `matters-gateway-note-companion-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(tmpDir, { recursive: true });
+  const keys = pemPair();
+  const configPath = path.join(tmpDir, "instance.json");
+  const publicKeyFile = path.join(tmpDir, "current-public.pem");
+  const privateKeyFile = path.join(tmpDir, "current-private.pem");
+
+  await writeFile(publicKeyFile, keys.publicKeyPem);
+  await writeFile(privateKeyFile, keys.privateKeyPem);
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        instance: {
+          domain: "matters.example",
+        },
+        actors: {
+          alice: {
+            publicKeyPemFile: "./current-public.pem",
+            privateKeyPemFile: "./current-private.pem",
+          },
+        },
+        compatibility: {
+          noteCompanion: {
+            enabled: true,
+            actorAllowlist: ["alice", ""],
+            receiverDomainAllowlist: ["Threads.Net", " "],
+            maxSummaryChars: 120,
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  const config = await loadGatewayConfig(configPath);
+  assert.equal(config.compatibility.noteCompanion.enabled, true);
+  assert.deepEqual(config.compatibility.noteCompanion.actorAllowlist, ["alice"]);
+  assert.deepEqual(config.compatibility.noteCompanion.receiverDomainAllowlist, ["threads.net"]);
+  assert.equal(config.compatibility.noteCompanion.maxSummaryChars, 120);
 });
 
 test("key rotation script writes overlap config and local actor update artifact", async () => {

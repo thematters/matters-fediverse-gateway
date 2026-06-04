@@ -29,6 +29,14 @@
     "userAgent": "MattersGatewayCore/0.1.0",
     "processingLeaseTimeoutMs": 900000
   },
+  "compatibility": {
+    "noteCompanion": {
+      "enabled": false,
+      "actorAllowlist": [],
+      "receiverDomainAllowlist": [],
+      "maxSummaryChars": 240
+    }
+  },
   "inboundReconciliation": {
     "maxItemsPerRun": 20,
     "schedulerBearerTokenFile": "./staging.secrets.example/inbound-reconciliation-scheduler.token"
