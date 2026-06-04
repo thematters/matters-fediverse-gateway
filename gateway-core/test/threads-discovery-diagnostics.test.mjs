@@ -109,6 +109,46 @@ function createDiscoveryServer({ handle = "alice", acceptedHost = null, actorPat
       return;
     }
 
+    if (requestUrl.pathname.startsWith("/ap/activities/")) {
+      response.writeHead(200, { "content-type": "application/activity+json", "cache-control": "no-store" });
+      response.end(
+        JSON.stringify({
+          "@context": "https://www.w3.org/ns/activitystreams",
+          id: `${baseUrl}${requestUrl.pathname}`,
+          type: "Create",
+          actor: actorUrl,
+          object: `${baseUrl}/ap/notes/probe`,
+        }),
+      );
+      return;
+    }
+
+    if (requestUrl.pathname.startsWith("/ap/notes/")) {
+      response.writeHead(200, { "content-type": "application/activity+json", "cache-control": "no-store" });
+      response.end(
+        JSON.stringify({
+          id: `${baseUrl}${requestUrl.pathname}`,
+          type: "Note",
+          content: "Threads probe",
+          attributedTo: actorUrl,
+        }),
+      );
+      return;
+    }
+
+    if (requestUrl.pathname.startsWith("/ap/articles/")) {
+      response.writeHead(200, { "content-type": "application/activity+json", "cache-control": "no-store" });
+      response.end(
+        JSON.stringify({
+          id: `${baseUrl}${requestUrl.pathname}`,
+          type: "Article",
+          name: "Threads article probe",
+          attributedTo: actorUrl,
+        }),
+      );
+      return;
+    }
+
     response.writeHead(404, { "content-type": "application/json" });
     response.end(JSON.stringify({ error: "not_found" }));
   });
@@ -225,6 +265,59 @@ test("threads discovery diagnostics can probe a prefixed canonical actor path", 
     assert.equal(report.scope.actorUrl, `${baseUrl}/ap/users/alice`);
     assert.equal(
       report.probes.some((probe) => probe.name === "actor" && probe.url === `${baseUrl}/ap/users/alice`),
+      true,
+    );
+  } finally {
+    await closeServer(discovery.server);
+  }
+});
+
+test("threads discovery diagnostics probes explicit public activity and object URLs", async () => {
+  const discovery = createDiscoveryServer({ actorPathPrefix: "/ap" });
+  const baseUrl = await listen(discovery.server);
+
+  try {
+    const activityUrl = `${baseUrl}/ap/activities/probe-create`;
+    const noteUrl = `${baseUrl}/ap/notes/probe-note`;
+    const articleUrl = `${baseUrl}/ap/articles/probe-article`;
+    const { stdout } = await execFile(
+      nodeBin,
+      [
+        "scripts/run-threads-discovery-diagnostics.mjs",
+        "--base-url",
+        baseUrl,
+        "--handle",
+        "alice",
+        "--canonical-domain",
+        new URL(baseUrl).host,
+        "--actor-path-prefix",
+        "/ap",
+        "--activity-url",
+        activityUrl,
+        "--object-url",
+        noteUrl,
+        "--object-url",
+        articleUrl,
+      ],
+      {
+        cwd: path.resolve(process.cwd()),
+      },
+    );
+
+    const report = JSON.parse(stdout);
+    assert.equal(report.ok, true);
+    assert.deepEqual(report.scope.activityUrls, [activityUrl]);
+    assert.deepEqual(report.scope.objectUrls, [noteUrl, articleUrl]);
+    assert.equal(
+      report.probes.some((probe) => probe.name === "activity-1" && probe.body?.type === "Create"),
+      true,
+    );
+    assert.equal(
+      report.probes.some((probe) => probe.name === "object-1" && probe.body?.type === "Note"),
+      true,
+    );
+    assert.equal(
+      report.probes.some((probe) => probe.name === "object-2" && probe.body?.type === "Article"),
       true,
     );
   } finally {

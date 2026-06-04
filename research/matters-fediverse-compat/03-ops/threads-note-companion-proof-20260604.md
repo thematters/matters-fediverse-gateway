@@ -94,6 +94,38 @@ Public dereference checks after delivery:
 - The companion `Note` is plain text, has `published`, and does not include
   `name` or `summary`.
 
+## Discovery Regression
+
+After reviewing public Threads / fediverse discovery reports, PR #110 expanded
+`check:threads-discovery` so operators can probe exact public ActivityPub
+content URLs with Meta-like user agents:
+
+```bash
+cd gateway-core
+npm run check:threads-discovery -- \
+  --canonical-base-url https://matters.town \
+  --activity-url https://matters.town/ap/activities/1780588588874-create-note-companion-mashbeanmatters \
+  --object-url https://matters.town/ap/notes/ap-articles-threads-note-companion-proof-20260604T155626Z-note-companion \
+  --object-url https://matters.town/ap/articles/threads-note-companion-proof-20260604T155626Z
+```
+
+Live result on 2026-06-04:
+
+- `ok=true`
+- no failures
+- no warnings
+- WebFinger returned `200` and `cache-control: no-store` for the default UA,
+  `facebookexternalua`, `facebookexternalhit/1.1`, and
+  `meta-externalagent/1.1`
+- actor, outbox, companion activity, companion `Note`, and primary `Article`
+  all returned `200`
+- none of the probes showed `cf-mitigated=challenge`, 403, 429, 503, or a
+  Cloudflare challenge page
+
+This closes the current Cloudflare / WAF / public dereference hypothesis for
+the tested URLs. Threads account search remains an indexing or product-surface
+issue unless a future regression shows the public probes failing.
+
 The outbound queue still contained the prior failed companion retry item and
 one older dead-letter item from an earlier bad test payload. No new stuck item
 was created by the successful proof.

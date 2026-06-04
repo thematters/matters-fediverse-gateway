@@ -27,6 +27,8 @@ function parseArgs(argv) {
     canonicalDomain: "matters.town",
     canonicalBaseUrl: null,
     actorPathPrefix: null,
+    activityUrls: [],
+    objectUrls: [],
     outputFile: null,
   };
 
@@ -42,6 +44,10 @@ function parseArgs(argv) {
       options.canonicalBaseUrl = argv[++index];
     } else if (arg === "--actor-path-prefix") {
       options.actorPathPrefix = argv[++index];
+    } else if (arg === "--activity-url") {
+      options.activityUrls.push(argv[++index]);
+    } else if (arg === "--object-url") {
+      options.objectUrls.push(argv[++index]);
     } else if (arg === "--output-file") {
       options.outputFile = argv[++index];
     } else {
@@ -59,6 +65,8 @@ function parseArgs(argv) {
   options.actorPathPrefix = `/${options.actorPathPrefix.replace(/^\/+|\/+$/gu, "")}`.replace(/^\/$/u, "");
   options.handle = options.handle.trim();
   options.canonicalDomain = options.canonicalDomain?.trim() || null;
+  options.activityUrls = options.activityUrls.map((value) => value.trim()).filter(Boolean);
+  options.objectUrls = options.objectUrls.map((value) => value.trim()).filter(Boolean);
 
   if (!options.baseUrl || !options.handle) {
     throw new Error("--base-url and --handle are required");
@@ -196,6 +204,17 @@ function evaluate({ probes, stagingAcct, canonicalAcct, actorUrl, canonicalDomai
     );
   }
 
+  const publicContentFailures = probes.filter(
+    (probe) => /^(activity|object)-/u.test(probe.name) && !probe.ok,
+  );
+  if (publicContentFailures.length > 0) {
+    failures.push(
+      `Public ActivityPub content URL probes failed: ${publicContentFailures
+        .map((probe) => `${probe.name}/${probe.userAgentName}:${probe.status}`)
+        .join(", ")}`,
+    );
+  }
+
   if (canonicalDomain && canonicalWebfinger?.status !== 200) {
     warnings.push(
       `${canonicalAcct} is not currently discoverable from the configured canonical surface; Threads discovery remains unproven until this returns 200`,
@@ -256,6 +275,22 @@ async function main() {
     }
   }
 
+  options.activityUrls.forEach((url, index) => {
+    endpoints.push({
+      name: `activity-${index + 1}`,
+      url: new URL(url),
+      accept: 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams", application/json',
+    });
+  });
+
+  options.objectUrls.forEach((url, index) => {
+    endpoints.push({
+      name: `object-${index + 1}`,
+      url: new URL(url),
+      accept: 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams", application/json',
+    });
+  });
+
   const probes = [];
   for (const endpoint of endpoints) {
     for (const agent of META_USER_AGENTS) {
@@ -290,6 +325,8 @@ async function main() {
       canonicalAcct,
       canonicalBaseUrl: options.canonicalBaseUrl,
       actorUrl,
+      activityUrls: options.activityUrls,
+      objectUrls: options.objectUrls,
       note: "This diagnoses public discovery preconditions only; it does not query Threads private APIs or prove Threads indexing.",
     },
     evaluation,
