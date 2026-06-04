@@ -137,14 +137,6 @@ function dedupeValues(values) {
   return [...new Set(values.filter((value) => typeof value === "string" && value.trim()))];
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;");
-}
-
 function normalizeActorIdList(values = []) {
   if (!Array.isArray(values)) {
     return [];
@@ -1547,22 +1539,19 @@ function truncateText(value, limit) {
   return `${text.slice(0, Math.max(0, limit - 3)).trimEnd()}...`;
 }
 
-function buildNoteCompanionObject({ config, actor, articleObject }) {
+function buildNoteCompanionObject({ config, actor, articleObject, now }) {
   const noteCompanion = config.compatibility?.noteCompanion ?? {};
   const articleUrl = typeof articleObject.url === "string" && articleObject.url.trim() ? articleObject.url.trim() : articleObject.id;
   const title = stripHtmlTags(articleObject.name ?? "");
   const summary = truncateText(stripHtmlTags(articleObject.summary || articleObject.content || title || articleUrl), noteCompanion.maxSummaryChars ?? 240);
-  const titleLine = title ? `<p>${escapeHtml(title)}</p>` : "";
-  const summaryLine = summary && summary !== title ? `<p>${escapeHtml(summary)}</p>` : "";
-  const linkLine = articleUrl ? `<p><a href="${escapeHtml(articleUrl)}" rel="noopener noreferrer ugc">${escapeHtml(articleUrl)}</a></p>` : "";
+  const content = [title, summary && summary !== title ? summary : null, articleUrl].filter(Boolean).join(": ");
 
   return {
     id: buildNoteCompanionId({ instance: config.instance, articleObject }),
     type: "Note",
-    name: title || summary || articleUrl,
-    summary: summary || title || articleUrl,
-    content: [titleLine, summaryLine, linkLine].filter(Boolean).join("\n"),
+    content,
     url: articleUrl,
+    published: now.toISOString(),
     attributedTo: actor.actorUrl,
   };
 }
@@ -4101,18 +4090,19 @@ export function createGatewayApp({
             config,
             actor,
             articleObject: activity.object,
+            now: clock(),
           });
           const noteCompanionActivity = buildNoteCompanionCreateActivity({
             actor,
             object: {
               ...noteCompanionObject,
               to: [PUBLIC_AUDIENCE],
-              cc: dedupeValues([actor.followersUrl, ...noteCompanionRecipients.map((entry) => entry.remoteActorId)]),
+              cc: [actor.followersUrl],
             },
             now: clock(),
             instance: config.instance,
             to: [PUBLIC_AUDIENCE],
-            cc: dedupeValues([actor.followersUrl, ...noteCompanionRecipients.map((entry) => entry.remoteActorId)]),
+            cc: [actor.followersUrl],
           });
           const noteCompanionDeliveries = await fanOutActivity({
             actorHandle: handle,
