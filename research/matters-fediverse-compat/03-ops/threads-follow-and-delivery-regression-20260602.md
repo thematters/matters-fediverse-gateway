@@ -1,7 +1,7 @@
 # Threads Follow And Delivery Regression
 
 Date: 2026-06-02
-Status: gateway-side pass; receiver-visible UI readback still needs manual confirmation
+Status: gateway-side pass; Threads profile/feed display and Like return confirmed; search, permalink, and reply remain receiver limitations or follow-up checks
 
 ## Scope
 
@@ -87,20 +87,48 @@ After `Accept.object` included the full original `Follow` activity, Threads
 accepted the replayed `Accept` deliveries, and the latest public Article
 `Create` also delivered to the Threads shared inbox.
 
-## Remaining Receiver-Visible Checks
+## Receiver-Visible Checks
 
-These checks require the Threads UI or a receiving account view:
+Manual Threads UI readback on 2026-06-04 confirmed:
 
-1. Confirm the Threads UI shows `mashbeanmatters@matters.town` as followed
-   rather than requested.
-2. Confirm the delivered public Article is visible in Threads.
-3. Reply to the federated Article from Threads and confirm `gateway-core`
-   records an inbound public reply.
-4. Like the federated Article from Threads and confirm `gateway-core` records
-   an inbound like.
+- Threads opens the remote profile page for `mashbeanmatters@matters.town`.
+- The profile shows `mashbeanmatters@matters.town` with the `following` state.
+- The profile feed shows delivered posts from the remote actor, including
+  `Threads visibility test for Matters Fediverse Gateway:
+  matters.town/a/n0w...`.
+- Threads displays a beta notice saying users can like posts from other
+  servers but cannot reply yet; reply return should therefore be tracked as a
+  Threads-side product limitation unless the UI changes.
+- The shown remote posts did not expose a single-post permalink or copyable
+  Threads URL.
+- Threads search still did not find the account reliably, even though the
+  profile page itself is visible.
 
-Mastodon and Misskey should remain in the passed baseline while these Threads
-checks continue.
+Gateway readback after the Threads Like action confirmed inbound Like return
+for the visible `Create(Note)` probe:
+
+- Notification content id:
+  `https://matters.town/ap/notes/1780526263869-threads-note-visibility-mashbeanmatters`
+- Threads Like activity id:
+  `https://threads.net/ap/users/17841401579146452/#likes/869695086184604`
+- Remote actor:
+  `https://threads.net/ap/users/17841401579146452/`
+- `GET /admin/local-notifications?actorHandle=mashbeanmatters&category=like`
+  returned the Threads Like notification.
+- `GET /admin/local-content?actorHandle=mashbeanmatters&contentId=<note-id>`
+  returned `metrics.likes=1` and `actionMatrix.inbound.like=1`.
+
+Mastodon and Misskey remain in the passed baseline. Threads is now split into
+specific receiver gates:
+
+- Profile/follow display: passed.
+- Feed post display: passed without permalink proof.
+- Like return: passed for the visible Note probe.
+- Article delivery and ActivityPub dereference: passed gateway-side.
+- Account search indexing: open / Threads-side.
+- Single-post permalink: unavailable in current Threads UI for this remote
+  post.
+- Reply return: blocked by current Threads UI notice.
 
 ## Article-vs-Note Visibility Probe
 
