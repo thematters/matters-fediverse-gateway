@@ -142,13 +142,22 @@ Gateway-side Threads delivery now passes for both:
 - canonical public `Article` delivery; and
 - receiver-scoped companion `Note` delivery.
 
-This does not close all Threads receiver-visible gates. The remaining Threads
-checks are:
+This does not close all Threads receiver-visible gates. Follow-up logged-in
+Safari readback on 2026-06-04 confirmed:
 
-- whether Threads exposes a single-post permalink for remote ActivityPub
-  posts;
-- whether reply return becomes possible after Threads enables remote replies in
-  its UI.
+- The companion `Note` appears on the remote profile page.
+- The overflow menu points `查看原始貼文` to
+  `https://matters.town/a/3tmz0u0a42qx`.
+- Threads does not expose a copyable Threads single-post permalink for the
+  remote post.
+- Threads blocks Share with
+  `You can't share posts from other servers yet.`
+- Threads blocks Reply with
+  `You can't reply to posts from other servers yet.`
+
+Treat those remaining reply / share / permalink gaps as Threads receiver-side
+limitations, not gateway blockers, unless a public ActivityPub gateway
+regression also appears.
 
 Do not enable broad production outbound based only on this proof. Keep the
 adapter pilot-scoped and receiver-scoped until receiver-visible regression is
