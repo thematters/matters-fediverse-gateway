@@ -247,8 +247,20 @@ Misskey:
 Mastodon:
 
 - delivery to g0v.social passed with HTTP 202.
-- automated Mastodon API readback was not available in this checkout because
-  `gateway-core/runtime/secrets/g0v-mastodon-readback-token` was missing.
+- automated Mastodon API readback was restored after this run.
+- local checkout token path:
+  `gateway-core/runtime/secrets/g0v-mastodon-readback-token`
+- AWS SecureString parameter:
+  `/matters-gateway/prod/g0v-mastodon-readback-token`
+- AWS gateway VM secret path:
+  `/opt/matters-gateway/repo/gateway-core/runtime/secrets/g0v-mastodon-readback-token`
+- AWS SSM command:
+  `5ecff877-188c-4ec0-a484-d1afe94cf12c`
+- result: `ok=true`
+- account resolved:
+  `acct:mashbeanmatters@matters.town`
+- expected URL found:
+  `https://matters.town/a/n0wacr6zgyyq`
 
 ## Result
 
@@ -258,12 +270,15 @@ queue cleanup. Broad server-triggered production outbound remains disabled.
 
 Remaining work before broader rollout:
 
-- restore or re-create the Mastodon readback token for repeatable post-send API
-  verification;
 - perform a manual Misskey notes-tab visual check after UI automation becomes
   stable;
 - keep Threads receiver-visible limitations tracked separately;
 - keep the two resolved Threads compatibility payloads as audit evidence, not
   as delivery regressions;
-- decide separately when to enable server-triggered outbound beyond bounded
-  pilot sends.
+- implement and review the next `matters-server` trigger mode before enabling
+  server-triggered outbound beyond bounded pilot sends. A 2026-06-05 source
+  check of `thematters/matters-server` `develop` found that
+  `FEDERATION_EXPORT_TRIGGER_MODE` currently supports only `off` and
+  `record_only`; `recordExportTriggerDecision` rejects every other mode before
+  writing an event. Therefore production full outbound cannot be opened by an
+  Elastic Beanstalk env-var change alone.

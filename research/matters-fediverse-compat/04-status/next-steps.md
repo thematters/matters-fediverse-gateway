@@ -170,16 +170,30 @@ Updated: 2026-05-22
    `03-ops/production-pilot-outbound-runbook.md`, and the first run evidence is
    archived in `03-ops/production-pilot-create-run-20260522.md` and
    `03-ops/production-pilot-update-run-20260528.md` and
-   `03-ops/production-pilot-delete-run-20260528.md`. Do not expand beyond the
-   `mashbean` pilot.
+   `03-ops/production-pilot-delete-run-20260528.md`. The 2026-06-05 bounded
+   `Update` evidence is archived in
+   `03-ops/production-pilot-update-run-20260605.md` and includes delivery to
+   g0v.social, gyutte.site, and Threads plus restored Mastodon API readback.
+   Do not expand beyond the `mashbean` pilot until `matters-server` implements
+   and reviews a non-`record_only` trigger path.
 5. Keep using `npm run check:production-record-only` after production
    configuration changes. This is read-only and must keep passing while the
    system remains in observation mode.
 6. Keep using `check:mastodon-readback` after each pilot `Create`, `Update`,
-   `Reply`, or `Delete` delivery run. Use a write-scoped Mastodon token or a
-   browser-based manual action before claiming Mastodon interaction return.
+   `Reply`, or `Delete` delivery run. The read-only g0v.social token is now
+   installed in the local ignored runtime secret path and on the AWS gateway VM
+   through SecureString
+   `/matters-gateway/prod/g0v-mastodon-readback-token`. Use a write-scoped
+   Mastodon token or a browser-based manual action before claiming Mastodon
+   interaction return.
 7. Preserve the versioned key-id rule for production actors; do not reuse the
    earlier Worker demo `#main-key` with gateway-core key material.
+8. Treat production full outbound as an implementation task, not an environment
+   toggle. A 2026-06-05 `matters-server` `develop` source check found only
+   `off` and `record_only` in `FEDERATION_EXPORT_TRIGGER_MODE`, and
+   `recordExportTriggerDecision` rejects unsupported modes before writing an
+   event. The next engineering step is a reviewed server/Lambda/gateway trigger
+   path with rollback to `record_only`.
 
 ## Human Gates Before Production
 

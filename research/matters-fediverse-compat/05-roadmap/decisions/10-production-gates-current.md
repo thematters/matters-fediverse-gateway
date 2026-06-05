@@ -1,7 +1,7 @@
 # Current Production Gates
 
-Date: 2026-06-02
-Status: bounded pilot `Create` / `Update` delivered, Threads Follow accepted, receiver-visible Threads Article and interaction checks still open; production outbound rollout is still gated
+Date: 2026-06-05
+Status: bounded pilot `Create` / `Update` delivered to Mastodon, Misskey, and Threads; Threads discovery/profile/feed/Like checks passed; production full outbound can enter cutover preparation but is not enabled yet
 
 This is the current gate list after the staging Cloudflare crawler bypass,
 canonical `matters.town` pilot deployment, Threads diagnostic rerun,
@@ -40,6 +40,7 @@ Accept compatibility fix.
 | Pilot final gate checklist | Partially cleared | `03-ops/production-pilot-final-gates-20260522.md` separates closed gates, blocking open gates, AWS verification commands, owner recommendations, and the go/no-go rule. On 2026-05-22, AWS CLI auth was restored, private S3 pilot storage was created, the live origin SQLite backup succeeded, and the consistency scan returned only explained SQLite-primary diffs. |
 | First bounded production `Create` | Cleared for Mastodon and Misskey | `03-ops/production-pilot-create-run-20260522.md` records the approved 2026-05-22 16:43-20:43 CST pilot window, private S3 bundle prefix, gateway-origin `Create`, delivery to g0v.social and gyutte.site with HTTP 202, Mastodon readback success, Misskey visual readback, queue `pending=0` / `deadLetter=0`, and post-send SQLite scan with no SQLite omissions or value mismatches. |
 | First bounded production `Update` | Cleared for delivery acceptance | `03-ops/production-pilot-update-run-20260528.md` records the gateway-origin `Update`, delivery to g0v.social and gyutte.site with HTTP 202, Mastodon readback success, Misskey visual readback, and queue `pending=0` / `deadLetter=0`. AWS session had expired, so S3/SSM evidence still needs a follow-up after reauthentication. |
+| 2026-06-05 bounded production `Update` | Cleared for delivery acceptance and Mastodon API readback | `03-ops/production-pilot-update-run-20260605.md` records the gateway-origin `Update` for article `1228008` / `n0wacr6zgyyq`, delivery to g0v.social, gyutte.site, and Threads, live queue cleanup to `pending=0` / `retryPending=0` / `deadLetter=0`, and restored `check:mastodon-readback` on both the local checkout and AWS gateway VM. |
 | Bounded production withdrawal | Partial pass; Misskey visible removal still open | `03-ops/production-pilot-delete-run-20260528.md` records four Delete variants. Mastodon withdrew the real article status and direct lookup returned `Not Found`; Misskey accepted string, URL, Tombstone, and `Tombstone(formerType=Article)` deliveries with HTTP 202 but still showed the remote note. Gateway queue and SQLite state stayed healthy, so this is now a receiver-side compatibility / remote-retention limitation rather than a gateway delivery failure. |
 | Deployed-Lambda staging workflow | Cleared as repeatable path | `lambda-handlers` workflow run 26017383955 selected public article `23525`, skipped paywalled article `23522` as `article_not_public`, returned one eligible bundle, and kept `dryRun=true`. Direct `articleIds` Lambda invocation is not the validated path because the Lambda environment does not include DB connection variables. |
 
@@ -47,7 +48,7 @@ Accept compatibility fix.
 
 | Gate | Required decision or proof | Decision owner |
 | --- | --- | --- |
-| Threads receiver-visible post and interaction checks | Threads crawler diagnostics pass on canonical `matters.town`, signed Follow reaches gateway-core, embedded-Follow Accept delivery succeeds, and the Threads UI shows the canonical profile as followed. The latest public Article `Create` and the bounded Note visibility probe both delivered to `https://threads.net/ap/inbox/`, but neither was observed in Threads profile/feed/search UI immediately after delivery. Reply and like return from Threads are therefore still unproven. See `03-ops/threads-follow-and-delivery-regression-20260602.md`. | Matters current General Manager; product and gateway operator support. |
+| Threads receiver-visible post and interaction checks | Profile/feed display, exact-handle account search, public Note companion visibility, source-article linkback, and Threads-origin Like return have passed. Threads remote Reply, Share, and single-post permalink remain receiver-side beta UI limitations and should stay in observation rather than block pilot outbound. | Matters current General Manager; product and gateway operator support. |
 | Mastodon interaction return | Current g0v.social token is read-only, so reply / favourite / boost write tests require a write-scoped token or manual browser action. | Matters current General Manager; gateway operator executes. |
 | Production gateway hosting | Confirm long-running gateway host, SQLite backup path, restore drill, monitoring, and direct-origin fallback outside Cloudflare. | Matters current General Manager; infra and gateway operator support. |
 | Production private S3 | Pilot bucket `matters-fediverse-prod-bundles` now exists with public access blocked, SSE-S3 encryption, versioning, and 90-day `pilot/` lifecycle. Before broader rollout, confirm IAM role wiring and whether CloudTrail data events or another access audit path is required. | Matters current General Manager; infra and security/legal support. |
@@ -56,13 +57,14 @@ Accept compatibility fix.
 | Privacy notice | Approve user-facing copy that explains external server caching and replication. | Matters current General Manager; product/legal supports. |
 | Key exposure / rotation | Approve severity, rotation, actor update/delete, and external notice rules. | Matters current General Manager; CTO/security supports. |
 | Rollback rehearsal | Prove the rollback sequence: disable author opt-in, stop export trigger, preserve evidence, pause delivery, and remove public routing if needed. | Matters current General Manager; gateway operator executes. |
-| Next bounded production action | Keep Mastodon/Misskey as passed baselines, keep Misskey visible withdrawal as best-effort remote retention unless a receiver proves removal, and continue Threads receiver-visible compatibility checks. Do not expand to broad delivery yet; the next engineering work is legal/privacy copy finalization, rollback rehearsal, Threads receiver-visible post display diagnosis, and Mastodon write-scope interaction checks. | Matters current General Manager. |
+| Production full outbound cutover | The user has approved moving toward production full outbound, but `matters-server` source currently has no delivery mode to enable. A 2026-06-05 source check found `FEDERATION_EXPORT_TRIGGER_MODE` supports only `off` and `record_only`, and `recordExportTriggerDecision` rejects unsupported modes before writing an event. The next cutover step is an implementation PR that adds a reviewed server/Lambda/gateway trigger path, with pilot scope still limited to `mashbean`, author opt-in required, public-only, article `disabled` wins, private/paywalled blocked, queue monitor active, and rollback to `record_only` ready. | Matters current General Manager. |
 
 ## Do Not Do Automatically
 
 - Do not expand canonical `acct:user@matters.town` beyond the approved pilot handle before the canonical identity gate is expanded.
-- Do not enable broad production outbound delivery while legal/privacy/rollback
-  gates are open. The first bounded `Create` does not imply broad rollout.
+- Do not claim broad production outbound is enabled until `matters-server`
+  implements a reviewed non-`record_only` trigger path and the production
+  rollback to `record_only` is tested.
 - Treat Matters current General Manager as the owner for all remaining pilot
   gate decisions unless a decision is explicitly delegated in writing.
 - Do not expose actor private keys, Lambda secrets, S3 credentials, or Cloudflare production routing changes in repo or chat logs.
