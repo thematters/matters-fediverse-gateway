@@ -3037,6 +3037,71 @@ export function createGatewayApp({
     };
   }
 
+  async function resolveDeadLetterItem(itemId, resolveRecord, { surface = "admin-dead-letter-resolve" } = {}) {
+    const deadLetter = store.getDeadLetter?.(itemId);
+    if (!deadLetter) {
+      return { error: "Unknown dead letter", statusCode: 404 };
+    }
+
+    if (deadLetter.status === "resolved") {
+      return { error: "Dead letter is already resolved", statusCode: 409 };
+    }
+
+    const resolvedState = await store.resolveDeadLetter?.(itemId, resolveRecord);
+    if (!resolvedState) {
+      return { error: "Unable to resolve dead letter", statusCode: 409 };
+    }
+
+    await recordAuditEvent({
+      timestamp: clock().toISOString(),
+      event: "dead-letter.resolved",
+      itemId,
+      actorHandle: deadLetter.actorHandle,
+      resolvedBy: resolveRecord.resolvedBy,
+      reason: resolveRecord.reason,
+      surface,
+    });
+    await store.recordTrace(
+      makeTrace(clock, {
+        direction: "internal",
+        event: "delivery.dead-letter-resolved",
+        itemId,
+        actorHandle: deadLetter.actorHandle,
+        remoteActorId: deadLetter.targetActorId,
+        surface,
+      }),
+    );
+    await recordEvidence(
+      buildEvidenceRecord({
+        category: "manual-resolution",
+        actorHandle: deadLetter.actorHandle,
+        remoteActorId: deadLetter.targetActorId,
+        queueItemId: itemId,
+        activityId: deadLetter.activityId,
+        activityType: deadLetter.activityType,
+        surface,
+        reason: resolveRecord.reason,
+        snapshot: {
+          deadLetter,
+          resolveRecord,
+        },
+      }),
+    );
+
+    if (deadLetter.actorHandle) {
+      await syncLocalDomainProjection(deadLetter.actorHandle);
+    }
+
+    return {
+      deadLetter: store.getDeadLetter?.(itemId) ?? resolvedState.deadLetter,
+      item: resolvedState.item,
+      itemId,
+      actorHandle: deadLetter.actorHandle,
+      targetActorId: deadLetter.targetActorId,
+      activityId: deadLetter.activityId,
+    };
+  }
+
   async function verifyInboundActivity(request, bodyText, activity, targetHandle) {
     const verification = await verifyInboundFollow({
       request,
@@ -6000,6 +6065,58 @@ export function createGatewayApp({
               : null,
           },
           202,
+        );
+      }
+
+      if (request.method === "POST" && pathname === "/admin/dead-letters/resolve") {
+        const bodyText = await request.text();
+        let payload;
+
+        try {
+          payload = parseJsonBody(bodyText);
+        } catch {
+          return jsonResponse({ error: "Invalid JSON body" }, 400);
+        }
+
+        if (!payload.id?.trim()) {
+          return jsonResponse({ error: "id is required" }, 422);
+        }
+        if (!payload.reason?.trim()) {
+          return jsonResponse({ error: "reason is required" }, 422);
+        }
+
+        const resolveRecord = {
+          resolvedAt: clock().toISOString(),
+          resolvedBy: payload.resolvedBy?.trim() || "system",
+          reason: payload.reason.trim(),
+        };
+        const result = await resolveDeadLetterItem(payload.id, resolveRecord, {
+          surface: "admin-dead-letter-resolve",
+        });
+        if (result.error) {
+          return jsonResponse(
+            {
+              error: result.error,
+              ...(result.payload ?? {}),
+            },
+            result.statusCode ?? 409,
+          );
+        }
+        return jsonResponse(
+          {
+            status: "resolved",
+            itemId: payload.id,
+            deadLetter: result.deadLetter,
+            delivery: result.item
+              ? {
+                  id: result.item.id,
+                  status: result.item.status,
+                  targetActorId: result.item.targetActorId,
+                  lastError: result.item.lastError ?? null,
+                }
+              : null,
+          },
+          200,
         );
       }
 

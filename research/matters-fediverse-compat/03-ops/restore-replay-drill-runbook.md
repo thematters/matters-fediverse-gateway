@@ -37,9 +37,12 @@
    - `GET /admin/runtime/storage`
    - `GET /admin/runtime/metrics`
    - `GET /admin/runtime/alerts?minimumSeverity=warn`
-8. 驗證 dead-letter replay
+8. 驗證 dead-letter replay / resolve
    - 找一筆 open dead letter
-   - 執行 `POST /admin/dead-letters/replay`
+   - 如果 payload 仍然正確、receiver 也已恢復，執行 `POST /admin/dead-letters/replay`
+   - 如果這是已知舊壞 payload、相容性測試殘留、或不應再對外重送，執行 `POST /admin/dead-letters/resolve`
+   - `resolve` body 至少要包含 `id` 與 `reason`，例如：
+     `{"id":"<queue-item-id>","resolvedBy":"operator","reason":"known incompatible compatibility probe; do not replay"}`
    - 確認 audit、trace、evidence 都有新紀錄
 9. 收尾
    - 保存本次 drill bundle 與操作紀錄
@@ -52,7 +55,7 @@
 - `last_restored_at` 與 `restored_from_backup` 正確寫入
 - consistency scan 可輸出 JSON 與 markdown 報表，且 operator 已判讀差異是否需要 repair
 - reconciliation 可成功完成，且沒有意外新增 orphaned records
-- 至少一筆 dead-letter replay 可成功走完
+- 至少一筆 dead-letter replay 或 resolve 可成功走完
 - alerts / metrics 可正常輸出
 
 ## Failure Handling
@@ -61,6 +64,7 @@
 - 如果 consistency scan 顯示 file / SQLite 差異，先保留報表；預設信任 SQLite，不要把 JSON file state 自動覆蓋回 SQLite
 - 如果 reconciliation 出現異常 orphaned records，先封存 bundle，再回頭分析資料一致性
 - 如果 replay 失敗，確認是不是 policy 阻擋、target domain block 或 remote delivery 失敗，不要直接重覆 replay
+- 如果 dead letter 來自已知舊壞 payload，不要用 replay 製造新的對外送達嘗試；改用 `resolve` 並留下 reason
 
 ## Follow-up
 
@@ -69,7 +73,7 @@
   使用的 backup
   restore target
   reconciliation summary
-  replay 結果
+  replay / resolve 結果
   是否有新缺口
 
 ## Observability Drill Extension
