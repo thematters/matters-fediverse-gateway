@@ -165,6 +165,39 @@ retryPending / dead-letter items are older Threads compatibility test payloads:
 
 They are not new regressions from this pilot update.
 
+Follow-up queue cleanup:
+
+- PR #118 added `POST /admin/dead-letters/resolve` for known-bad dead letters
+  that should not be replayed.
+- PR #119 added `POST /admin/outbound/resolve` for known-bad pending or
+  retry-pending outbound queue items that should not be retried.
+- AWS origin deploy command for PR #118:
+  `1053b6cd-e1bc-45e0-84c4-50ea46bb2937`, deployed commit `bbf2ee5`.
+- AWS origin deploy command for PR #119:
+  `3d5d2e2c-9725-4d04-a4ff-e1f05996e400`, deployed commit `9f58054`.
+- Resolved dead letter:
+  `https://matters.town/ap/activities/1780527884912-create-mashbeanmatters`
+  because it was an obsolete Threads compatibility probe with public `atomUri`
+  injection, superseded by PR #102 and later successful sends.
+- Resolved retry-pending outbound item:
+  `https://matters.town/ap/activities/1780588199379-create-note-companion-mashbeanmatters`
+  because it was the first 2026-06-04 companion `Note` attempt, superseded by
+  PR #108 and the successful companion `Note` delivery.
+- These resolve operations did not call any remote inbox and did not send any
+  ActivityPub activity.
+
+Post-resolve queue summary:
+
+- total: `60`
+- pending: `0`
+- processing: `0`
+- delivered: `58`
+- deadLetter: `0`
+- retryPending: `0`
+- resolved: `2`
+- open dead letters: `0`
+- resolved dead letters: `1`
+
 Fresh AWS-backed SQLite backup and consistency scan after send:
 
 - SSM command: `66da53ec-ccd2-4ea4-9b3d-36a072040a70`
@@ -174,6 +207,18 @@ Fresh AWS-backed SQLite backup and consistency scan after send:
   `/var/lib/matters-gateway/runtime/backups/matters-gateway-2026-06-05-043134752Z-post-outbound-pilot-update-20260605.sqlite.json`
 - consistency report:
   `/var/lib/matters-gateway/runtime/consistency-scans/consistency-scan-2026-06-05-043135113Z-post-outbound-pilot-update-20260605.md`
+- result: `totalDiffs=8`, all `missing_in_file`; `missing_in_sqlite=0`,
+  `value_mismatch=0`
+
+Fresh AWS-backed SQLite backup and consistency scan after queue resolve:
+
+- SSM command: `2650ccac-38d8-434d-a454-b5ed507d7344`
+- backup:
+  `/var/lib/matters-gateway/runtime/backups/matters-gateway-2026-06-05-051143183Z-post-outbound-resolve-20260605.sqlite`
+- manifest:
+  `/var/lib/matters-gateway/runtime/backups/matters-gateway-2026-06-05-051143183Z-post-outbound-resolve-20260605.sqlite.json`
+- consistency report:
+  `/var/lib/matters-gateway/runtime/consistency-scans/consistency-scan-2026-06-05-051144013Z-post-outbound-resolve-20260605.md`
 - result: `totalDiffs=8`, all `missing_in_file`; `missing_in_sqlite=0`,
   `value_mismatch=0`
 
@@ -208,8 +253,8 @@ Mastodon:
 ## Result
 
 The bounded production pilot `Update` passed preflight, AWS backup/scan,
-gateway delivery, queue inspection, and public ActivityPub readback. Broad
-server-triggered production outbound remains disabled.
+gateway delivery, queue inspection, public ActivityPub readback, and follow-up
+queue cleanup. Broad server-triggered production outbound remains disabled.
 
 Remaining work before broader rollout:
 
@@ -218,5 +263,7 @@ Remaining work before broader rollout:
 - perform a manual Misskey notes-tab visual check after UI automation becomes
   stable;
 - keep Threads receiver-visible limitations tracked separately;
+- keep the two resolved Threads compatibility payloads as audit evidence, not
+  as delivery regressions;
 - decide separately when to enable server-triggered outbound beyond bounded
   pilot sends.

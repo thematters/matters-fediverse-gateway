@@ -132,6 +132,11 @@ Updated: 2026-05-22
   g0v.social, gyutte.site, and Threads while production server-triggered
   outbound stayed disabled. Fresh pre/post AWS SQLite backups and consistency
   scans passed with only expected SQLite-primary `missing_in_file` diffs.
+- Follow-up gateway-core PRs #118 and #119 added auditable resolve paths for
+  known-bad dead-letter and retry-pending queue items. After deploying commit
+  `9f58054`, the two obsolete Threads compatibility payloads were resolved
+  without replay. Live queue health is now `pending=0`, `retryPending=0`, and
+  `deadLetter=0`, with `resolved=2`.
 - On 2026-05-28, the bounded production withdrawal rehearsal ran with pre/post
   AWS SSM SQLite backups and consistency scans. Two Delete variants were sent:
   the ActivityPub object id and the canonical article URL. Both delivered to
