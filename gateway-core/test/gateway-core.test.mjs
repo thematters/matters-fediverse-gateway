@@ -5261,6 +5261,124 @@ test("admin dead-letter resolve closes known-bad delivery without replaying", as
   assert.equal(auditPayload.items.some((entry) => entry.event === "dead-letter.resolved"), true);
 });
 
+test("admin outbound resolve closes retry-pending delivery without dispatching", async () => {
+  const harness = await createHarness();
+  const { config, store, remoteKeys } = harness;
+  const successfulDeliveries = [];
+  const app = createGatewayApp({
+    config: {
+      ...config,
+      delivery: {
+        ...config.delivery,
+        maxAttempts: 3,
+      },
+    },
+    store,
+    deliveryClient: {
+      async deliver({ item }) {
+        if (item.targetActorId === "https://reply.example/users/mika") {
+          const error = new Error("obsolete compatibility probe");
+          error.status = 500;
+          error.temporary = true;
+          throw error;
+        }
+
+        successfulDeliveries.push(item);
+        return { status: 202 };
+      },
+    },
+  });
+
+  const rootActivity = {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    id: "https://remote.example/activities/resolve-pending-root-1",
+    type: "Create",
+    actor: "https://remote.example/users/zoe",
+    object: {
+      id: "https://remote.example/notes/resolve-pending-root-1",
+      type: "Note",
+      content: "Resolve pending root body",
+      published: "2026-03-21T00:00:00.000Z",
+      to: ["https://www.w3.org/ns/activitystreams#Public"],
+    },
+  };
+  const response = await app.handle(
+    signedRequest({
+      method: "POST",
+      url: "https://matters.example/users/alice/inbox",
+      body: JSON.stringify(rootActivity),
+      keyId: "https://remote.example/users/zoe#main-key",
+      privateKeyPem: remoteKeys.privateKeyPem,
+    }),
+  );
+  assert.equal(response.status, 202);
+
+  const replyResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: "https://matters.example/notes/resolve-pending-reply-1",
+          type: "Note",
+          content: "Resolve pending reply body",
+          inReplyTo: "https://remote.example/notes/resolve-pending-root-1",
+        },
+        includeFollowers: false,
+        targetActorIds: ["https://remote.example/users/zoe", "https://reply.example/users/mika"],
+      }),
+    }),
+  );
+  assert.equal(replyResponse.status, 202);
+
+  const beforeQueueResponse = await app.handle(new Request("https://matters.example/admin/queues/outbound?traceLimit=5"));
+  assert.equal(beforeQueueResponse.status, 200);
+  const beforeQueuePayload = await beforeQueueResponse.json();
+  assert.equal(beforeQueuePayload.queue.summary.retryPending, 1);
+
+  const retryItem = store
+    .getQueueSnapshot({ traceLimit: 20 })
+    .recentDeliveryTraces.find((entry) => entry.event === "delivery.retry-scheduled");
+  assert.ok(retryItem?.itemId);
+
+  const resolveResponse = await app.handle(
+    new Request("https://matters.example/admin/outbound/resolve", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        id: retryItem.itemId,
+        resolvedBy: "tester",
+        reason: "obsolete compatibility probe; do not retry",
+      }),
+    }),
+  );
+  assert.equal(resolveResponse.status, 200);
+  const resolvePayload = await resolveResponse.json();
+  assert.equal(resolvePayload.status, "resolved");
+  assert.equal(resolvePayload.delivery.status, "resolved");
+  assert.equal(successfulDeliveries.length, 1);
+
+  const refreshedQueueResponse = await app.handle(new Request("https://matters.example/admin/queues/outbound?traceLimit=5"));
+  assert.equal(refreshedQueueResponse.status, 200);
+  const refreshedQueuePayload = await refreshedQueueResponse.json();
+  assert.equal(refreshedQueuePayload.queue.summary.pending, 0);
+  assert.equal(refreshedQueuePayload.queue.summary.retryPending, 0);
+  assert.equal(refreshedQueuePayload.queue.summary.resolved, 1);
+  assert.equal(
+    refreshedQueuePayload.queue.recentDeliveryTraces.some((entry) => entry.event === "delivery.outbound-resolved"),
+    true,
+  );
+
+  const auditResponse = await app.handle(new Request("https://matters.example/admin/audit-log?limit=5"));
+  assert.equal(auditResponse.status, 200);
+  const auditPayload = await auditResponse.json();
+  assert.equal(auditPayload.items.some((entry) => entry.event === "outbound.resolved"), true);
+});
+
 test("admin review queue lists content delivery issues and replayable items", async () => {
   const harness = await createHarness();
   const { config, store, remoteKeys } = harness;
