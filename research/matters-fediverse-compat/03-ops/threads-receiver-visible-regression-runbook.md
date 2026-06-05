@@ -134,12 +134,19 @@ Check single-post URL:
   and share controls.
 - Record whether Threads exposes a copyable URL.
 - If only the profile page is available, mark permalink as unavailable.
+- Do not treat unauthenticated HTTP fetches as sufficient evidence here:
+  `https://www.threads.com/fediverse_profile/@mashbeanmatters@matters.town`
+  redirects anonymous requests to login, so permalink availability must be
+  checked in a logged-in Threads UI.
 
 Check reply:
 
 - Open the reply action on the visible remote post.
 - Do not send a reply unless explicitly approved for that run.
 - Record whether Threads says remote replies are unavailable or beta-limited.
+- Reply availability must also be checked in the logged-in Threads UI. The
+  public HTML path does not expose enough state to prove whether a remote reply
+  can be submitted.
 
 Check Like return only when explicitly approved:
 
