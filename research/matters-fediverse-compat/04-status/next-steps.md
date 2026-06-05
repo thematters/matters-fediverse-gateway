@@ -127,6 +127,11 @@ Updated: 2026-05-22
   Mastodon readback still found `https://matters.town/a/3tmz0u0a42qx`, and
   Misskey UI readback still showed the canonical actor and Matters Fediverse
   article.
+- On 2026-06-05, after the decision to enter production pilot outbound, a
+  bounded gateway-origin `Update` for public article `n0wacr6zgyyq` delivered to
+  g0v.social, gyutte.site, and Threads while production server-triggered
+  outbound stayed disabled. Fresh pre/post AWS SQLite backups and consistency
+  scans passed with only expected SQLite-primary `missing_in_file` diffs.
 - On 2026-05-28, the bounded production withdrawal rehearsal ran with pre/post
   AWS SSM SQLite backups and consistency scans. Two Delete variants were sent:
   the ActivityPub object id and the canonical article URL. Both delivered to
