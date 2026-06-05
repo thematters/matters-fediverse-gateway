@@ -3102,6 +3102,75 @@ export function createGatewayApp({
     };
   }
 
+  async function resolveOutboundQueueItem(itemId, resolveRecord, { surface = "admin-outbound-resolve" } = {}) {
+    const item = store.getOutboundItem?.(itemId);
+    if (!item) {
+      return { error: "Unknown outbound item", statusCode: 404 };
+    }
+
+    if (item.status === "resolved") {
+      return { error: "Outbound item is already resolved", statusCode: 409 };
+    }
+
+    if (item.status === "delivered") {
+      return { error: "Delivered outbound item cannot be resolved", statusCode: 409 };
+    }
+
+    const resolvedState = await store.resolveOutboundItem?.(itemId, resolveRecord);
+    if (!resolvedState) {
+      return { error: "Unable to resolve outbound item", statusCode: 409 };
+    }
+
+    await recordAuditEvent({
+      timestamp: clock().toISOString(),
+      event: "outbound.resolved",
+      itemId,
+      actorHandle: item.actorHandle,
+      resolvedBy: resolveRecord.resolvedBy,
+      reason: resolveRecord.reason,
+      surface,
+    });
+    await store.recordTrace(
+      makeTrace(clock, {
+        direction: "internal",
+        event: "delivery.outbound-resolved",
+        itemId,
+        actorHandle: item.actorHandle,
+        remoteActorId: item.targetActorId,
+        surface,
+      }),
+    );
+    await recordEvidence(
+      buildEvidenceRecord({
+        category: "manual-resolution",
+        actorHandle: item.actorHandle,
+        remoteActorId: item.targetActorId,
+        queueItemId: itemId,
+        activityId: item.activity?.id ?? null,
+        activityType: item.activity?.type ?? null,
+        surface,
+        reason: resolveRecord.reason,
+        snapshot: {
+          item,
+          resolveRecord,
+        },
+      }),
+    );
+
+    if (item.actorHandle) {
+      await syncLocalDomainProjection(item.actorHandle);
+    }
+
+    return {
+      deadLetter: resolvedState.deadLetter,
+      item: resolvedState.item,
+      itemId,
+      actorHandle: item.actorHandle,
+      targetActorId: item.targetActorId,
+      activityId: item.activity?.id ?? null,
+    };
+  }
+
   async function verifyInboundActivity(request, bodyText, activity, targetHandle) {
     const verification = await verifyInboundFollow({
       request,
@@ -6092,6 +6161,58 @@ export function createGatewayApp({
         };
         const result = await resolveDeadLetterItem(payload.id, resolveRecord, {
           surface: "admin-dead-letter-resolve",
+        });
+        if (result.error) {
+          return jsonResponse(
+            {
+              error: result.error,
+              ...(result.payload ?? {}),
+            },
+            result.statusCode ?? 409,
+          );
+        }
+        return jsonResponse(
+          {
+            status: "resolved",
+            itemId: payload.id,
+            deadLetter: result.deadLetter,
+            delivery: result.item
+              ? {
+                  id: result.item.id,
+                  status: result.item.status,
+                  targetActorId: result.item.targetActorId,
+                  lastError: result.item.lastError ?? null,
+                }
+              : null,
+          },
+          200,
+        );
+      }
+
+      if (request.method === "POST" && pathname === "/admin/outbound/resolve") {
+        const bodyText = await request.text();
+        let payload;
+
+        try {
+          payload = parseJsonBody(bodyText);
+        } catch {
+          return jsonResponse({ error: "Invalid JSON body" }, 400);
+        }
+
+        if (!payload.id?.trim()) {
+          return jsonResponse({ error: "id is required" }, 422);
+        }
+        if (!payload.reason?.trim()) {
+          return jsonResponse({ error: "reason is required" }, 422);
+        }
+
+        const resolveRecord = {
+          resolvedAt: clock().toISOString(),
+          resolvedBy: payload.resolvedBy?.trim() || "system",
+          reason: payload.reason.trim(),
+        };
+        const result = await resolveOutboundQueueItem(payload.id, resolveRecord, {
+          surface: "admin-outbound-resolve",
         });
         if (result.error) {
           return jsonResponse(

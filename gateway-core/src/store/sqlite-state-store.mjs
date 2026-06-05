@@ -930,6 +930,7 @@ export class SqliteStateStore {
         processing: processingItems.length,
         delivered: outboundItems.filter((item) => item.status === "delivered").length,
         deadLetter: outboundItems.filter((item) => item.status === "dead-letter").length,
+        resolved: outboundItems.filter((item) => item.status === "resolved").length,
         retryPending: pendingItems.filter((item) => (item.attempts ?? 0) > 0).length,
         oldestPendingAt: pendingItems[0]?.createdAt ?? null,
         oldestProcessingAt:
@@ -1545,6 +1546,48 @@ export class SqliteStateStore {
     return {
       deadLetter: updatedDeadLetter,
       item: item ? structuredClone(item) : null,
+    };
+  }
+
+  async resolveOutboundItem(id, resolveRecord) {
+    const item = this.getOutboundItem(id);
+    if (!item) {
+      return null;
+    }
+
+    item.status = "resolved";
+    item.resolvedAt = resolveRecord.resolvedAt;
+    item.resolvedBy = resolveRecord.resolvedBy;
+    item.resolveReason = resolveRecord.reason;
+    clearOutboundDeliveryLease(item);
+    this.db
+      .prepare("UPDATE outbound_queue SET status = ?, item_json = ? WHERE id = ?")
+      .run(item.status, JSON.stringify(item), id);
+
+    const deadLetter = this.getDeadLetter(id);
+    let updatedDeadLetter = null;
+    if (deadLetter) {
+      updatedDeadLetter = {
+        ...deadLetter,
+        status: "resolved",
+        resolvedAt: resolveRecord.resolvedAt,
+        resolvedBy: resolveRecord.resolvedBy,
+        resolveReason: resolveRecord.reason,
+        resolveHistory: [...(deadLetter.resolveHistory ?? []), resolveRecord],
+        item: structuredClone(item),
+      };
+      this.db
+        .prepare("INSERT OR REPLACE INTO dead_letters (id, record_json) VALUES (?, ?)")
+        .run(id, JSON.stringify(updatedDeadLetter));
+    }
+
+    this.refreshContentDeliveryProjection(item.actorHandle, {
+      recentReplays: this.getContentDeliveryProjection(item.actorHandle)?.review?.recentReplays ?? [],
+    });
+
+    return {
+      deadLetter: updatedDeadLetter,
+      item: structuredClone(item),
     };
   }
 

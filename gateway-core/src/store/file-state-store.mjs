@@ -525,6 +525,7 @@ export class FileStateStore {
         processing: processingItems.length,
         delivered: outboundItems.filter((item) => item.status === "delivered").length,
         deadLetter: outboundItems.filter((item) => item.status === "dead-letter").length,
+        resolved: outboundItems.filter((item) => item.status === "resolved").length,
         retryPending: pendingItems.filter((item) => (item.attempts ?? 0) > 0).length,
         oldestPendingAt: pendingItems[0]?.createdAt ?? null,
         oldestProcessingAt:
@@ -1116,6 +1117,42 @@ export class FileStateStore {
     return {
       deadLetter: updatedDeadLetter,
       item: item ? structuredClone(item) : null,
+    };
+  }
+
+  async resolveOutboundItem(id, resolveRecord) {
+    const item = this.getOutboundItem(id);
+    if (!item) {
+      return null;
+    }
+
+    item.status = "resolved";
+    item.resolvedAt = resolveRecord.resolvedAt;
+    item.resolvedBy = resolveRecord.resolvedBy;
+    item.resolveReason = resolveRecord.reason;
+    clearOutboundDeliveryLease(item);
+
+    const deadLetter = this.getDeadLetter(id);
+    let updatedDeadLetter = null;
+    if (deadLetter) {
+      updatedDeadLetter = {
+        ...deadLetter,
+        status: "resolved",
+        resolvedAt: resolveRecord.resolvedAt,
+        resolvedBy: resolveRecord.resolvedBy,
+        resolveReason: resolveRecord.reason,
+        resolveHistory: [...(deadLetter.resolveHistory ?? []), resolveRecord],
+        item: structuredClone(item),
+      };
+      const deadLetterIndex = this.state.deadLetters.findIndex((entry) => entry.id === id);
+      this.state.deadLetters[deadLetterIndex] = updatedDeadLetter;
+    }
+
+    this.#refreshContentDeliveryProjection(item.actorHandle);
+    await this.#persist();
+    return {
+      deadLetter: updatedDeadLetter,
+      item: structuredClone(item),
     };
   }
 

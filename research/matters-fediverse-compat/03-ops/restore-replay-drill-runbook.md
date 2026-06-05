@@ -44,7 +44,12 @@
    - `resolve` body 至少要包含 `id` 與 `reason`，例如：
      `{"id":"<queue-item-id>","resolvedBy":"operator","reason":"known incompatible compatibility probe; do not replay"}`
    - 確認 audit、trace、evidence 都有新紀錄
-9. 收尾
+9. 驗證 retry-pending outbound resolve
+   - 找一筆 pending 且已有失敗紀錄、但尚未進 dead letter 的已知舊壞 queue item
+   - 執行 `POST /admin/outbound/resolve`
+   - 這只會把 queue item 標為 `resolved`；不會呼叫 remote inbox，也不會重送 Activity
+   - 不可用在已經 `delivered` 的 item
+10. 收尾
    - 保存本次 drill bundle 與操作紀錄
    - 清理 drill target
    - 更新 drill 結果與待修事項
@@ -65,6 +70,7 @@
 - 如果 reconciliation 出現異常 orphaned records，先封存 bundle，再回頭分析資料一致性
 - 如果 replay 失敗，確認是不是 policy 阻擋、target domain block 或 remote delivery 失敗，不要直接重覆 replay
 - 如果 dead letter 來自已知舊壞 payload，不要用 replay 製造新的對外送達嘗試；改用 `resolve` 並留下 reason
+- 如果 pending / retry-pending item 已知不應再送，使用 `/admin/outbound/resolve`，不要等它自然重試到 dead letter
 
 ## Follow-up
 

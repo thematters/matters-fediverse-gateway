@@ -68,7 +68,7 @@ These static GitHub Pages endpoints demonstrate the same read-side federation su
 - Social loop: inbound `Create`, `Reply`, `Like`, `Announce`, `Undo`; outbound `Create`, `Like`, `Announce`, `Update`, `Delete`
 - Thread reconstruction and remote `acct:` mention resolution
 - Moderation baseline: domain block, actor suspension, legal takedown, rate limits, evidence retention, manual replay
-- Persistence: SQLite plus backup, restore, reconcile, replay, and dead-letter resolve tooling
+- Persistence: SQLite plus backup, restore, reconcile, replay, and outbound/dead-letter resolve tooling
 - Observability: metrics, alerts, logs, webhook dispatch, and Slack incoming webhook support
 - Mastodon sandbox black-box interoperability check completed
 - `g0v.social` exact discovery and inbound follow delivery confirmed for `acct:matters@matters.town`
