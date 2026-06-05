@@ -195,6 +195,7 @@ function summarizeQueueObservability({ outboundQueue, deadLetters, traces }) {
       total: normalizedDeadLetters.length,
       open: normalizedDeadLetters.filter((item) => item.status === "open").length,
       replayed: normalizedDeadLetters.filter((item) => item.status === "replayed").length,
+      resolved: normalizedDeadLetters.filter((item) => item.status === "resolved").length,
       oldestRecordedAt: normalizedDeadLetters.map((item) => item.recordedAt).filter(Boolean).sort()[0] ?? null,
     },
     traces: {
@@ -547,6 +548,7 @@ export class FileStateStore {
       deadLetters: {
         open: deadLetters.filter((entry) => entry.status === "open").length,
         replayed: deadLetters.filter((entry) => entry.status === "replayed").length,
+        resolved: deadLetters.filter((entry) => entry.status === "resolved").length,
       },
       recentDeadLetters: deadLetters.slice(-5),
       recentDeliveryTraces: this.getTraces({ limit: traceLimit, eventPrefix: "delivery." }),
@@ -1077,6 +1079,43 @@ export class FileStateStore {
     return {
       deadLetter: updatedDeadLetter,
       item: structuredClone(item),
+    };
+  }
+
+  async resolveDeadLetter(id, resolveRecord) {
+    const item = this.getOutboundItem(id);
+    const deadLetter = this.getDeadLetter(id);
+    if (!deadLetter) {
+      return null;
+    }
+
+    if (item) {
+      item.status = "resolved";
+      item.resolvedAt = resolveRecord.resolvedAt;
+      item.resolvedBy = resolveRecord.resolvedBy;
+      item.resolveReason = resolveRecord.reason;
+      clearOutboundDeliveryLease(item);
+    }
+
+    const updatedDeadLetter = {
+      ...deadLetter,
+      status: "resolved",
+      resolvedAt: resolveRecord.resolvedAt,
+      resolvedBy: resolveRecord.resolvedBy,
+      resolveReason: resolveRecord.reason,
+      resolveHistory: [...(deadLetter.resolveHistory ?? []), resolveRecord],
+      item: item ? structuredClone(item) : deadLetter.item,
+    };
+    const deadLetterIndex = this.state.deadLetters.findIndex((entry) => entry.id === id);
+    this.state.deadLetters[deadLetterIndex] = updatedDeadLetter;
+
+    if (item?.actorHandle) {
+      this.#refreshContentDeliveryProjection(item.actorHandle);
+    }
+    await this.#persist();
+    return {
+      deadLetter: updatedDeadLetter,
+      item: item ? structuredClone(item) : null,
     };
   }
 

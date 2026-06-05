@@ -953,6 +953,7 @@ export class SqliteStateStore {
       deadLetters: {
         open: deadLetters.filter((entry) => entry.status === "open").length,
         replayed: deadLetters.filter((entry) => entry.status === "replayed").length,
+        resolved: deadLetters.filter((entry) => entry.status === "resolved").length,
       },
       recentDeadLetters: deadLetters.slice(-5),
       recentDeliveryTraces: this.getTraces({ limit: traceLimit, eventPrefix: "delivery." }),
@@ -1501,6 +1502,49 @@ export class SqliteStateStore {
     return {
       deadLetter: updatedDeadLetter,
       item: structuredClone(item),
+    };
+  }
+
+  async resolveDeadLetter(id, resolveRecord) {
+    const item = this.getOutboundItem(id);
+    const deadLetter = this.getDeadLetter(id);
+    if (!deadLetter) {
+      return null;
+    }
+
+    if (item) {
+      item.status = "resolved";
+      item.resolvedAt = resolveRecord.resolvedAt;
+      item.resolvedBy = resolveRecord.resolvedBy;
+      item.resolveReason = resolveRecord.reason;
+      clearOutboundDeliveryLease(item);
+      this.db
+        .prepare("UPDATE outbound_queue SET status = ?, item_json = ? WHERE id = ?")
+        .run(item.status, JSON.stringify(item), id);
+    }
+
+    const updatedDeadLetter = {
+      ...deadLetter,
+      status: "resolved",
+      resolvedAt: resolveRecord.resolvedAt,
+      resolvedBy: resolveRecord.resolvedBy,
+      resolveReason: resolveRecord.reason,
+      resolveHistory: [...(deadLetter.resolveHistory ?? []), resolveRecord],
+      item: item ? structuredClone(item) : deadLetter.item,
+    };
+    this.db
+      .prepare("INSERT OR REPLACE INTO dead_letters (id, record_json) VALUES (?, ?)")
+      .run(id, JSON.stringify(updatedDeadLetter));
+
+    if (item?.actorHandle) {
+      this.refreshContentDeliveryProjection(item.actorHandle, {
+        recentReplays: this.getContentDeliveryProjection(item.actorHandle)?.review?.recentReplays ?? [],
+      });
+    }
+
+    return {
+      deadLetter: updatedDeadLetter,
+      item: item ? structuredClone(item) : null,
     };
   }
 

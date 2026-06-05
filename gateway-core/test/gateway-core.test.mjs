@@ -5149,6 +5149,118 @@ test("admin queue and content delivery surfaces expose dead letters and recent r
   assert.equal(replayedQueuePayload.items.length, 0);
 });
 
+test("admin dead-letter resolve closes known-bad delivery without replaying", async () => {
+  const harness = await createHarness();
+  const { config, store, remoteKeys } = harness;
+  const replayDeliveries = [];
+  const app = createGatewayApp({
+    config: {
+      ...config,
+      delivery: {
+        ...config.delivery,
+        maxAttempts: 1,
+      },
+    },
+    store,
+    deliveryClient: {
+      async deliver({ item }) {
+        if (item.targetActorId === "https://reply.example/users/mika") {
+          const error = new Error("known incompatible payload");
+          error.status = 500;
+          throw error;
+        }
+
+        replayDeliveries.push(item);
+        return { status: 202 };
+      },
+    },
+  });
+
+  const rootActivity = {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    id: "https://remote.example/activities/resolve-root-1",
+    type: "Create",
+    actor: "https://remote.example/users/zoe",
+    object: {
+      id: "https://remote.example/notes/resolve-root-1",
+      type: "Note",
+      content: "Resolve root body",
+      published: "2026-03-21T00:00:00.000Z",
+      to: ["https://www.w3.org/ns/activitystreams#Public"],
+    },
+  };
+  const response = await app.handle(
+    signedRequest({
+      method: "POST",
+      url: "https://matters.example/users/alice/inbox",
+      body: JSON.stringify(rootActivity),
+      keyId: "https://remote.example/users/zoe#main-key",
+      privateKeyPem: remoteKeys.privateKeyPem,
+    }),
+  );
+  assert.equal(response.status, 202);
+
+  const replyResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: "https://matters.example/notes/resolve-reply-1",
+          type: "Note",
+          content: "Resolve reply body",
+          inReplyTo: "https://remote.example/notes/resolve-root-1",
+        },
+        includeFollowers: false,
+        targetActorIds: ["https://remote.example/users/zoe", "https://reply.example/users/mika"],
+      }),
+    }),
+  );
+  assert.equal(replyResponse.status, 202);
+
+  const deadLetterResponse = await app.handle(new Request("https://matters.example/admin/dead-letters"));
+  assert.equal(deadLetterResponse.status, 200);
+  const deadLetterPayload = await deadLetterResponse.json();
+  assert.equal(deadLetterPayload.items.length, 1);
+
+  const resolveResponse = await app.handle(
+    new Request("https://matters.example/admin/dead-letters/resolve", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        id: deadLetterPayload.items[0].id,
+        resolvedBy: "tester",
+        reason: "known bad compatibility probe; do not replay",
+      }),
+    }),
+  );
+  assert.equal(resolveResponse.status, 200);
+  const resolvePayload = await resolveResponse.json();
+  assert.equal(resolvePayload.status, "resolved");
+  assert.equal(resolvePayload.delivery.status, "resolved");
+  assert.equal(replayDeliveries.length, 1);
+
+  const refreshedQueueResponse = await app.handle(new Request("https://matters.example/admin/queues/outbound?traceLimit=5"));
+  assert.equal(refreshedQueueResponse.status, 200);
+  const refreshedQueuePayload = await refreshedQueueResponse.json();
+  assert.equal(refreshedQueuePayload.queue.summary.deadLetter, 0);
+  assert.equal(refreshedQueuePayload.queue.deadLetters.open, 0);
+  assert.equal(refreshedQueuePayload.queue.deadLetters.resolved, 1);
+  assert.equal(
+    refreshedQueuePayload.queue.recentDeliveryTraces.some((entry) => entry.event === "delivery.dead-letter-resolved"),
+    true,
+  );
+
+  const auditResponse = await app.handle(new Request("https://matters.example/admin/audit-log?limit=5"));
+  assert.equal(auditResponse.status, 200);
+  const auditPayload = await auditResponse.json();
+  assert.equal(auditPayload.items.some((entry) => entry.event === "dead-letter.resolved"), true);
+});
+
 test("admin review queue lists content delivery issues and replayable items", async () => {
   const harness = await createHarness();
   const { config, store, remoteKeys } = harness;
