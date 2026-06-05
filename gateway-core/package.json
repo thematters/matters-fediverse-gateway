@@ -27,6 +27,7 @@
     "check:mastodon-readback": "node scripts/run-mastodon-readback.mjs",
     "check:threads-discovery": "node scripts/run-threads-discovery-diagnostics.mjs",
     "check:threads-note-visibility": "node scripts/run-threads-note-visibility-probe.mjs",
+    "check:threads-receiver-readback": "node scripts/run-threads-receiver-visible-readback.mjs",
     "check:production-record-only": "node scripts/check-production-record-only-preflight.mjs",
     "run:inbound-reconciliation": "node scripts/run-inbound-reconciliation-job.mjs",
     "check:record-only-trigger": "node scripts/check-record-only-trigger-report.mjs",

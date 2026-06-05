@@ -85,6 +85,23 @@ Expected result:
 If this fails, fix the gateway / Worker / Cloudflare path before using Threads
 UI as evidence.
 
+Run the gateway-side receiver readback next:
+
+```bash
+cd gateway-core
+npm run check:threads-receiver-readback
+```
+
+Expected result for the current pilot:
+
+- `ok=true`
+- `Threads-origin Like return` appears under `passed`
+- `Threads-origin Reply return` remains under `open`
+- `Threads single-post permalink / copyable URL` remains under `open`
+
+This confirms persisted gateway evidence for delivery and returned
+interactions. It does not inspect the Threads UI or use Threads APIs.
+
 ## UI Checks
 
 Use a logged-in Threads account with fediverse sharing enabled.

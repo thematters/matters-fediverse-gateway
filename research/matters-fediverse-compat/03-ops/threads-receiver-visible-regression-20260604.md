@@ -5,6 +5,7 @@ Operator: mashbean
 Threads account: `mashbean`
 Gateway commit: `12d259a` or later
 Discovery regression: pass
+Gateway readback: pass
 
 ## Profile
 
@@ -49,6 +50,8 @@ Discovery regression: pass
 
 - Like return: passed for the visible Note probe and the latest companion Note.
 - Reply return: not passed; Threads UI does not currently allow the action.
+- Receiver readback command:
+  `cd gateway-core && npm run check:threads-receiver-readback`
 - Notification/content evidence:
   `https://threads.net/ap/users/17841401579146452/#likes/869695086184604`
   was stored by `gateway-core` and appears in local notification/content
