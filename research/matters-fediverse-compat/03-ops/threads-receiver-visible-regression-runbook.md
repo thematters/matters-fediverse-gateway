@@ -35,8 +35,9 @@ Passed receiver-visible:
 
 Open receiver-visible checks:
 
-- single-post permalink or copyable URL;
-- reply action from Threads to the remote post;
+- whether Threads later exposes a single-post permalink or copyable URL for
+  remote posts;
+- whether Threads later enables reply action from Threads to the remote post;
 
 ## External Product Context
 
@@ -134,6 +135,11 @@ Check single-post URL:
   and share controls.
 - Record whether Threads exposes a copyable URL.
 - If only the profile page is available, mark permalink as unavailable.
+- If the overflow menu only exposes `查看原始貼文`, record whether it points to
+  the Matters canonical article URL. That is useful product evidence, but it is
+  not a Threads single-post permalink.
+- If Share says `You can't share posts from other servers yet.`, record it as a
+  Threads receiver-side limitation.
 - Do not treat unauthenticated HTTP fetches as sufficient evidence here:
   `https://www.threads.com/fediverse_profile/@mashbeanmatters@matters.town`
   redirects anonymous requests to login, so permalink availability must be
@@ -144,6 +150,9 @@ Check reply:
 - Open the reply action on the visible remote post.
 - Do not send a reply unless explicitly approved for that run.
 - Record whether Threads says remote replies are unavailable or beta-limited.
+- If Threads says `You can't reply to posts from other servers yet.`, keep the
+  gateway gate non-blocking and treat reply return as unavailable until Threads
+  changes the receiver UI.
 - Reply availability must also be checked in the logged-in Threads UI. The
   public HTML path does not expose enough state to prove whether a remote reply
   can be submitted.

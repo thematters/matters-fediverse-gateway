@@ -3,7 +3,7 @@
 Date: 2026-06-04
 Operator: mashbean
 Threads account: `mashbean`
-Gateway commit: `12d259a` or later
+Gateway commit: `285650d` or later
 Discovery regression: pass
 Gateway readback: pass
 
@@ -11,10 +11,11 @@ Gateway readback: pass
 
 - URL:
   `https://www.threads.com/fediverse_profile/@mashbeanmatters@matters.town`
-- Opens: yes, confirmed in earlier 2026-06-04 UI readback.
-- Follow state: following, confirmed in earlier 2026-06-04 UI readback.
-- Beta notice: Threads indicated users can like posts from other servers but
-  cannot reply yet in the earlier UI readback.
+- Opens: yes, confirmed in logged-in Safari UI readback on 2026-06-04.
+- Follow state: following, confirmed in logged-in Safari UI readback on
+  2026-06-04.
+- Beta notice: Threads indicates users can like posts from other servers but
+  cannot reply yet, and that some posts may not display.
 
 ## Search
 
@@ -28,23 +29,31 @@ Gateway readback: pass
 
 ## Feed
 
-- Fediverse feed visible: passed in earlier 2026-06-04 UI readback.
+- Fediverse feed visible: passed in logged-in Safari UI readback on
+  2026-06-04.
 - Latest companion Note visible / interactable: passed by Threads-origin Like
   return on 2026-06-04T16:53:24.395Z.
-- Other remote posts visible: passed in earlier 2026-06-04 UI readback.
+- Other remote posts visible: passed in logged-in Safari UI readback on
+  2026-06-04.
 
 ## Permalink
 
-- Copyable single-post URL: still open.
-- Observed controls: earlier UI readback did not expose a copyable single-post
-  permalink for the remote post.
+- Copyable Threads single-post URL: unavailable in current Threads UI.
+- Timestamp click: did not navigate away from the remote profile URL.
+- Overflow menu: exposed `查看原始貼文`, `封鎖`, and `檢舉`; it did not
+  expose a Threads permalink or copy action.
+- `查看原始貼文`: opens an external-link confirmation for
+  `https://matters.town/a/3tmz0u0a42qx`, so Threads points users back to the
+  Matters canonical article URL rather than a Threads-hosted remote-post URL.
+- Share button: blocked by Threads with
+  `You can't share posts from other servers yet.`
 
 ## Reply
 
-- Reply button visible: visible on prior profile/feed readback.
-- Reply allowed: still open / blocked by Threads UI notice.
-- Notice text: earlier UI readback showed a beta notice that users can like
-  posts from other servers but cannot reply yet.
+- Reply button visible: yes, visible on the latest companion Note.
+- Reply allowed: no, blocked by Threads UI.
+- Notice text: clicking Reply showed
+  `You can't reply to posts from other servers yet.`
 
 ## Gateway Return
 
@@ -63,7 +72,8 @@ Gateway readback: pass
 ## Decision
 
 - Gateway blocker: no.
-- Receiver-side limitation: single-post permalink and remote reply remain
-  receiver-visible limitations or open checks.
+- Receiver-side limitation: single-post Threads permalink, remote sharing, and
+  remote reply are current Threads UI limitations, not gateway blockers.
 - Follow-up: continue pilot-scoped Threads checks with the runbook after new
-  bounded sends; do not treat Threads search as a blocker.
+  bounded sends; do not treat Threads search, reply, or permalink limitations
+  as gateway blockers unless a public gateway regression also appears.

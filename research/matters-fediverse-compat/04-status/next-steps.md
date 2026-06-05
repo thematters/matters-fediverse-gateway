@@ -32,9 +32,11 @@ Updated: 2026-05-22
   `matters.town` surface and returns `ok: true` for default,
   `facebookexternalua`, `facebookexternalhit`, and `meta-externalagent` probes
   against WebFinger, `/ap/users/<handle>`, outbox, and NodeInfo.
-- Logged-in Threads UI search can find the canonical pilot profile, but Threads
-  follow still does not complete. This is tracked as a Threads Follow
-  compatibility item, not as a launch blocker or backend regression.
+- Logged-in Threads UI search can find the canonical pilot profile, Threads
+  follow completes, remote profile/feed display is visible, and Threads-origin
+  Likes return to gateway-core. Threads still blocks remote Reply and Share,
+  and does not expose a Threads single-post permalink for remote posts; these
+  are tracked as receiver-side beta limitations, not as gateway blockers.
 - `POST /jobs/inbound-reconciliation` is implemented for scheduled
   reconciliation of known public remote Activity URLs. It reuses the manual
   `POST /admin/inbound/reconcile-activity` policy checks and writes trace/audit
@@ -146,8 +148,8 @@ Updated: 2026-05-22
    The latest companion Note also received a Threads-origin Like return.
    Use `03-ops/threads-receiver-visible-regression-runbook.md` after bounded
    proof sends or Cloudflare changes. Current public endpoint and Meta-like UA
-   discovery checks pass; remaining open gates are single-post permalink
-   exposure and remote reply availability.
+   discovery checks pass; Threads permalink exposure, remote Share, and remote
+   Reply are receiver-side beta limitations rather than gateway blockers.
 3. Keep production audit queries on the redacted path by default
    (`include_decision_report=false`), using workflow run
    [26269962135](https://github.com/thematters/matters-server/actions/runs/26269962135)
