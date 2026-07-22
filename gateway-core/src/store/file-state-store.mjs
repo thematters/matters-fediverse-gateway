@@ -10,6 +10,8 @@ import {
 function createInitialState() {
   return {
     actors: {},
+    actorProfiles: {},
+    localOutboundActivities: [],
     remoteActors: {},
     mentionResolutions: {},
     processedActivities: {},
@@ -242,6 +244,36 @@ export class FileStateStore {
     this.state.actors[handle].localNotifications ??= {};
   }
 
+  getActorProfiles() {
+    return Object.values(this.state.actorProfiles);
+  }
+
+  getActorProfile(handle) {
+    return this.state.actorProfiles[handle] ?? null;
+  }
+
+  async upsertActorProfile(profile) {
+    this.ensureActor(profile.handle);
+    this.state.actorProfiles[profile.handle] = structuredClone(profile);
+    await this.#persist();
+    return structuredClone(profile);
+  }
+
+  getLocalOutboundActivities({ actorHandle = null } = {}) {
+    return this.state.localOutboundActivities.filter((item) => !actorHandle || item.actorHandle === actorHandle);
+  }
+
+  async recordLocalOutboundActivity(item) {
+    const existingIndex = this.state.localOutboundActivities.findIndex((entry) => entry.id === item.id);
+    if (existingIndex >= 0) {
+      this.state.localOutboundActivities[existingIndex] = structuredClone(item);
+    } else {
+      this.state.localOutboundActivities.push(structuredClone(item));
+    }
+    await this.#persist();
+    return structuredClone(item);
+  }
+
   getRemoteActor(actorId) {
     return this.state.remoteActors[actorId] ?? null;
   }
@@ -310,6 +342,10 @@ export class FileStateStore {
 
   hasProcessed(activityId) {
     return Boolean(activityId && this.state.processedActivities[activityId]);
+  }
+
+  getProcessed(activityId) {
+    return activityId ? this.state.processedActivities[activityId] ?? null : null;
   }
 
   async recordProcessed(activityId, result) {

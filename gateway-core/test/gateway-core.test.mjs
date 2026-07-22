@@ -633,6 +633,9 @@ test("healthz exposes gateway-core origin contract", async () => {
     inboxPersistence: true,
     deliveryQueue: true,
     httpSignatureVerification: true,
+    operatorAuthentication: false,
+    edgeAuthentication: false,
+    dynamicActors: false,
   });
 });
 
@@ -1265,7 +1268,7 @@ test("sqlite state store exposes runtime metadata and queue snapshot", async () 
   const runtime = store.getRuntimeMetadata();
   const queue = store.getQueueSnapshot({ traceLimit: 5 });
   assert.equal(runtime.driver, "sqlite");
-  assert.equal(runtime.schemaVersion, 6);
+  assert.equal(runtime.schemaVersion, 7);
   assert.equal(queue.summary.total, 3);
   assert.equal(queue.summary.pending, 1);
   assert.equal(queue.summary.processing, 0);
@@ -2148,7 +2151,7 @@ test("admin runtime storage endpoint exposes sqlite metadata", async () => {
   assert.equal(response.status, 200);
   const payload = await response.json();
   assert.equal(payload.runtime.driver, "sqlite");
-  assert.equal(payload.runtime.schemaVersion, 6);
+  assert.equal(payload.runtime.schemaVersion, 7);
   assert.equal(payload.runtime.journalMode, "wal");
   assert.equal(payload.alerts.items.some((entry) => entry.code === "storage.backup.missing"), true);
 
@@ -7297,7 +7300,7 @@ test("backup script creates sqlite backup and manifest", async () => {
 
   assert.equal(backupDb.length > 0, true);
   assert.equal(manifest.sourceFile, sqliteFile);
-  assert.equal(manifest.schemaVersion, 6);
+  assert.equal(manifest.schemaVersion, 7);
 });
 
 test("restore script restores sqlite backup and stamps runtime metadata", async () => {
@@ -8804,4 +8807,98 @@ test("rollout artifact check script validates required env keys and paths", asyn
   assert.deepEqual(payload.missingKeys, []);
   assert.deepEqual(payload.missingPaths, []);
   assert.equal(payload.checkedPaths.length, 3);
+});
+
+test("operator routes require the configured bearer token", async () => {
+  const { app, config } = await createHarness();
+  config.auth = {
+    edgeBearerToken: "edge-secret",
+    operatorBearerToken: "operator-secret",
+  };
+
+  const rejected = await app.handle(new Request("https://matters.example/admin/dashboard"));
+  assert.equal(rejected.status, 401);
+
+  const accepted = await app.handle(
+    new Request("https://matters.example/admin/dashboard", {
+      headers: { authorization: "Bearer operator-secret" },
+    }),
+  );
+  assert.equal(accepted.status, 200);
+});
+
+test("authenticated actor registration persists dynamic authors", async () => {
+  const { app, config, store } = await createHarness();
+  config.auth = { operatorBearerToken: "operator-secret" };
+  config.dynamicActors = {
+    enabled: true,
+    profileHostAllowlist: ["matters.town"],
+    sharedSigningKey: {
+      publicKeyPem: config.actors.alice.publicKeyPem,
+      privateKeyPem: config.actors.alice.privateKeyPem,
+      previousPublicKeyPem: null,
+    },
+  };
+
+  const response = await app.handle(
+    new Request("https://matters.example/admin/actors", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer operator-secret",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        handle: "newauthor",
+        displayName: "New Author",
+        summary: "Public Matters author",
+        profileUrl: "https://matters.town/@newauthor",
+      }),
+    }),
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 201);
+  assert.equal(body.actor.id, "https://matters.example/users/newauthor");
+  assert.equal(store.getActorProfile("newauthor").displayName, "New Author");
+
+  const actorResponse = await app.handle(new Request("https://matters.example/users/newauthor"));
+  assert.equal(actorResponse.status, 200);
+});
+
+test("outbox create is idempotent and records articles without followers", async () => {
+  const { app, store } = await createHarness();
+  const requestBody = JSON.stringify({
+    idempotencyKey: "event-100",
+    object: {
+      id: "https://matters.town/a/idempotent-article",
+      type: "Article",
+      name: "Idempotent article",
+      content: "<p>Public article</p>",
+      url: "https://matters.town/a/idempotent-article",
+    },
+  });
+
+  const first = await app.handle(
+    new Request("https://matters.example/users/bob/outbox/create", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: requestBody,
+    }),
+  );
+  const firstBody = await first.json();
+  assert.equal(first.status, 202);
+  assert.deepEqual(firstBody.recipients, []);
+
+  const second = await app.handle(
+    new Request("https://matters.example/users/bob/outbox/create", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: requestBody,
+    }),
+  );
+  const secondBody = await second.json();
+  assert.equal(second.status, 200);
+  assert.equal(secondBody.status, "duplicate");
+  assert.equal(secondBody.activityId, firstBody.activityId);
+  assert.equal(store.getLocalOutboundActivities({ actorHandle: "bob" }).length, 1);
 });

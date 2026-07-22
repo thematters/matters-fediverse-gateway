@@ -1,6 +1,7 @@
 name = "matters-fediverse-gateway-demo"
 main = "src/index.js"
-compatibility_date = "2026-04-30"
+compatibility_date = "2026-07-22"
+compatibility_flags = ["nodejs_compat"]
 account_id = "757aaed316df635d8deb63859258808c"
 workers_dev = true
 
@@ -36,4 +37,15 @@ zone_name = "matters.town"
 MATTERS_PROFILE_URL = "https://matters.town"
 PROJECT_DOCS_URL = "https://thematters.github.io/matters-fediverse-gateway/"
 CANONICAL_PILOT_HANDLES = "mashbeanmatters"
+GENERAL_AUTHORS_ENABLED = "true"
 GATEWAY_CORE_ORIGIN = "https://gateway-core-origin.matters.town"
+
+[observability]
+enabled = true
+
+[observability.logs]
+head_sampling_rate = 1
+
+[observability.traces]
+enabled = true
+head_sampling_rate = 0.01

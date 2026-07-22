@@ -175,6 +175,18 @@ cat >/etc/matters-gateway/staging.instance.json <<'JSON'
       "privateKeyPemFile": "./secrets/mashbeanmatters-private-key.pem"
     }
   },
+  "auth": {
+    "edgeBearerTokenFile": "./secrets/edge-origin.token",
+    "operatorBearerTokenFile": "./secrets/operator.token"
+  },
+  "dynamicActors": {
+    "enabled": true,
+    "profileHostAllowlist": ["matters.town"],
+    "sharedSigningKey": {
+      "publicKeyPemFile": "./secrets/mashbeanmatters-public-key.pem",
+      "privateKeyPemFile": "./secrets/mashbeanmatters-private-key.pem"
+    }
+  },
   "remoteActors": {},
   "remoteDiscovery": {
     "cacheTtlMs": 3600000
@@ -260,10 +272,13 @@ cat >/etc/matters-gateway/README-next-steps.txt <<'TXT'
 Next steps before starting matters-gateway-core:
 1. Provision /etc/matters-gateway/secrets/mashbeanmatters-public-key.pem.
 2. Provision /etc/matters-gateway/secrets/mashbeanmatters-private-key.pem.
-3. chown root:matters-gateway /etc/matters-gateway/secrets/mashbeanmatters-*.pem
-4. chmod 640 /etc/matters-gateway/secrets/mashbeanmatters-*.pem
-5. systemctl enable --now matters-gateway-core.service
-6. curl -s http://127.0.0.1:8787/healthz
+3. Provision independent random values in /etc/matters-gateway/secrets/edge-origin.token and operator.token.
+4. chown root:matters-gateway /etc/matters-gateway/secrets/*
+5. chmod 640 /etc/matters-gateway/secrets/*
+6. Store edge-origin.token as the Cloudflare Worker GATEWAY_ORIGIN_BEARER_TOKEN secret.
+7. Store operator.token in the Lambda and matters-server production secret stores.
+8. systemctl enable --now matters-gateway-core.service
+9. curl -s http://127.0.0.1:8787/healthz
 TXT
 EOF
 

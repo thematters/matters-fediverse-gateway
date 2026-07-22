@@ -1,0 +1,40 @@
+name: Test gateway
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  gateway-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: gateway-core/package-lock.json
+      - run: npm ci
+        working-directory: gateway-core
+      - run: npm test
+        working-directory: gateway-core
+
+  cloudflare-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: cloudflare-worker/package-lock.json
+      - run: npm ci
+        working-directory: cloudflare-worker
+      - run: npm test
+        working-directory: cloudflare-worker
+      - run: npm run dry-run
+        working-directory: cloudflare-worker

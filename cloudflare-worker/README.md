@@ -35,18 +35,18 @@ https://matters.town/.well-known/nodeinfo
 https://matters.town/ap/instance-info/2.1
 ```
 
-Canonical pilot handles are closed by default. The current pilot exposes
-`acct:mashbeanmatters@matters.town` through an explicit allowlist:
+The current pilot remains available through the explicit allowlist. Production
+also enables registered Matters authors through the gateway-core actor registry:
 
 ```toml
 [vars]
 CANONICAL_PILOT_HANDLES = "mashbeanmatters"
+GENERAL_AUTHORS_ENABLED = "true"
 ```
 
-Do not expand this variable beyond the approved pilot handles until product,
-legal/privacy, rollback, and launch gates are closed. The current approved
-production-preparation mode is `mashbean` only, record-only / observation, with
-full outbound delivery still disabled.
+`GENERAL_AUTHORS_ENABLED` only changes edge routing. An address resolves after
+the authenticated publishing pipeline has registered that author in
+`gateway-core`; unknown handles still return `404` from the origin.
 
 The isolated Worker testbed remains:
 
@@ -167,6 +167,13 @@ Set `GATEWAY_CORE_ORIGIN` to forward canonical pilot actor reads and dynamic inb
 ```toml
 [vars]
 GATEWAY_CORE_ORIGIN = "https://gateway-core.example"
+```
+
+Store the matching origin credential as a Worker secret. The Worker replaces
+any inbound `Authorization` header before forwarding to the origin:
+
+```bash
+npx wrangler secret put GATEWAY_ORIGIN_BEARER_TOKEN
 ```
 
 When `GATEWAY_CORE_ORIGIN` is unset, the current demo accepts inbox POST requests only as an edge demo. When it is set, configured canonical pilot handles such as `mashbeanmatters` proxy actor, outbox, followers, and following reads to `gateway-core`, and inbox POST requests are also forwarded with the `/ap` prefix stripped for the origin. Production federation still requires `gateway-core` for signature verification, followers state, delivery queues, moderation, and persistence.
