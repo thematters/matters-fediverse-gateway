@@ -604,7 +604,8 @@ async function seedContentDeliveryReviewFixture(store, actorHandle = "alice") {
 }
 
 test("webfinger resolves a single canonical actor", async () => {
-  const { app } = await createHarness();
+  const { app, config } = await createHarness();
+  config.actors.alice.aliases.push(config.actors.alice.profileUrl);
   const response = await app.handle(
     new Request("https://matters.example/.well-known/webfinger?resource=acct:alice@matters.example"),
   );
@@ -612,6 +613,7 @@ test("webfinger resolves a single canonical actor", async () => {
   assert.equal(response.status, 200);
   const payload = await response.json();
   assert.equal(payload.subject, "acct:alice@matters.example");
+  assert.equal(new Set(payload.aliases).size, payload.aliases.length);
   assert.equal(payload.links[0].href, "https://matters.example/users/alice");
 });
 
@@ -668,7 +670,9 @@ test("actor document exposes profile discovery hints", async () => {
   const payload = await response.json();
   assert.equal(payload.discoverable, true);
   assert.equal(payload.indexable, true);
-  assert.deepEqual(payload["@context"][2], {
+  assert.equal(payload.webfinger, "alice@matters.example");
+  assert.equal(payload["@context"][2], "https://purl.archive.org/socialweb/webfinger");
+  assert.deepEqual(payload["@context"][3], {
     toot: "http://joinmastodon.org/ns#",
     discoverable: "toot:discoverable",
     indexable: "toot:indexable",
@@ -3826,6 +3830,62 @@ test("outbox Create normalizes public Article before fanout", async () => {
   assert.equal(outbox.orderedItems[0].object.id, "https://matters.example/articles/normalized-create");
 });
 
+test("inbound engagement keeps an authored Article visible in the public outbox", async () => {
+  const { app, remoteKeys } = await createHarness();
+  const objectId = "https://matters.example/articles/engaged-create";
+  const createResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: objectId,
+          type: "Article",
+          name: "Engaged Create",
+          url: "https://matters.example/a/engaged-create",
+          content: "<p>Engaged body</p>",
+        },
+      }),
+    }),
+  );
+  assert.equal(createResponse.status, 202);
+
+  const like = {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    id: "https://remote.example/activities/like-engaged-create",
+    type: "Like",
+    actor: "https://remote.example/users/zoe",
+    object: objectId,
+  };
+  const likeResponse = await app.handle(
+    signedRequest({
+      method: "POST",
+      url: "https://matters.example/users/alice/inbox",
+      body: JSON.stringify(like),
+      keyId: "https://remote.example/users/zoe#main-key",
+      privateKeyPem: remoteKeys.privateKeyPem,
+    }),
+  );
+  assert.equal(likeResponse.status, 202);
+
+  const outboxResponse = await app.handle(new Request("https://matters.example/users/alice/outbox"));
+  const outbox = await outboxResponse.json();
+  assert.equal(outbox.totalItems, 1);
+  assert.equal(outbox.orderedItems[0].object.id, objectId);
+
+  const localContentResponse = await app.handle(
+    new Request(
+      `https://matters.example/admin/local-content?actorHandle=alice&contentId=${encodeURIComponent(objectId)}`,
+    ),
+  );
+  const localContent = await localContentResponse.json();
+  assert.equal(localContent.item.rootMapping, "create");
+  assert.equal(localContent.item.status, "resolved");
+  assert.equal(localContent.item.metrics.likes, 1);
+});
+
 test("outbox Create canonicalizes same-domain Article ids behind public ActivityPub prefix", async () => {
   const { app, config, store, deliveries } = await createHarness();
   config.instance.activityBaseUrl = "https://matters.example/ap";
@@ -3913,7 +3973,7 @@ test("outbox Create canonicalizes same-domain Article ids behind public Activity
   ]);
 });
 
-test("outbox Create sends configured Note companion only to allowlisted receivers", async () => {
+test("outbox Create supports explicit and wildcard actor allowlists for receiver-scoped Note companions", async () => {
   const { app, config, store, deliveries } = await createHarness();
   config.instance.activityBaseUrl = "https://matters.example/ap";
   config.compatibility = {
@@ -3980,6 +4040,31 @@ test("outbox Create sends configured Note companion only to allowlisted receiver
   assert.equal(typeof deliveries[2].activity.object.published, "string");
   assert.deepEqual(deliveries[2].activity.cc, ["https://matters.example/users/alice/followers"]);
   assert.deepEqual(deliveries[2].activity.object.cc, ["https://matters.example/users/alice/followers"]);
+
+  config.compatibility.noteCompanion.actorAllowlist = ["*"];
+  deliveries.length = 0;
+  const wildcardResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: "https://matters.example/1228009-wildcard-article/",
+          type: "Article",
+          name: "Threads Wildcard Preview",
+          url: "https://matters.example/a/wildcard-preview",
+          content: "<p>Wildcard body</p>",
+        },
+      }),
+    }),
+  );
+  assert.equal(wildcardResponse.status, 202);
+  const wildcardPayload = await wildcardResponse.json();
+  assert.deepEqual(wildcardPayload.noteCompanion.recipients, ["https://threads.net/ap/users/123/"]);
+  assert.equal(deliveries.length, 3);
+  assert.equal(deliveries[2].activity.object.type, "Note");
 });
 
 test("outbox Create reply fans out to followers, explicit targets, and mention recipients", async () => {
