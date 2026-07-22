@@ -258,6 +258,51 @@ test("canonical pilot actor reads proxy to gateway-core when origin is configure
   }
 });
 
+test("general author discovery proxies to gateway-core and authenticates the origin", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init });
+    return new Response(
+      JSON.stringify({
+        subject: "acct:newauthor@matters.town",
+        links: [
+          {
+            rel: "self",
+            type: "application/activity+json",
+            href: "https://matters.town/ap/users/newauthor",
+          },
+        ],
+      }),
+      { status: 200, headers: { "content-type": "application/jrd+json" } },
+    );
+  };
+
+  try {
+    const response = await fetchWorker(
+      "/.well-known/webfinger?resource=acct:newauthor@matters.town",
+      {
+        ...canonicalEnv,
+        GENERAL_AUTHORS_ENABLED: "true",
+        GATEWAY_CORE_ORIGIN: "https://gateway-origin.example.test",
+        GATEWAY_ORIGIN_BEARER_TOKEN: "edge-origin-secret",
+      },
+    );
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.subject, "acct:newauthor@matters.town");
+    assert.equal(
+      calls[0].url,
+      "https://gateway-origin.example.test/.well-known/webfinger?resource=acct:newauthor@matters.town",
+    );
+    assert.equal(calls[0].init.headers.get("authorization"), "Bearer edge-origin-secret");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("canonical activity reads proxy to gateway-core when origin is configured", async () => {
   const originalFetch = globalThis.fetch;
   const calls = [];

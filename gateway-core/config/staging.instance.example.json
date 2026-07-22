@@ -20,6 +20,18 @@
       "privateKeyPemFile": "./staging.secrets.example/staging-private-key.pem"
     }
   },
+  "auth": {
+    "edgeBearerTokenFile": "./staging.secrets.example/edge-origin.token",
+    "operatorBearerTokenFile": "./staging.secrets.example/operator.token"
+  },
+  "dynamicActors": {
+    "enabled": true,
+    "profileHostAllowlist": ["matters.town", "matters.icu"],
+    "sharedSigningKey": {
+      "publicKeyPemFile": "./staging.secrets.example/staging-public-key.pem",
+      "privateKeyPemFile": "./staging.secrets.example/staging-private-key.pem"
+    }
+  },
   "remoteActors": {},
   "remoteDiscovery": {
     "cacheTtlMs": 3600000

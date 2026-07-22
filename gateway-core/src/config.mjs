@@ -270,6 +270,43 @@ export async function loadGatewayConfig(configPath) {
     )
   ).trim();
 
+  const edgeBearerToken = (
+    await readMaybeFile(
+      configDir,
+      raw.auth?.edgeBearerToken,
+      raw.auth?.edgeBearerTokenFile,
+    )
+  ).trim();
+  const operatorBearerToken = (
+    await readMaybeFile(
+      configDir,
+      raw.auth?.operatorBearerToken,
+      raw.auth?.operatorBearerTokenFile,
+    )
+  ).trim();
+  const dynamicActorPublicKeyPem = await readOptionalKeyFile(
+    configDir,
+    raw.dynamicActors?.sharedSigningKey?.publicKeyPem,
+    raw.dynamicActors?.sharedSigningKey?.publicKeyPemFile,
+  );
+  const dynamicActorPrivateKeyPem = await readOptionalKeyFile(
+    configDir,
+    raw.dynamicActors?.sharedSigningKey?.privateKeyPem,
+    raw.dynamicActors?.sharedSigningKey?.privateKeyPemFile,
+  );
+  const dynamicActorPreviousPublicKeyPem = await readOptionalKeyFile(
+    configDir,
+    raw.dynamicActors?.sharedSigningKey?.previousPublicKeyPem,
+    raw.dynamicActors?.sharedSigningKey?.previousPublicKeyPemFile,
+  );
+
+  if (raw.dynamicActors?.enabled === true && (!dynamicActorPublicKeyPem || !dynamicActorPrivateKeyPem)) {
+    throw new Error("dynamicActors shared signing key is required when dynamic actors are enabled");
+  }
+  if (process.env.NODE_ENV === "production" && (!edgeBearerToken || !operatorBearerToken)) {
+    throw new Error("auth edge and operator bearer tokens are required in production");
+  }
+
   return {
     instance: {
       domain,
@@ -283,6 +320,19 @@ export async function loadGatewayConfig(configPath) {
       openRegistrations: raw.instance.openRegistrations === true,
     },
     actors,
+    auth: {
+      edgeBearerToken: edgeBearerToken || null,
+      operatorBearerToken: operatorBearerToken || null,
+    },
+    dynamicActors: {
+      enabled: raw.dynamicActors?.enabled === true,
+      profileHostAllowlist: normalizeStringList(raw.dynamicActors?.profileHostAllowlist).map((value) => value.toLowerCase()),
+      sharedSigningKey: {
+        publicKeyPem: dynamicActorPublicKeyPem,
+        privateKeyPem: dynamicActorPrivateKeyPem,
+        previousPublicKeyPem: dynamicActorPreviousPublicKeyPem,
+      },
+    },
     remoteActors: raw.remoteActors ?? {},
     remoteDiscovery: {
       cacheTtlMs: raw.remoteDiscovery?.cacheTtlMs ?? 60 * 60 * 1000,

@@ -68,6 +68,10 @@ function configuredPilotHandles(env) {
     .filter((handle) => HANDLE_PATTERN.test(handle));
 }
 
+function generalAuthorsEnabled(env) {
+  return String(env.GENERAL_AUTHORS_ENABLED || "").toLowerCase() === "true";
+}
+
 function gatewayCoreOrigin(env) {
   return env.GATEWAY_CORE_ORIGIN ? trimTrailingSlash(env.GATEWAY_CORE_ORIGIN) : null;
 }
@@ -107,6 +111,9 @@ async function fetchOriginHealth(env) {
     const response = await fetch(new URL("/healthz", origin), {
       headers: {
         accept: "application/json",
+        ...(env.GATEWAY_ORIGIN_BEARER_TOKEN
+          ? { authorization: `Bearer ${env.GATEWAY_ORIGIN_BEARER_TOKEN}` }
+          : {}),
       },
     });
     const text = await response.text();
@@ -141,14 +148,14 @@ function supportedActorHandles(env) {
 }
 
 function isSupportedActorHandle(handle, env) {
-  return supportedActorHandles(env).has(handle);
+  return HANDLE_PATTERN.test(handle) && (generalAuthorsEnabled(env) || supportedActorHandles(env).has(handle));
 }
 
-function shouldProxyPilotActorRead(actorHandle, env) {
+function shouldProxyActorRead(actorHandle, env) {
   return Boolean(
     actorHandle &&
       gatewayCoreOrigin(env) &&
-      configuredPilotHandles(env).includes(actorHandle),
+      (generalAuthorsEnabled(env) || configuredPilotHandles(env).includes(actorHandle)),
   );
 }
 
@@ -530,6 +537,11 @@ async function proxyToGatewayCore(request, env) {
     headers.set("x-forwarded-prefix", prefix);
   }
   headers.set("x-original-url", request.url);
+  if (env.GATEWAY_ORIGIN_BEARER_TOKEN) {
+    headers.set("authorization", `Bearer ${env.GATEWAY_ORIGIN_BEARER_TOKEN}`);
+  } else {
+    headers.delete("authorization");
+  }
 
   return fetch(targetUrl, {
     method: request.method,
@@ -653,6 +665,12 @@ export default {
       return respond(textResponse(iconSvg(), 200, "image/svg+xml; charset=utf-8"));
     }
     if (path === "/.well-known/webfinger") {
+      if (generalAuthorsEnabled(env) && gatewayCoreOrigin(env)) {
+        const proxied = await proxyToGatewayCore(request, env);
+        if (proxied) {
+          return respond(proxied);
+        }
+      }
       return respond(webfinger(request, env));
     }
     if (path === "/.well-known/host-meta") {
@@ -662,13 +680,19 @@ export default {
       return respond(jsonResponse(nodeInfoDirectory(base, prefix)));
     }
     if (path === "/nodeinfo/2.1" || path === `${prefix}/nodeinfo/2.1` || path === `${prefix}/instance-info/2.1`) {
+      if (generalAuthorsEnabled(env) && gatewayCoreOrigin(env)) {
+        const proxied = await proxyToGatewayCore(request, env);
+        if (proxied) {
+          return respond(proxied);
+        }
+      }
       return respond(jsonResponse(nodeInfo()));
     }
     if (path === inboxUrl("", prefix) || path === "/inbox") {
       return respond(activityResponse(collection(inboxUrl(base, prefix))));
     }
     if (actorHandle && actorSubpath === null) {
-      if (shouldProxyPilotActorRead(actorHandle, env)) {
+      if (shouldProxyActorRead(actorHandle, env)) {
         const proxied = await proxyToGatewayCore(request, env);
         if (proxied) {
           return respond(proxied);
@@ -677,7 +701,7 @@ export default {
       return respond(activityResponse(actorDocument(base, prefix, request, env, actorHandle)));
     }
     if (actorHandle && actorSubpath === "outbox") {
-      if (shouldProxyPilotActorRead(actorHandle, env)) {
+      if (shouldProxyActorRead(actorHandle, env)) {
         const proxied = await proxyToGatewayCore(request, env);
         if (proxied) {
           return respond(proxied);
@@ -686,7 +710,7 @@ export default {
       return respond(activityResponse(outbox(base, prefix, actorHandle)));
     }
     if (actorHandle && actorSubpath === "followers") {
-      if (shouldProxyPilotActorRead(actorHandle, env)) {
+      if (shouldProxyActorRead(actorHandle, env)) {
         const proxied = await proxyToGatewayCore(request, env);
         if (proxied) {
           return respond(proxied);
@@ -695,7 +719,7 @@ export default {
       return respond(activityResponse(collection(`${actorUrl(base, prefix, actorHandle)}/followers`)));
     }
     if (actorHandle && actorSubpath === "following") {
-      if (shouldProxyPilotActorRead(actorHandle, env)) {
+      if (shouldProxyActorRead(actorHandle, env)) {
         const proxied = await proxyToGatewayCore(request, env);
         if (proxied) {
           return respond(proxied);

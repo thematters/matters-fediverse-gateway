@@ -8,7 +8,7 @@ import {
   combineContentDeliveryReviewSnapshots,
 } from "../lib/content-delivery-ops.mjs";
 
-const SQLITE_SCHEMA_VERSION = 6;
+const SQLITE_SCHEMA_VERSION = 7;
 
 function parseJson(value) {
   return value ? JSON.parse(value) : null;
@@ -185,6 +185,18 @@ export class SqliteStateStore {
         handle TEXT PRIMARY KEY
       );
 
+      CREATE TABLE IF NOT EXISTS actor_profiles (
+        handle TEXT PRIMARY KEY,
+        record_json TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS local_outbound_activities (
+        activity_id TEXT PRIMARY KEY,
+        actor_handle TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        record_json TEXT NOT NULL
+      );
+
       CREATE TABLE IF NOT EXISTS remote_actors (
         actor_id TEXT PRIMARY KEY,
         record_json TEXT NOT NULL
@@ -344,6 +356,49 @@ export class SqliteStateStore {
 
   ensureActor(handle) {
     this.db.prepare("INSERT OR IGNORE INTO actors (handle) VALUES (?)").run(handle);
+  }
+
+  getActorProfiles() {
+    return this.db
+      .prepare("SELECT record_json FROM actor_profiles ORDER BY handle ASC")
+      .all()
+      .map((row) => parseJson(row.record_json));
+  }
+
+  getActorProfile(handle) {
+    const row = this.db.prepare("SELECT record_json FROM actor_profiles WHERE handle = ?").get(handle);
+    return parseJson(row?.record_json) ?? null;
+  }
+
+  async upsertActorProfile(profile) {
+    this.ensureActor(profile.handle);
+    this.db
+      .prepare("INSERT OR REPLACE INTO actor_profiles (handle, record_json) VALUES (?, ?)")
+      .run(profile.handle, JSON.stringify(profile));
+    return structuredClone(profile);
+  }
+
+  getLocalOutboundActivities({ actorHandle = null } = {}) {
+    if (actorHandle) {
+      return this.db
+        .prepare("SELECT record_json FROM local_outbound_activities WHERE actor_handle = ? ORDER BY created_at ASC")
+        .all(actorHandle)
+        .map((row) => parseJson(row.record_json));
+    }
+
+    return this.db
+      .prepare("SELECT record_json FROM local_outbound_activities ORDER BY created_at ASC")
+      .all()
+      .map((row) => parseJson(row.record_json));
+  }
+
+  async recordLocalOutboundActivity(item) {
+    this.db
+      .prepare(
+        "INSERT OR REPLACE INTO local_outbound_activities (activity_id, actor_handle, created_at, record_json) VALUES (?, ?, ?, ?)",
+      )
+      .run(item.id, item.actorHandle, item.createdAt, JSON.stringify(item));
+    return structuredClone(item);
   }
 
   getRemoteActor(actorId) {
@@ -575,6 +630,15 @@ export class SqliteStateStore {
 
     const row = this.db.prepare("SELECT 1 FROM processed_activities WHERE activity_id = ?").get(activityId);
     return Boolean(row);
+  }
+
+  getProcessed(activityId) {
+    if (!activityId) {
+      return null;
+    }
+
+    const row = this.db.prepare("SELECT result_json FROM processed_activities WHERE activity_id = ?").get(activityId);
+    return parseJson(row?.result_json) ?? null;
   }
 
   async recordProcessed(activityId, result) {

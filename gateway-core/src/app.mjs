@@ -39,6 +39,8 @@ import {
   buildUniqueContentDeliveryActivities,
 } from "./lib/content-delivery-ops.mjs";
 import { createStaticOutboxBridge } from "./lib/static-outbox-bridge.mjs";
+import { buildLocalActor, normalizeLocalActorProfile } from "./lib/local-actors.mjs";
+import { verifyBearerToken } from "./security/bearer-auth.mjs";
 import { readHttpSignatureKeyId, signHttpGetRequest, verifyHttpSignature } from "./security/http-signatures.mjs";
 
 const PUBLIC_AUDIENCE = "https://www.w3.org/ns/activitystreams#Public";
@@ -46,6 +48,27 @@ const DEFAULT_MENTION_FAILURE_RETRY_MS = 5 * 60 * 1000;
 const DISCOVERY_RESPONSE_HEADERS = {
   "cache-control": "no-store",
 };
+const OUTBOX_MUTATION_PATTERN = /^\/users\/[^/]+\/outbox\/(create|update|delete|like|announce|engagement)$/u;
+
+function isOperatorRoute(request, pathname) {
+  return (
+    pathname.startsWith("/admin/") ||
+    pathname.startsWith("/jobs/") ||
+    (request.method === "POST" && OUTBOX_MUTATION_PATTERN.test(pathname))
+  );
+}
+
+function isEdgeProtocolRoute(pathname) {
+  return (
+    pathname === "/inbox" ||
+    pathname.startsWith("/.well-known/") ||
+    pathname.startsWith("/nodeinfo/") ||
+    pathname.startsWith("/users/") ||
+    pathname.startsWith("/activities/") ||
+    pathname.startsWith("/notes/") ||
+    pathname.startsWith("/articles/")
+  );
+}
 
 function jsonResponse(body, status = 200, contentType = "application/json", headers = {}) {
   return new Response(JSON.stringify(body, null, 2), {
@@ -220,8 +243,30 @@ function buildRuntimeOutboxItems({ actorHandle, actor, store }) {
     return [];
   }
 
+  const outboundItems = [
+    ...(store.getOutboundItems?.({ actorHandle }) ?? []),
+    ...(store.getLocalOutboundActivities?.({ actorHandle }) ?? []),
+  ];
+  const latestObjects = new Map();
+  for (const item of outboundItems) {
+    const activity = item?.activity;
+    const object = activity?.object;
+    if (
+      activity?.type === "Update" &&
+      object &&
+      typeof object === "object" &&
+      !Array.isArray(object) &&
+      object.id
+    ) {
+      const existing = latestObjects.get(object.id);
+      if (!existing || (item.createdAt ?? "") > (existing.createdAt ?? "")) {
+        latestObjects.set(object.id, { createdAt: item.createdAt, object });
+      }
+    }
+  }
+
   const itemsByActivityId = new Map();
-  for (const item of store.getOutboundItems?.({ actorHandle }) ?? []) {
+  for (const item of outboundItems) {
     const activity = item?.activity;
     const object = activity?.object;
     if (
@@ -245,6 +290,7 @@ function buildRuntimeOutboxItems({ actorHandle, actor, store }) {
           actor: actor.actorUrl,
           object: {
             ...object,
+            ...(latestObjects.get(object.id)?.object ?? {}),
             attributedTo: object.attributedTo ?? actor.actorUrl,
           },
         },
@@ -1765,6 +1811,55 @@ export function createGatewayApp({
     },
   });
 
+  for (const profile of store.getActorProfiles?.() ?? []) {
+    config.actors[profile.handle] = buildLocalActor(profile, config);
+  }
+
+  function getAllOutboundItems(actorHandle = null) {
+    return [
+      ...(store.getOutboundItems?.({ actorHandle }) ?? []),
+      ...(store.getLocalOutboundActivities?.({ actorHandle }) ?? []),
+    ];
+  }
+
+  async function recordLocalOutboundActivity({ actorHandle, activity, actionType, idempotencyKey = null }) {
+    const createdAt = clock().toISOString();
+    return store.recordLocalOutboundActivity?.({
+      id: activity.id,
+      actorHandle,
+      actionType,
+      activity,
+      idempotencyKey,
+      createdAt,
+    });
+  }
+
+  function getOutboundIdempotencyKey(request, payload, actorHandle, actionType) {
+    const rawKey = request.headers.get("idempotency-key")?.trim() || payload.idempotencyKey?.trim() || null;
+    if (!rawKey) {
+      return null;
+    }
+    if (rawKey.length > 200) {
+      throw new Error("idempotency key must be at most 200 characters");
+    }
+    return `outbound:${actorHandle}:${actionType}:${rawKey}`;
+  }
+
+  function getIdempotentOutboundResponse(idempotencyKey) {
+    return idempotencyKey ? store.getProcessed?.(idempotencyKey) ?? null : null;
+  }
+
+  async function recordIdempotentOutboundResponse(idempotencyKey, responseBody) {
+    if (!idempotencyKey) {
+      return;
+    }
+    await store.recordProcessed(idempotencyKey, {
+      handledAt: clock().toISOString(),
+      disposition: "outbound-idempotent",
+      responseBody,
+    });
+  }
+
   function buildEvidenceRecord({
     category,
     actorHandle = null,
@@ -2252,12 +2347,13 @@ export function createGatewayApp({
       conversations,
       generatedAt: clock().toISOString(),
     });
-    const outboundItems = store.getOutboundItems?.({ actorHandle }) ?? [];
+    const authoredOutboundItems = getAllOutboundItems(actorHandle);
+    const deliveryOutboundItems = store.getOutboundItems?.({ actorHandle }) ?? [];
     const authoredContents = buildLocalAuthoredContentRecords({
       config,
       actorHandle,
       inboundObjects: store.getInboundObjects?.(actorHandle) ?? [],
-      outboundItems,
+      outboundItems: authoredOutboundItems,
       generatedAt: clock().toISOString(),
     });
     const contents = mergeLocalContentRecords({
@@ -2282,7 +2378,7 @@ export function createGatewayApp({
       contents,
       notificationEvents,
       notifications,
-      outboundItems,
+      outboundItems: deliveryOutboundItems,
     });
     await store.replaceLocalConversations(actorHandle, conversations);
     await store.replaceLocalContents?.(actorHandle, enrichedContents);
@@ -2350,7 +2446,7 @@ export function createGatewayApp({
       return null;
     }
 
-    const items = store.getOutboundItems?.({}) ?? [];
+    const items = getAllOutboundItems().sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""));
     for (const item of items) {
       if (item?.activity?.id === objectId) {
         return item.activity;
@@ -2910,12 +3006,13 @@ export function createGatewayApp({
       conversations,
       generatedAt: clock().toISOString(),
     });
-    const outboundItems = store.getOutboundItems?.({ actorHandle }) ?? [];
+    const authoredOutboundItems = getAllOutboundItems(actorHandle);
+    const deliveryOutboundItems = store.getOutboundItems?.({ actorHandle }) ?? [];
     const authoredContents = buildLocalAuthoredContentRecords({
       config,
       actorHandle,
       inboundObjects: workingObjects,
-      outboundItems,
+      outboundItems: authoredOutboundItems,
       generatedAt: clock().toISOString(),
     });
     const contents = mergeLocalContentRecords({
@@ -2940,7 +3037,7 @@ export function createGatewayApp({
       contents,
       notificationEvents,
       notifications,
-      outboundItems,
+      outboundItems: deliveryOutboundItems,
     });
     if (!dryRun) {
       await store.replaceLocalConversations?.(actorHandle, conversations);
@@ -3982,12 +4079,34 @@ export function createGatewayApp({
               inboxPersistence: true,
               deliveryQueue: true,
               httpSignatureVerification: true,
+              operatorAuthentication: Boolean(config.auth?.operatorBearerToken),
+              edgeAuthentication: Boolean(config.auth?.edgeBearerToken),
+              dynamicActors: config.dynamicActors?.enabled === true,
             },
           },
           200,
           "application/json",
           DISCOVERY_RESPONSE_HEADERS,
         );
+      }
+
+      if (
+        isOperatorRoute(request, pathname) &&
+        config.auth?.operatorBearerToken &&
+        !verifyBearerToken(request, config.auth.operatorBearerToken) &&
+        !(pathname === "/jobs/inbound-reconciliation" && verifyBearerToken(request, config.inboundReconciliation?.schedulerBearerToken))
+      ) {
+        return jsonResponse({ error: "Unauthorized operator request" }, 401);
+      }
+
+      if (
+        !isOperatorRoute(request, pathname) &&
+        isEdgeProtocolRoute(pathname) &&
+        config.auth?.edgeBearerToken &&
+        !verifyBearerToken(request, config.auth.edgeBearerToken) &&
+        !verifyBearerToken(request, config.auth?.operatorBearerToken)
+      ) {
+        return jsonResponse({ error: "Unauthorized edge request" }, 401);
       }
 
       if (isReadMethod(request.method) && pathname === "/.well-known/webfinger") {
@@ -4073,6 +4192,17 @@ export function createGatewayApp({
           return jsonResponse({ error: "object.id is required" }, 422);
         }
 
+        let idempotencyKey;
+        try {
+          idempotencyKey = getOutboundIdempotencyKey(request, payload, handle, "update");
+        } catch (error) {
+          return jsonResponse({ error: error.message }, 422);
+        }
+        const previousResult = getIdempotentOutboundResponse(idempotencyKey);
+        if (previousResult?.responseBody) {
+          return jsonResponse({ ...previousResult.responseBody, status: "duplicate" }, 200);
+        }
+
         const takedown = await enforceTakedownIfNeeded(payload.object.id, handle, "outbox-update");
         if (takedown) {
           return jsonResponse({ error: "Object is under legal takedown", caseId: takedown.caseId, objectId: payload.object.id }, 451);
@@ -4084,6 +4214,12 @@ export function createGatewayApp({
           now: clock(),
           instance: config.instance,
         });
+        await recordLocalOutboundActivity({
+          actorHandle: handle,
+          activity,
+          actionType: "update",
+          idempotencyKey,
+        });
         const followers = await buildFanOutRecipients({
           actorHandle: handle,
         });
@@ -4094,20 +4230,19 @@ export function createGatewayApp({
           traceEvent: "update.fanned-out",
         });
 
-        return jsonResponse(
-          {
-            status: "queued",
-            activityId: activity.id,
-            mapping: "update",
-            recipients: followers.map((entry) => entry.remoteActorId),
-            deliveries: deliveries.map((entry) => ({
-              id: entry.id,
-              status: entry.status,
-              targetActorId: entry.targetActorId,
-            })),
-          },
-          202,
-        );
+        const responseBody = {
+          status: "queued",
+          activityId: activity.id,
+          mapping: "update",
+          recipients: followers.map((entry) => entry.remoteActorId),
+          deliveries: deliveries.map((entry) => ({
+            id: entry.id,
+            status: entry.status,
+            targetActorId: entry.targetActorId,
+          })),
+        };
+        await recordIdempotentOutboundResponse(idempotencyKey, responseBody);
+        return jsonResponse(responseBody, 202);
       }
 
       if (request.method === "POST" && handle && pathname === `/users/${handle}/outbox/create` && actor) {
@@ -4130,6 +4265,17 @@ export function createGatewayApp({
         }
         if (typeof payload.object.id !== "string" || !payload.object.id.trim()) {
           return jsonResponse({ error: "object.id is required" }, 422);
+        }
+
+        let idempotencyKey;
+        try {
+          idempotencyKey = getOutboundIdempotencyKey(request, payload, handle, "create");
+        } catch (error) {
+          return jsonResponse({ error: error.message }, 422);
+        }
+        const previousResult = getIdempotentOutboundResponse(idempotencyKey);
+        if (previousResult?.responseBody) {
+          return jsonResponse({ ...previousResult.responseBody, status: "duplicate" }, 200);
         }
 
         const initialMentionEntries = mergeMentionEntries(
@@ -4188,6 +4334,12 @@ export function createGatewayApp({
           to: audience.to,
           cc: audience.cc,
         });
+        await recordLocalOutboundActivity({
+          actorHandle: handle,
+          activity,
+          actionType: object.inReplyTo ? "reply" : "create",
+          idempotencyKey,
+        });
         let recipients;
         try {
           recipients = await buildFanOutRecipients({
@@ -4196,15 +4348,6 @@ export function createGatewayApp({
           });
         } catch (error) {
           return jsonResponse({ error: error.message }, 422);
-        }
-        if (recipients.length === 0) {
-          return jsonResponse(
-            {
-              error: "At least one recipient is required",
-              mentionResolution: mentionResolutionSummary,
-            },
-            422,
-          );
         }
         const deliveries = await fanOutActivity({
           actorHandle: handle,
@@ -4256,23 +4399,22 @@ export function createGatewayApp({
           };
         }
 
-        return jsonResponse(
-          {
-            status: "queued",
-            activityId: activity.id,
-            mapping: object.inReplyTo ? "reply" : "create",
-            mentions: mentionEntries,
-            mentionResolution: mentionResolutionSummary,
-            recipients: recipients.map((entry) => entry.remoteActorId),
-            deliveries: deliveries.map((entry) => ({
-              id: entry.id,
-              status: entry.status,
-              targetActorId: entry.targetActorId,
-            })),
-            noteCompanion,
-          },
-          202,
-        );
+        const responseBody = {
+          status: "queued",
+          activityId: activity.id,
+          mapping: object.inReplyTo ? "reply" : "create",
+          mentions: mentionEntries,
+          mentionResolution: mentionResolutionSummary,
+          recipients: recipients.map((entry) => entry.remoteActorId),
+          deliveries: deliveries.map((entry) => ({
+            id: entry.id,
+            status: entry.status,
+            targetActorId: entry.targetActorId,
+          })),
+          noteCompanion,
+        };
+        await recordIdempotentOutboundResponse(idempotencyKey, responseBody);
+        return jsonResponse(responseBody, 202);
       }
 
       if (request.method === "POST" && handle && pathname === `/users/${handle}/outbox/like` && actor) {
@@ -4596,12 +4738,29 @@ export function createGatewayApp({
           return jsonResponse({ error: "objectId is required" }, 422);
         }
 
+        let idempotencyKey;
+        try {
+          idempotencyKey = getOutboundIdempotencyKey(request, payload, handle, "delete");
+        } catch (error) {
+          return jsonResponse({ error: error.message }, 422);
+        }
+        const previousResult = getIdempotentOutboundResponse(idempotencyKey);
+        if (previousResult?.responseBody) {
+          return jsonResponse({ ...previousResult.responseBody, status: "duplicate" }, 200);
+        }
+
         const activity = buildDeleteActivity({
           actor,
           objectId: payload.objectId,
           object: payload.object,
           now: clock(),
           instance: config.instance,
+        });
+        await recordLocalOutboundActivity({
+          actorHandle: handle,
+          activity,
+          actionType: "delete",
+          idempotencyKey,
         });
         const followers = await buildFanOutRecipients({
           actorHandle: handle,
@@ -4613,19 +4772,79 @@ export function createGatewayApp({
           traceEvent: "delete.fanned-out",
         });
 
+        const responseBody = {
+          status: "queued",
+          activityId: activity.id,
+          mapping: "delete",
+          recipients: followers.map((entry) => entry.remoteActorId),
+          deliveries: deliveries.map((entry) => ({
+            id: entry.id,
+            status: entry.status,
+            targetActorId: entry.targetActorId,
+          })),
+        };
+        await recordIdempotentOutboundResponse(idempotencyKey, responseBody);
+        return jsonResponse(responseBody, 202);
+      }
+
+      if (request.method === "GET" && pathname === "/admin/actors") {
+        return jsonResponse({
+          dynamicActorsEnabled: config.dynamicActors?.enabled === true,
+          items: Object.values(config.actors).map((entry) => ({
+            handle: entry.handle,
+            displayName: entry.displayName,
+            summary: entry.summary,
+            profileUrl: entry.profileUrl,
+            aliases: entry.aliases,
+            actorUrl: entry.actorUrl,
+            followers: store.getFollowers?.(entry.handle)?.length ?? 0,
+            dynamic: Boolean(store.getActorProfile?.(entry.handle)),
+          })),
+        });
+      }
+
+      if (request.method === "POST" && pathname === "/admin/actors") {
+        if (config.dynamicActors?.enabled !== true) {
+          return jsonResponse({ error: "Dynamic actors are disabled" }, 409);
+        }
+
+        let payload;
+        try {
+          payload = parseJsonBody(await request.text());
+        } catch {
+          return jsonResponse({ error: "Invalid JSON body" }, 400);
+        }
+
+        let profile;
+        try {
+          profile = normalizeLocalActorProfile(payload, config);
+        } catch (error) {
+          return jsonResponse({ error: error.message }, 422);
+        }
+
+        const existingActor = config.actors[profile.handle];
+        if (existingActor && !store.getActorProfile?.(profile.handle)) {
+          return jsonResponse({ error: "Static actors cannot be replaced at runtime" }, 409);
+        }
+
+        await store.upsertActorProfile(profile);
+        store.ensureActor(profile.handle);
+        const localActor = buildLocalActor(profile, config);
+        config.actors[profile.handle] = localActor;
+        await recordAuditEvent({
+          timestamp: clock().toISOString(),
+          event: existingActor ? "local-actor.updated" : "local-actor.created",
+          actorHandle: profile.handle,
+          actorUrl: localActor.actorUrl,
+          updatedBy: payload.updatedBy?.trim() || "federation-pipeline",
+        });
+
         return jsonResponse(
           {
-            status: "queued",
-            activityId: activity.id,
-            mapping: "delete",
-            recipients: followers.map((entry) => entry.remoteActorId),
-            deliveries: deliveries.map((entry) => ({
-              id: entry.id,
-              status: entry.status,
-              targetActorId: entry.targetActorId,
-            })),
+            status: existingActor ? "updated" : "created",
+            actor: buildActorDocument({ instance: config.instance, actor: localActor }),
           },
-          202,
+          existingActor ? 200 : 201,
         );
       }
 
