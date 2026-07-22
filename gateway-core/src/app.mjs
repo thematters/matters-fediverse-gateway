@@ -1131,9 +1131,104 @@ function buildLocalAuthoredContentRecords({ config, actorHandle, inboundObjects,
 function mergeLocalContentRecords({ threadedContents = [], authoredContents = [] }) {
   const merged = new Map(threadedContents.map((content) => [content.contentId, content]));
   for (const content of authoredContents) {
-    if (!merged.has(content.contentId)) {
+    const threaded = merged.get(content.contentId);
+    if (!threaded) {
       merged.set(content.contentId, content);
+      continue;
     }
+
+    const participantActorIds = dedupeValues([
+      ...(content.participantActorIds ?? []),
+      ...(threaded.participantActorIds ?? []),
+    ]);
+    const localParticipantHandles = dedupeValues([
+      ...(content.localParticipantHandles ?? []),
+      ...(threaded.localParticipantHandles ?? []),
+    ]);
+    const mentionActorIds = dedupeValues([
+      ...(content.mentionActorIds ?? []),
+      ...(threaded.mentionActorIds ?? []),
+    ]);
+    const threadResolved =
+      content.status === "deleted" ||
+      content.actionMatrix?.state?.threadResolved === true ||
+      threaded.actionMatrix?.state?.threadResolved === true;
+    const sumMetric = (key) => (content.metrics?.[key] ?? 0) + (threaded.metrics?.[key] ?? 0);
+    const sumInbound = (key) =>
+      (content.actionMatrix?.inbound?.[key] ?? 0) + (threaded.actionMatrix?.inbound?.[key] ?? 0);
+
+    merged.set(content.contentId, {
+      ...threaded,
+      ...content,
+      status:
+        content.status === "deleted"
+          ? "deleted"
+          : threadResolved
+            ? "resolved"
+            : content.status ?? threaded.status,
+      participantActorIds,
+      localParticipantHandles,
+      mentionActorIds,
+      metrics: {
+        objects: sumMetric("objects"),
+        replies: sumMetric("replies"),
+        engagements: sumMetric("engagements"),
+        likes: sumMetric("likes"),
+        announces: sumMetric("announces"),
+      },
+      actionMatrix: {
+        ...threaded.actionMatrix,
+        ...content.actionMatrix,
+        inbound: {
+          create: sumInbound("create"),
+          reply: sumInbound("reply"),
+          like: sumInbound("like"),
+          announce: sumInbound("announce"),
+        },
+        participation: {
+          participants: participantActorIds.length,
+          localParticipants: localParticipantHandles.length,
+          mentions: mentionActorIds.length,
+          unresolvedObjects: threadResolved
+            ? 0
+            : Math.max(
+                content.actionMatrix?.participation?.unresolvedObjects ?? 0,
+                threaded.actionMatrix?.participation?.unresolvedObjects ?? 0,
+              ),
+        },
+        state: {
+          hasReplies:
+            content.actionMatrix?.state?.hasReplies === true ||
+            threaded.actionMatrix?.state?.hasReplies === true,
+          hasEngagements:
+            content.actionMatrix?.state?.hasEngagements === true ||
+            threaded.actionMatrix?.state?.hasEngagements === true,
+          threadResolved,
+        },
+      },
+      relations: {
+        ...threaded.relations,
+        ...content.relations,
+        inReplyTo: content.relations?.inReplyTo ?? threaded.relations?.inReplyTo ?? null,
+        replyObjectIds: dedupeValues([
+          ...(content.relations?.replyObjectIds ?? []),
+          ...(threaded.relations?.replyObjectIds ?? []),
+        ]),
+        engagementIds: dedupeValues([
+          ...(content.relations?.engagementIds ?? []),
+          ...(threaded.relations?.engagementIds ?? []),
+        ]),
+        identityObjectIds: dedupeValues([
+          ...(content.relations?.identityObjectIds ?? []),
+          ...(threaded.relations?.identityObjectIds ?? []),
+        ]),
+      },
+      latestPublishedAt:
+        (content.latestPublishedAt ?? "") >= (threaded.latestPublishedAt ?? "")
+          ? content.latestPublishedAt
+          : threaded.latestPublishedAt,
+      updatedAt: (content.updatedAt ?? "") >= (threaded.updatedAt ?? "") ? content.updatedAt : threaded.updatedAt,
+    });
   }
 
   return [...merged.values()].sort((left, right) => (right.latestPublishedAt ?? "").localeCompare(left.latestPublishedAt ?? ""));
@@ -1556,10 +1651,11 @@ function matchesNoteCompanionReceiver(config, remoteActor) {
 
 function selectNoteCompanionRecipients({ config, actorHandle, object, recipients }) {
   const noteCompanion = config.compatibility?.noteCompanion;
+  const actorAllowlist = noteCompanion?.actorAllowlist ?? [];
   if (
     noteCompanion?.enabled !== true ||
     object?.type !== "Article" ||
-    !noteCompanion.actorAllowlist?.includes(actorHandle)
+    (!actorAllowlist.includes("*") && !actorAllowlist.includes(actorHandle))
   ) {
     return [];
   }

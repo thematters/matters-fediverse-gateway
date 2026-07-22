@@ -2,6 +2,7 @@ import { normalizeArticleObject } from "./article-normalization.mjs";
 
 const ACTIVITY_STREAMS = "https://www.w3.org/ns/activitystreams";
 const SECURITY_V1 = "https://w3id.org/security/v1";
+const WEBFINGER_CONTEXT = "https://purl.archive.org/socialweb/webfinger";
 const PUBLIC_AUDIENCE = `${ACTIVITY_STREAMS}#Public`;
 const MASTODON_NS = "http://joinmastodon.org/ns#";
 
@@ -72,7 +73,7 @@ function canonicalizeArticleObjectId({ object, instance }) {
 export function buildWebFinger({ instance, actor }) {
   return {
     subject: `acct:${actor.handle}@${instance.domain}`,
-    aliases: [actor.profileUrl, ...actor.aliases],
+    aliases: [...new Set([actor.profileUrl, ...actor.aliases].filter(Boolean))],
     links: [
       {
         rel: "self",
@@ -94,6 +95,7 @@ export function buildActorDocument({ instance, actor }) {
     "@context": [
       ACTIVITY_STREAMS,
       SECURITY_V1,
+      WEBFINGER_CONTEXT,
       {
         toot: MASTODON_NS,
         discoverable: "toot:discoverable",
@@ -103,6 +105,7 @@ export function buildActorDocument({ instance, actor }) {
     id: actor.actorUrl,
     type: "Person",
     preferredUsername: actor.handle,
+    webfinger: `${actor.handle}@${instance.domain}`,
     name: actor.displayName,
     summary: actor.summary,
     url: actor.profileUrl,

@@ -10,6 +10,9 @@ This runbook targets a three-day general-availability launch. Federation remains
 - Edge bearer token used only by the Cloudflare Worker
 - Operator bearer token shared only with matters-server and federation-export Lambda
 - Dynamic actor registry enabled with `matters.town` in the profile host allowlist
+- Threads `Note` companion enabled with `threads.net` as the receiver domain;
+  use an explicit staff actor allowlist during controlled delivery and `*` only
+  after the general-author compatibility gate passes
 - Current ActivityPub signing private/public key pair, with the previous public key retained during rotation
 - SQLite storage on persistent disk with scheduled backup, reconciliation, delivery, metrics, logs, and alert jobs
 
@@ -53,7 +56,8 @@ Exit gate: gateway tests and Worker dry run pass; Lambda image command is `feder
 2. Change trigger mode to `sqs` for production.
 3. Enable federation on two staff accounts and publish one new public article, revise it, then archive it.
 4. Confirm Create, Update, and Delete arrive in order, duplicate delivery is idempotent, and remote readback works from at least Mastodon and Misskey.
-5. Verify the `/next/fediverse` page shows the same queue and audit state as the gateway.
+5. Confirm each public actor outbox contains the active Article after inbound Like or Announce activity.
+6. Verify the `/next/fediverse` page shows the same queue and audit state as the gateway.
 
 Exit gate: no open dead letters, oldest pending item under five minutes, and no private or paid article leaves Matters.
 

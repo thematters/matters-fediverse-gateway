@@ -148,6 +148,10 @@ domain allowlist:
 }
 ```
 
+Use `"actorAllowlist": ["*"]` only when the compatibility adapter is approved
+for every dynamic author. The receiver domain allowlist remains mandatory, so a
+wildcard actor scope can still be restricted to `threads.net`.
+
 When enabled, `POST /users/<handle>/outbox/create` still sends the primary
 `Article` to all selected recipients. If the object is an `Article`, the actor is
 allowlisted, and a recipient domain matches, the gateway also sends one
