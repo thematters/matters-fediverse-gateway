@@ -1,3 +1,10 @@
+import {
+  FederationUrlPolicyError,
+  readLimitedJson,
+  safeFederationFetch,
+  validateFederationUrl,
+} from "./safe-fetch.mjs";
+
 function isUsableRecord(record) {
   return Boolean(
     record?.actorId?.trim() &&
@@ -87,6 +94,22 @@ function normalizePublicKeyEntry(value) {
 function normalizeRemoteActor({ actorId, actorDocument, source, discoveredAt }) {
   const publicKey = normalizePublicKeyEntry(actorDocument.publicKey);
   const previousPublicKey = normalizePublicKeyEntry(actorDocument.previousPublicKey);
+  validateFederationUrl(actorId);
+  validateFederationUrl(actorDocument.id ?? actorId);
+  validateFederationUrl(actorDocument.inbox);
+  if (actorDocument.endpoints?.sharedInbox) {
+    validateFederationUrl(actorDocument.endpoints.sharedInbox);
+  }
+  if (publicKey?.id) {
+    validateFederationUrl(publicKey.id, { allowFragment: true });
+  }
+  if (publicKey?.owner && publicKey.owner !== actorId) {
+    throw createRemoteActorResolutionError(`Remote actor public key owner mismatch for ${actorId}`, {
+      code: "actor_public_key_owner_mismatch",
+      stage: "actor_document",
+      temporary: false,
+    });
+  }
 
   const normalized = {
     actorId: actorDocument.id ?? actorId,
@@ -135,6 +158,8 @@ function normalizeRemoteActor({ actorId, actorDocument, source, discoveredAt }) 
 }
 
 function normalizeRemoteActorFromSignatureKey({ actorId, keyId, keyDocument, source, discoveredAt }) {
+  validateFederationUrl(actorId);
+  validateFederationUrl(keyId, { allowFragment: true });
   const documentKey =
     keyDocument.id === keyId && keyDocument.publicKeyPem?.trim()
       ? keyDocument
@@ -167,6 +192,10 @@ function normalizeRemoteActorFromSignatureKey({ actorId, keyId, keyDocument, sou
       temporary: false,
     });
   }
+  validateFederationUrl(keyDocument.inbox);
+  if (keyDocument.endpoints?.sharedInbox) {
+    validateFederationUrl(keyDocument.endpoints.sharedInbox);
+  }
 
   const normalized = {
     actorId,
@@ -191,21 +220,35 @@ function normalizeRemoteActorFromSignatureKey({ actorId, keyId, keyDocument, sou
   return normalized;
 }
 
-export async function loadRemoteActorDocument(actorId, fetchImpl = fetch, { signedFetchHeaders = null } = {}) {
+export async function loadRemoteActorDocument(
+  actorId,
+  fetchImpl = null,
+  { allowFragment = false, signedFetchHeaders = null } = {},
+) {
   let response;
   const headers = {
     accept: [
       "application/activity+json",
       'application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
     ].join(", "),
-    ...(signedFetchHeaders ? signedFetchHeaders(actorId) : {}),
   };
 
   try {
-    response = await fetchImpl(actorId, {
-      headers,
-    });
+    response = await safeFederationFetch(
+      actorId,
+      {
+        headers,
+      },
+      {
+        allowFragment,
+        buildHeaders: signedFetchHeaders,
+        ...(fetchImpl ? { fetchImpl } : {}),
+      },
+    );
   } catch (error) {
+    if (error?.temporary === false) {
+      throw error;
+    }
     throw createRemoteActorResolutionError(`Failed to load remote actor ${actorId}`, {
       code: "actor_document_network_error",
       stage: "actor_document",
@@ -224,8 +267,11 @@ export async function loadRemoteActorDocument(actorId, fetchImpl = fetch, { sign
   }
 
   try {
-    return await response.json();
+    return await readLimitedJson(response);
   } catch (error) {
+    if (error instanceof FederationUrlPolicyError) {
+      throw error;
+    }
     throw createRemoteActorResolutionError(`Remote actor ${actorId} returned invalid JSON`, {
       code: "actor_document_invalid_json",
       stage: "actor_document",
@@ -235,7 +281,7 @@ export async function loadRemoteActorDocument(actorId, fetchImpl = fetch, { sign
   }
 }
 
-export async function loadRemoteActorIdFromAccount(account, fetchImpl = fetch) {
+export async function loadRemoteActorIdFromAccount(account, fetchImpl = null) {
   const parsed = parseAccount(account);
   if (!parsed) {
     throw createRemoteActorResolutionError(`Invalid remote account ${account}`, {
@@ -251,12 +297,21 @@ export async function loadRemoteActorIdFromAccount(account, fetchImpl = fetch) {
   let response;
 
   try {
-    response = await fetchImpl(webFingerUrl, {
-      headers: {
-        accept: "application/jrd+json, application/json",
+    response = await safeFederationFetch(
+      webFingerUrl,
+      {
+        headers: {
+          accept: "application/jrd+json, application/json",
+        },
       },
-    });
+      {
+        ...(fetchImpl ? { fetchImpl } : {}),
+      },
+    );
   } catch (error) {
+    if (error?.temporary === false) {
+      throw error;
+    }
     throw createRemoteActorResolutionError(`Failed to resolve remote account ${parsed.acct}`, {
       code: "webfinger_network_error",
       stage: "webfinger",
@@ -280,8 +335,11 @@ export async function loadRemoteActorIdFromAccount(account, fetchImpl = fetch) {
   let payload;
 
   try {
-    payload = await response.json();
+    payload = await readLimitedJson(response);
   } catch (error) {
+    if (error instanceof FederationUrlPolicyError) {
+      throw error;
+    }
     throw createRemoteActorResolutionError(`Remote account ${parsed.acct} returned invalid WebFinger JSON`, {
       code: "webfinger_invalid_json",
       stage: "webfinger",
@@ -302,7 +360,7 @@ export async function loadRemoteActorIdFromAccount(account, fetchImpl = fetch) {
     );
   }
 
-  return actorLink.href;
+  return validateFederationUrl(actorLink.href).href;
 }
 
 export function createRemoteActorDirectory({
@@ -374,7 +432,9 @@ export function createRemoteActorDirectory({
   }
 
   async function discoverBySignatureKey(actorId, keyId) {
-    const keyDocument = await actorDocumentLoader(keyId);
+    const keyDocument = await actorDocumentLoader(keyId, {
+      allowFragment: true,
+    });
     const record = normalizeRemoteActorFromSignatureKey({
       actorId,
       keyId,

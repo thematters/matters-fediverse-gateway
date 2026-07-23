@@ -43,6 +43,7 @@ import {
 } from "./lib/content-delivery-ops.mjs";
 import { createStaticOutboxBridge } from "./lib/static-outbox-bridge.mjs";
 import { buildLocalActor, normalizeLocalActorProfile } from "./lib/local-actors.mjs";
+import { readLimitedJson, safeFederationFetch } from "./lib/safe-fetch.mjs";
 import { verifyBearerToken } from "./security/bearer-auth.mjs";
 import { readHttpSignatureKeyId, signHttpGetRequest, verifyHttpSignature } from "./security/http-signatures.mjs";
 
@@ -52,6 +53,10 @@ const DISCOVERY_RESPONSE_HEADERS = {
   "cache-control": "no-store",
 };
 const OUTBOX_MUTATION_PATTERN = /^\/users\/[^/]+\/outbox\/(create|update|delete|like|announce|engagement|follow|undo)$/u;
+const SCHEDULER_JOB_PATHS = new Set([
+  "/jobs/inbound-reconciliation",
+  "/jobs/social-prune",
+]);
 
 function isOperatorRoute(request, pathname) {
   return (
@@ -1876,13 +1881,15 @@ export function createGatewayApp({
   config,
   store,
   deliveryClient = createFetchDeliveryClient({ userAgent: config.delivery.userAgent }),
-  fetchImpl = fetch,
+  fetchImpl = null,
   remoteActorDirectory = createRemoteActorDirectory({
     seedActors: config.remoteActors,
     store,
-    actorDocumentLoader: (actorId) => loadRemoteActorDocument(actorId, fetchImpl, {
-      signedFetchHeaders: createSignedFetchHeadersFactory(config),
-    }),
+    actorDocumentLoader: (actorId, options = {}) =>
+      loadRemoteActorDocument(actorId, fetchImpl, {
+        ...options,
+        signedFetchHeaders: createSignedFetchHeadersFactory(config),
+      }),
     cacheTtlMs: config.remoteDiscovery?.cacheTtlMs ?? 60 * 60 * 1000,
   }),
   outboxBridge = null,
@@ -1927,6 +1934,56 @@ export function createGatewayApp({
         .getLocalOutboundActivities?.({ actorHandle })
         .find((entry) => entry.id === activityId) ?? null
     );
+  }
+
+  function isRemoteActorBlocked(actorHandle, remoteActorId) {
+    return (
+      Boolean(actorHandle && remoteActorId) &&
+      store.getFollowing?.(actorHandle, remoteActorId)?.status === "blocked"
+    );
+  }
+
+  function getActiveOutboundEngagement(
+    actorHandle,
+    objectId,
+    actionType,
+  ) {
+    if (!actorHandle || !objectId || !["like", "announce"].includes(actionType)) {
+      return null;
+    }
+
+    const latest =
+      [...(store.getLocalOutboundActivities?.({ actorHandle }) ?? [])]
+        .reverse()
+        .find((entry) => {
+          if (entry.actionType === actionType) {
+            return getObjectReferenceId(entry.activity?.object) === objectId;
+          }
+          if (entry.actionType === `undo-${actionType}`) {
+            return (
+              getObjectReferenceId(entry.activity?.object?.object) === objectId
+            );
+          }
+          return false;
+        }) ?? null;
+
+    return latest?.actionType === actionType ? latest : null;
+  }
+
+  function getOutboundEngagementState(actorHandle, objectId) {
+    const like = getActiveOutboundEngagement(actorHandle, objectId, "like");
+    const announce = getActiveOutboundEngagement(
+      actorHandle,
+      objectId,
+      "announce",
+    );
+
+    return {
+      liked: Boolean(like),
+      announced: Boolean(announce),
+      likeActivityId: like?.id ?? null,
+      announceActivityId: announce?.id ?? null,
+    };
   }
 
   function hasActorProfileChanged(previousActor, nextActor) {
@@ -2164,8 +2221,12 @@ export function createGatewayApp({
 
   async function fanOutActivity({ actorHandle, remoteActors, activity, traceEvent }) {
     const deliveries = [];
+    const eligibleRemoteActors = remoteActors.filter(
+      (remoteActor) =>
+        !isRemoteActorBlocked(actorHandle, remoteActor.remoteActorId),
+    );
 
-    for (const [index, remoteActor] of remoteActors.entries()) {
+    for (const [index, remoteActor] of eligibleRemoteActors.entries()) {
       const queueItem = await store.enqueueOutbound({
         id: buildQueueItemId(activity.id, remoteActor.remoteActorId, index),
         status: "pending",
@@ -2186,7 +2247,12 @@ export function createGatewayApp({
         event: traceEvent,
         actorHandle,
         activityId: activity.id,
-        recipients: remoteActors.map((entry) => entry.remoteActorId),
+        recipients: eligibleRemoteActors.map((entry) => entry.remoteActorId),
+        blockedRecipients: remoteActors
+          .filter((entry) =>
+            isRemoteActorBlocked(actorHandle, entry.remoteActorId),
+          )
+          .map((entry) => entry.remoteActorId),
         deliveryCount: deliveries.length,
       }),
     );
@@ -2196,11 +2262,17 @@ export function createGatewayApp({
     return deliveries;
   }
 
-  async function resolveExplicitRemoteActors(actorIds = []) {
+  async function resolveExplicitRemoteActors(
+    actorIds = [],
+    { actorHandle = null } = {},
+  ) {
     const resolvedActors = [];
 
     for (const actorId of dedupeValues(actorIds)) {
       if (findActorByUrl(config, actorId)) {
+        continue;
+      }
+      if (isRemoteActorBlocked(actorHandle, actorId)) {
         continue;
       }
 
@@ -2449,8 +2521,18 @@ export function createGatewayApp({
   async function buildFanOutRecipients({ actorHandle, explicitActorIds = [] }) {
     const followerRecipients = store
       .getFollowers(actorHandle)
-      .filter((entry) => entry.status === "accepted" && (entry.sharedInbox ?? entry.inbox));
-    const explicitRecipients = await resolveExplicitRemoteActors(explicitActorIds);
+      .filter(
+        (entry) =>
+          entry.status === "accepted" &&
+          (entry.sharedInbox ?? entry.inbox) &&
+          !isRemoteActorBlocked(actorHandle, entry.remoteActorId),
+      );
+    const explicitRecipients = await resolveExplicitRemoteActors(
+      explicitActorIds,
+      {
+        actorHandle,
+      },
+    );
 
     return [...followerRecipients, ...explicitRecipients].filter(
       (entry, index, list) => list.findIndex((candidate) => candidate.remoteActorId === entry.remoteActorId) === index,
@@ -2592,18 +2674,24 @@ export function createGatewayApp({
     let response;
 
     try {
-      response = await fetchImpl(activityUrl, {
-        headers: {
-          accept: [
-            "application/activity+json",
-            'application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
-          ].join(", "),
+      response = await safeFederationFetch(
+        activityUrl,
+        {
+          headers: {
+            accept: [
+              "application/activity+json",
+              'application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
+            ].join(", "),
+          },
         },
-      });
+        {
+          ...(fetchImpl ? { fetchImpl } : {}),
+        },
+      );
     } catch (error) {
       return {
         error: `Failed to fetch activity: ${error.message}`,
-        statusCode: 502,
+        statusCode: error?.temporary === false ? 422 : 502,
       };
     }
 
@@ -2616,11 +2704,14 @@ export function createGatewayApp({
 
     try {
       return {
-        activity: await response.json(),
+        activity: await readLimitedJson(response),
       };
-    } catch {
+    } catch (error) {
       return {
-        error: "Fetched activity is not valid JSON",
+        error:
+          error?.code === "federation_response_too_large"
+            ? error.message
+            : "Fetched activity is not valid JSON",
         statusCode: 422,
       };
     }
@@ -2991,6 +3082,60 @@ export function createGatewayApp({
     }
 
     return { ok: true };
+  }
+
+  function authorizeSocialPruneJob(request) {
+    const expectedToken = config.inboundReconciliation?.schedulerBearerToken?.trim() ?? "";
+
+    if (!expectedToken) {
+      return {
+        ok: false,
+        statusCode: 503,
+        error: "Social prune scheduler token is not configured",
+      };
+    }
+
+    if (getBearerToken(request) !== expectedToken) {
+      return {
+        ok: false,
+        statusCode: 401,
+        error: "Unauthorized scheduler request",
+      };
+    }
+
+    return { ok: true };
+  }
+
+  async function runSocialPrune(payload = {}) {
+    const retentionDays =
+      Number.isFinite(payload.retentionDays) && payload.retentionDays > 0
+        ? Math.floor(payload.retentionDays)
+        : config.social?.timelineRetentionDays ?? 30;
+    const maxItems =
+      Number.isFinite(payload.maxItems) && payload.maxItems > 0
+        ? Math.floor(payload.maxItems)
+        : config.social?.timelineMaxItems ?? 1_000;
+    const before = new Date(
+      clock().getTime() - retentionDays * 24 * 60 * 60 * 1000
+    ).toISOString();
+    const removed = await store.pruneSocialData?.({ before, maxItems });
+    for (const localHandle of Object.keys(config.actors)) {
+      await syncLocalDomainProjection(localHandle);
+    }
+    await recordAuditEvent({
+      timestamp: clock().toISOString(),
+      event: "social.retention-pruned",
+      before,
+      maxItems,
+      removed,
+      requestedBy: payload.requestedBy?.trim() || "system",
+    });
+    return {
+      status: "pruned",
+      before,
+      maxItems,
+      removed: removed ?? { inboundObjects: 0, inboundEngagements: 0 },
+    };
   }
 
   function buildContentDeliveryOpsSnapshot({
@@ -4302,7 +4447,13 @@ export function createGatewayApp({
         isOperatorRoute(request, pathname) &&
         config.auth?.operatorBearerToken &&
         !verifyBearerToken(request, config.auth.operatorBearerToken) &&
-        !(pathname === "/jobs/inbound-reconciliation" && verifyBearerToken(request, config.inboundReconciliation?.schedulerBearerToken))
+        !(
+          SCHEDULER_JOB_PATHS.has(pathname) &&
+          verifyBearerToken(
+            request,
+            config.inboundReconciliation?.schedulerBearerToken
+          )
+        )
       ) {
         return jsonResponse({ error: "Unauthorized operator request" }, 401);
       }
@@ -4855,6 +5006,23 @@ export function createGatewayApp({
         if (!objectId) {
           return jsonResponse({ error: "objectId is required" }, 422);
         }
+        const actionType = engagementType.toLowerCase();
+        const activeEngagement = getActiveOutboundEngagement(
+          handle,
+          objectId,
+          actionType,
+        );
+        if (activeEngagement) {
+          return jsonResponse(
+            {
+              status: "duplicate",
+              mapping: actionType,
+              activityId: activeEngagement.id,
+              active: true,
+            },
+            200,
+          );
+        }
 
         const takedown = await enforceTakedownIfNeeded(objectId, handle, `outbox-${engagementType.toLowerCase()}`);
         if (takedown) {
@@ -4923,7 +5091,7 @@ export function createGatewayApp({
         await recordLocalOutboundActivity({
           actorHandle: handle,
           activity,
-          actionType: engagementType.toLowerCase(),
+          actionType,
         });
         const deliveries = await fanOutActivity({
           actorHandle: handle,
@@ -4936,7 +5104,8 @@ export function createGatewayApp({
           {
             status: "queued",
             activityId: activity.id,
-            mapping: engagementType.toLowerCase(),
+            mapping: actionType,
+            active: true,
             mentionResolution: mentionResolutionSummary,
             recipients: recipients.map((entry) => entry.remoteActorId),
             deliveries: deliveries.map((entry) => ({
@@ -4966,20 +5135,6 @@ export function createGatewayApp({
         const requestedActorId = payload.actorId?.trim() || null;
         if (!account && !requestedActorId) {
           return jsonResponse({ error: "account or actorId is required" }, 422);
-        }
-
-        const activeFollowing = (store.getFollowing?.(handle) ?? []).filter(
-          (entry) => entry.status === "pending" || entry.status === "accepted"
-        );
-        const maximum = config.social?.maxFollowingPerActor ?? 200;
-        if (activeFollowing.length >= maximum) {
-          return jsonResponse(
-            {
-              error: "Following limit reached",
-              limit: maximum,
-            },
-            409
-          );
         }
 
         let remoteActor;
@@ -5018,6 +5173,20 @@ export function createGatewayApp({
               item: existing,
             },
             200
+          );
+        }
+
+        const activeFollowing = (store.getFollowing?.(handle) ?? []).filter(
+          (entry) => entry.status === "pending" || entry.status === "accepted"
+        );
+        const maximum = config.social?.maxFollowingPerActor ?? 200;
+        if (activeFollowing.length >= maximum) {
+          return jsonResponse(
+            {
+              error: "Following limit reached",
+              limit: maximum,
+            },
+            409
           );
         }
 
@@ -5134,13 +5303,29 @@ export function createGatewayApp({
           ? getLocalOutboundActivity(handle, activityId)
           : null;
         if (!original && mapping && objectId) {
-          original = [...(store.getLocalOutboundActivities?.({ actorHandle: handle }) ?? [])]
-            .reverse()
-            .find(
-              (entry) =>
-                entry.actionType === mapping &&
-                getObjectReferenceId(entry.activity?.object) === objectId
-            );
+          original = ["like", "announce"].includes(mapping)
+            ? getActiveOutboundEngagement(handle, objectId, mapping)
+            : [...(store.getLocalOutboundActivities?.({ actorHandle: handle }) ?? [])]
+                .reverse()
+                .find(
+                  (entry) =>
+                    entry.actionType === mapping &&
+                    getObjectReferenceId(entry.activity?.object) === objectId,
+                );
+        }
+        if (
+          !original &&
+          objectId &&
+          ["like", "announce"].includes(mapping)
+        ) {
+          return jsonResponse(
+            {
+              status: "duplicate",
+              mapping: `undo-${mapping}`,
+              active: false,
+            },
+            200,
+          );
         }
         if (
           !original ||
@@ -5150,6 +5335,29 @@ export function createGatewayApp({
             { error: "A known follow, like, or announce activity is required" },
             404
           );
+        }
+
+        if (["like", "announce"].includes(original.actionType)) {
+          const engagementObjectId = getObjectReferenceId(
+            original.activity?.object,
+          );
+          const activeEngagement = getActiveOutboundEngagement(
+            handle,
+            engagementObjectId,
+            original.actionType,
+          );
+          if (!activeEngagement) {
+            return jsonResponse(
+              {
+                status: "duplicate",
+                mapping: `undo-${original.actionType}`,
+                activityId: original.id,
+                active: false,
+              },
+              200,
+            );
+          }
+          original = activeEngagement;
         }
 
         const originalActivity = original.activity;
@@ -5171,7 +5379,9 @@ export function createGatewayApp({
         ]);
         let recipients;
         try {
-          recipients = await resolveExplicitRemoteActors(explicitActorIds);
+          recipients = await resolveExplicitRemoteActors(explicitActorIds, {
+            actorHandle: handle,
+          });
         } catch (error) {
           return jsonResponse({ error: error.message }, 422);
         }
@@ -5208,6 +5418,7 @@ export function createGatewayApp({
             mapping: `undo-${original.actionType}`,
             activityId: activity.id,
             undoneActivityId: originalActivity.id,
+            active: false,
             recipients: recipients.map((entry) => entry.remoteActorId),
             deliveries: deliveries.map((entry) => ({
               id: entry.id,
@@ -5423,6 +5634,24 @@ export function createGatewayApp({
         });
       }
 
+      if (
+        request.method === "GET" &&
+        pathname === "/admin/social/unread-count"
+      ) {
+        const actorHandle = url.searchParams.get("actorHandle");
+        if (!actorHandle || !config.actors[actorHandle]) {
+          return jsonResponse({ error: "Known actorHandle is required" }, 422);
+        }
+        const unreadNotifications = (
+          store.getLocalNotifications?.(actorHandle) ?? []
+        ).reduce((total, entry) => total + (entry.unreadCount ?? 0), 0);
+        return jsonResponse({
+          actorHandle,
+          unreadNotifications,
+          unreadNotificationsCount: unreadNotifications,
+        });
+      }
+
       if (request.method === "GET" && pathname === "/admin/social/summary") {
         const actors = Object.keys(config.actors).map((actorHandle) => {
           const following = store.getFollowing?.(actorHandle) ?? [];
@@ -5509,6 +5738,10 @@ export function createGatewayApp({
             remoteActor: store.getRemoteActor?.(entry.remoteActorId) ?? {
               actorId: entry.remoteActorId,
             },
+            viewerEngagement: getOutboundEngagementState(
+              actorHandle,
+              entry.objectId,
+            ),
           }));
 
         return jsonResponse({
@@ -5613,6 +5846,14 @@ export function createGatewayApp({
           return jsonResponse({ error: "remoteActorId is required" }, 422);
         }
 
+        const previousFollowing = store.getFollowing?.(
+          actorHandle,
+          remoteActorId,
+        );
+        const previousFollower = store.getFollower?.(
+          actorHandle,
+          remoteActorId,
+        );
         const blockRecord = {
           remoteActorId,
           status: "blocked",
@@ -5621,8 +5862,29 @@ export function createGatewayApp({
           blockedAt: clock().toISOString(),
           updatedAt: clock().toISOString(),
           createdBy: payload.createdBy?.trim() || actorHandle,
+          previousFollowingStatus:
+            previousFollowing?.status &&
+            previousFollowing.status !== "blocked"
+              ? previousFollowing.status
+              : previousFollowing?.previousFollowingStatus ?? null,
         };
         await store.upsertFollowing?.(actorHandle, blockRecord);
+        await store.removeFollower?.(actorHandle, remoteActorId);
+        const canceledDeliveries = [];
+        for (const item of store.getOutboundItems?.({ actorHandle }) ?? []) {
+          if (
+            item.targetActorId !== remoteActorId ||
+            !["pending", "processing"].includes(item.status)
+          ) {
+            continue;
+          }
+          const error = new Error(
+            `Delivery blocked by local user for ${remoteActorId}`,
+          );
+          error.temporary = false;
+          await store.moveOutboundToDeadLetter?.(item.id, error);
+          canceledDeliveries.push(item.id);
+        }
         await recordAuditEvent({
           timestamp: clock().toISOString(),
           event: "social.remote-actor-blocked",
@@ -5630,8 +5892,18 @@ export function createGatewayApp({
           remoteActorId,
           reason: blockRecord.reason,
           createdBy: blockRecord.createdBy,
+          followerRemoved: Boolean(previousFollower),
+          canceledDeliveryCount: canceledDeliveries.length,
         });
-        return jsonResponse({ status: "blocked", item: blockRecord }, 201);
+        return jsonResponse(
+          {
+            status: "blocked",
+            item: blockRecord,
+            followerRemoved: Boolean(previousFollower),
+            canceledDeliveries,
+          },
+          201,
+        );
       }
 
       if (request.method === "POST" && pathname === "/admin/social/unblock") {
@@ -5729,35 +6001,7 @@ export function createGatewayApp({
         } catch {
           return jsonResponse({ error: "Invalid JSON body" }, 400);
         }
-        const retentionDays =
-          Number.isFinite(payload.retentionDays) && payload.retentionDays > 0
-            ? Math.floor(payload.retentionDays)
-            : config.social?.timelineRetentionDays ?? 30;
-        const maxItems =
-          Number.isFinite(payload.maxItems) && payload.maxItems > 0
-            ? Math.floor(payload.maxItems)
-            : config.social?.timelineMaxItems ?? 1_000;
-        const before = new Date(
-          clock().getTime() - retentionDays * 24 * 60 * 60 * 1000
-        ).toISOString();
-        const removed = await store.pruneSocialData?.({ before, maxItems });
-        for (const localHandle of Object.keys(config.actors)) {
-          await syncLocalDomainProjection(localHandle);
-        }
-        await recordAuditEvent({
-          timestamp: clock().toISOString(),
-          event: "social.retention-pruned",
-          before,
-          maxItems,
-          removed,
-          requestedBy: payload.requestedBy?.trim() || "system",
-        });
-        return jsonResponse({
-          status: "pruned",
-          before,
-          maxItems,
-          removed: removed ?? { inboundObjects: 0, inboundEngagements: 0 },
-        });
+        return jsonResponse(await runSocialPrune(payload));
       }
 
       if (request.method === "GET" && pathname === "/admin/domain-blocks") {
@@ -5815,6 +6059,36 @@ export function createGatewayApp({
 
         const result = await runInboundReconciliationJob(payload);
         return jsonResponse(result, result.status === "partial" ? 207 : 200);
+      }
+
+      if (request.method === "POST" && pathname === "/jobs/social-prune") {
+        const authorization = authorizeSocialPruneJob(request);
+        if (!authorization.ok) {
+          return jsonResponse(
+            { error: authorization.error },
+            authorization.statusCode
+          );
+        }
+
+        const bodyText = await request.text();
+        let payload = {};
+        if (bodyText.trim()) {
+          try {
+            payload = parseJsonBody(bodyText);
+          } catch {
+            return jsonResponse({ error: "Invalid JSON body" }, 400);
+          }
+        }
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+          return jsonResponse({ error: "JSON body must be an object" }, 400);
+        }
+
+        return jsonResponse(
+          await runSocialPrune({
+            ...payload,
+            requestedBy: payload.requestedBy?.trim() || "scheduler",
+          })
+        );
       }
 
       if (request.method === "GET" && pathname === "/admin/actor-suspensions") {
