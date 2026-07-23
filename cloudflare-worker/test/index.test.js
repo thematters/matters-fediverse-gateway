@@ -175,6 +175,47 @@ test("canonical healthz blocks follow readiness when origin health fails", async
   }
 });
 
+test("canonical NodeInfo document proxies to the gateway-core NodeInfo route", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init });
+    return new Response(
+      JSON.stringify({
+        version: "2.1",
+        software: { name: "matters-fediverse-gateway", version: "1.0.0" },
+        protocols: ["activitypub"],
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      },
+    );
+  };
+
+  try {
+    const response = await fetchWorker("/ap/instance-info/2.1", {
+      ...canonicalEnv,
+      GENERAL_AUTHORS_ENABLED: "true",
+      GATEWAY_CORE_ORIGIN: "https://gateway-origin.example.test/",
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.version, "2.1");
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, "https://gateway-origin.example.test/nodeinfo/2.1");
+    assert.equal(calls[0].init.headers.get("x-forwarded-prefix"), "/ap");
+    assert.equal(
+      calls[0].init.headers.get("x-original-url"),
+      "https://matters.town/ap/instance-info/2.1",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("canonical inbox proxy strips /ap prefix before forwarding to gateway-core", async () => {
   const originalFetch = globalThis.fetch;
   const calls = [];

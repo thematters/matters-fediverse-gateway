@@ -528,7 +528,9 @@ async function proxyToGatewayCore(request, env) {
 
   const sourceUrl = new URL(request.url);
   const prefix = activityPrefix(request, env);
-  const targetPathname = stripActivityPrefix(sourceUrl.pathname, prefix);
+  const strippedPathname = stripActivityPrefix(sourceUrl.pathname, prefix);
+  const targetPathname =
+    strippedPathname === "/instance-info/2.1" ? "/nodeinfo/2.1" : strippedPathname;
   const targetUrl = new URL(`${origin}${targetPathname}${sourceUrl.search}`);
   const headers = new Headers(request.headers);
   headers.set("x-forwarded-host", sourceUrl.host);
