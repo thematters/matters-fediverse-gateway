@@ -240,6 +240,8 @@ export async function loadGatewayConfig(configPath) {
       handle,
       displayName: actor.displayName ?? handle,
       summary: actor.summary ?? "",
+      avatarUrl: actor.avatarUrl?.trim() || null,
+      headerUrl: actor.headerUrl?.trim() || null,
       autoAcceptFollows: actor.autoAcceptFollows !== false,
       aliases: actor.aliases ?? [],
       staticOutboxFile: actor.staticOutboxFile
@@ -336,6 +338,20 @@ export async function loadGatewayConfig(configPath) {
     remoteActors: raw.remoteActors ?? {},
     remoteDiscovery: {
       cacheTtlMs: raw.remoteDiscovery?.cacheTtlMs ?? 60 * 60 * 1000,
+    },
+    social: {
+      maxFollowingPerActor:
+        Number.isFinite(raw.social?.maxFollowingPerActor) && raw.social.maxFollowingPerActor > 0
+          ? Math.floor(raw.social.maxFollowingPerActor)
+          : 200,
+      timelineRetentionDays:
+        Number.isFinite(raw.social?.timelineRetentionDays) && raw.social.timelineRetentionDays > 0
+          ? Math.floor(raw.social.timelineRetentionDays)
+          : 30,
+      timelineMaxItems:
+        Number.isFinite(raw.social?.timelineMaxItems) && raw.social.timelineMaxItems > 0
+          ? Math.floor(raw.social.timelineMaxItems)
+          : 1_000,
     },
     delivery: {
       maxAttempts: raw.delivery?.maxAttempts ?? 2,

@@ -42,12 +42,21 @@ export function normalizeLocalActorProfile(profile, config) {
     aliases.unshift(profileUrl);
   }
 
+  const avatarUrl = profile?.avatarUrl?.trim()
+    ? normalizeUrl(profile.avatarUrl.trim(), "avatarUrl")
+    : null;
+  const headerUrl = profile?.headerUrl?.trim()
+    ? normalizeUrl(profile.headerUrl.trim(), "headerUrl")
+    : null;
+
   return {
     handle,
     displayName,
     summary,
     profileUrl,
     aliases,
+    avatarUrl,
+    headerUrl,
     autoAcceptFollows: profile?.autoAcceptFollows !== false,
     updatedAt: profile?.updatedAt ?? new Date().toISOString(),
   };

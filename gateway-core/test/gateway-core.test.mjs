@@ -1272,7 +1272,7 @@ test("sqlite state store exposes runtime metadata and queue snapshot", async () 
   const runtime = store.getRuntimeMetadata();
   const queue = store.getQueueSnapshot({ traceLimit: 5 });
   assert.equal(runtime.driver, "sqlite");
-  assert.equal(runtime.schemaVersion, 7);
+  assert.equal(runtime.schemaVersion, 8);
   assert.equal(queue.summary.total, 3);
   assert.equal(queue.summary.pending, 1);
   assert.equal(queue.summary.processing, 0);
@@ -2155,7 +2155,7 @@ test("admin runtime storage endpoint exposes sqlite metadata", async () => {
   assert.equal(response.status, 200);
   const payload = await response.json();
   assert.equal(payload.runtime.driver, "sqlite");
-  assert.equal(payload.runtime.schemaVersion, 7);
+  assert.equal(payload.runtime.schemaVersion, 8);
   assert.equal(payload.runtime.journalMode, "wal");
   assert.equal(payload.alerts.items.some((entry) => entry.code === "storage.backup.missing"), true);
 
@@ -7385,7 +7385,7 @@ test("backup script creates sqlite backup and manifest", async () => {
 
   assert.equal(backupDb.length > 0, true);
   assert.equal(manifest.sourceFile, sqliteFile);
-  assert.equal(manifest.schemaVersion, 7);
+  assert.equal(manifest.schemaVersion, 8);
 });
 
 test("restore script restores sqlite backup and stamps runtime metadata", async () => {
@@ -8948,6 +8948,134 @@ test("authenticated actor registration persists dynamic authors", async () => {
 
   const actorResponse = await app.handle(new Request("https://matters.example/users/newauthor"));
   assert.equal(actorResponse.status, 200);
+});
+
+test("dynamic actor profile exposes avatar and sends Update Person when profile changes", async () => {
+  const { app, config, store, deliveries } = await createHarness();
+  config.dynamicActors = {
+    enabled: true,
+    profileHostAllowlist: ["matters.town"],
+    sharedSigningKey: {
+      publicKeyPem: config.actors.alice.publicKeyPem,
+      privateKeyPem: config.actors.alice.privateKeyPem,
+      previousPublicKeyPem: null,
+    },
+  };
+  const createResponse = await app.handle(
+    new Request("https://matters.example/admin/actors", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        handle: "newauthor",
+        displayName: "New Author",
+        profileUrl: "https://matters.town/@newauthor",
+        avatarUrl: "https://imagedelivery.net/example/avatar-v1/public",
+      }),
+    }),
+  );
+  const created = await createResponse.json();
+  assert.equal(created.actor.icon.url, "https://imagedelivery.net/example/avatar-v1/public");
+  assert.equal(created.profileUpdate, null);
+
+  await store.upsertFollower("newauthor", {
+    remoteActorId: "https://remote.example/users/zoe",
+    inbox: "https://remote.example/users/zoe/inbox",
+    sharedInbox: "https://remote.example/inbox",
+    status: "accepted",
+    lastActivityId: "https://remote.example/activities/follow-profile-1",
+  });
+  const updateResponse = await app.handle(
+    new Request("https://matters.example/admin/actors", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        handle: "newauthor",
+        displayName: "New Author",
+        profileUrl: "https://matters.town/@newauthor",
+        avatarUrl: "https://imagedelivery.net/example/avatar-v2/public",
+        headerUrl: "https://imagedelivery.net/example/header/public",
+      }),
+    }),
+  );
+  const updated = await updateResponse.json();
+  assert.equal(updateResponse.status, 200);
+  assert.equal(updated.actor.icon.url, "https://imagedelivery.net/example/avatar-v2/public");
+  assert.equal(updated.actor.image.url, "https://imagedelivery.net/example/header/public");
+  assert.equal(updated.profileUpdate.recipients.length, 1);
+  assert.equal(deliveries.at(-1).activity.type, "Update");
+  assert.equal(deliveries.at(-1).activity.object.type, "Person");
+  assert.equal(
+    deliveries.at(-1).activity.object.icon.url,
+    "https://imagedelivery.net/example/avatar-v2/public",
+  );
+});
+
+test("outbound follow persists state, accepts remote response, and can be undone", async () => {
+  const { app, store, deliveries, remoteKeys } = await createHarness();
+  const followResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/follow", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        actorId: "https://remote.example/users/zoe",
+        idempotencyKey: "follow-zoe",
+      }),
+    }),
+  );
+  const followed = await followResponse.json();
+  assert.equal(followResponse.status, 202);
+  assert.equal(followed.status, "pending");
+  assert.equal(
+    store.getFollowing("alice", "https://remote.example/users/zoe").status,
+    "pending",
+  );
+  assert.equal(deliveries.at(-1).activity.type, "Follow");
+
+  const accept = {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    id: "https://remote.example/activities/accept-follow-zoe",
+    type: "Accept",
+    actor: "https://remote.example/users/zoe",
+    object: deliveries.at(-1).activity,
+  };
+  const acceptResponse = await app.handle(
+    signedRequest({
+      method: "POST",
+      url: "https://matters.example/users/alice/inbox",
+      body: JSON.stringify(accept),
+      keyId: "https://remote.example/users/zoe#main-key",
+      privateKeyPem: remoteKeys.privateKeyPem,
+    }),
+  );
+  assert.equal(acceptResponse.status, 202);
+  assert.equal(
+    store.getFollowing("alice", "https://remote.example/users/zoe").status,
+    "accepted",
+  );
+
+  const collectionResponse = await app.handle(
+    new Request("https://matters.example/users/alice/following"),
+  );
+  const collection = await collectionResponse.json();
+  assert.deepEqual(collection.orderedItems, [
+    "https://remote.example/users/zoe",
+  ]);
+
+  const undoResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/undo", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ activityId: followed.activityId }),
+    }),
+  );
+  const undone = await undoResponse.json();
+  assert.equal(undoResponse.status, 202);
+  assert.equal(undone.mapping, "undo-follow");
+  assert.equal(
+    store.getFollowing("alice", "https://remote.example/users/zoe"),
+    null,
+  );
+  assert.equal(deliveries.at(-1).activity.type, "Undo");
 });
 
 test("outbox create is idempotent and records articles without followers", async () => {

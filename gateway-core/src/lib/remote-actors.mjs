@@ -90,6 +90,21 @@ function normalizeRemoteActor({ actorId, actorDocument, source, discoveredAt }) 
 
   const normalized = {
     actorId: actorDocument.id ?? actorId,
+    preferredUsername: actorDocument.preferredUsername ?? null,
+    name: actorDocument.name ?? actorDocument.preferredUsername ?? null,
+    summary: actorDocument.summary ?? "",
+    url:
+      typeof actorDocument.url === "string"
+        ? actorDocument.url
+        : actorDocument.url?.href ?? actorDocument.id ?? actorId,
+    avatarUrl:
+      typeof actorDocument.icon === "string"
+        ? actorDocument.icon
+        : actorDocument.icon?.url ?? null,
+    headerUrl:
+      typeof actorDocument.image === "string"
+        ? actorDocument.image
+        : actorDocument.image?.url ?? null,
     keyId: publicKey?.id ?? `${actorDocument.id ?? actorId}#main-key`,
     inbox: actorDocument.inbox ?? "",
     sharedInbox: actorDocument.endpoints?.sharedInbox ?? null,
@@ -314,6 +329,12 @@ export function createRemoteActorDirectory({
 
     const normalizedSeed = {
       actorId,
+      preferredUsername: seed.preferredUsername ?? null,
+      name: seed.name ?? seed.preferredUsername ?? null,
+      summary: seed.summary ?? "",
+      url: seed.url ?? actorId,
+      avatarUrl: seed.avatarUrl ?? null,
+      headerUrl: seed.headerUrl ?? null,
       keyId: seed.keyId ?? `${actorId}#main-key`,
       inbox: seed.inbox ?? "",
       sharedInbox: seed.sharedInbox ?? null,

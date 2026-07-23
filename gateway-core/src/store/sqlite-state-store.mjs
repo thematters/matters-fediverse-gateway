@@ -8,7 +8,7 @@ import {
   combineContentDeliveryReviewSnapshots,
 } from "../lib/content-delivery-ops.mjs";
 
-const SQLITE_SCHEMA_VERSION = 7;
+const SQLITE_SCHEMA_VERSION = 8;
 
 function parseJson(value) {
   return value ? JSON.parse(value) : null;
@@ -276,6 +276,14 @@ export class SqliteStateStore {
       CREATE TABLE IF NOT EXISTS followers (
         handle TEXT NOT NULL,
         remote_actor_id TEXT NOT NULL,
+        record_json TEXT NOT NULL,
+        PRIMARY KEY (handle, remote_actor_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS following (
+        handle TEXT NOT NULL,
+        remote_actor_id TEXT NOT NULL,
+        status TEXT NOT NULL,
         record_json TEXT NOT NULL,
         PRIMARY KEY (handle, remote_actor_id)
       );
@@ -553,6 +561,19 @@ export class SqliteStateStore {
         localNotifications: {},
       };
       snapshot.actors[row.handle].followers[row.remote_actor_id] = parseJson(row.record_json);
+    }
+
+    for (const row of this.db.prepare("SELECT handle, remote_actor_id, record_json FROM following").all()) {
+      snapshot.actors[row.handle] ??= {
+        followers: {},
+        following: {},
+        inboundObjects: {},
+        inboundEngagements: {},
+        localConversations: {},
+        localContents: {},
+        localNotifications: {},
+      };
+      snapshot.actors[row.handle].following[row.remote_actor_id] = parseJson(row.record_json);
     }
 
     for (const row of this.db.prepare("SELECT handle, object_id, record_json FROM inbound_objects").all()) {
@@ -947,6 +968,7 @@ export class SqliteStateStore {
         remoteActors: this.db.prepare("SELECT COUNT(*) AS count FROM remote_actors").get().count,
         mentionResolutions: this.db.prepare("SELECT COUNT(*) AS count FROM mention_resolutions").get().count,
         followers: this.db.prepare("SELECT COUNT(*) AS count FROM followers").get().count,
+        following: this.db.prepare("SELECT COUNT(*) AS count FROM following").get().count,
         inboundObjects: this.db.prepare("SELECT COUNT(*) AS count FROM inbound_objects").get().count,
         inboundEngagements: this.db.prepare("SELECT COUNT(*) AS count FROM inbound_engagements").get().count,
         localConversations: this.db.prepare("SELECT COUNT(*) AS count FROM local_conversations").get().count,
@@ -1071,6 +1093,46 @@ export class SqliteStateStore {
       .map((row) => parseJson(row.record_json));
   }
 
+  async upsertFollowing(handle, followingRecord) {
+    this.ensureActor(handle);
+    this.db
+      .prepare(
+        "INSERT OR REPLACE INTO following (handle, remote_actor_id, status, record_json) VALUES (?, ?, ?, ?)"
+      )
+      .run(
+        handle,
+        followingRecord.remoteActorId,
+        followingRecord.status,
+        JSON.stringify(followingRecord)
+      );
+  }
+
+  getFollowing(handle, remoteActorId = null) {
+    this.ensureActor(handle);
+    if (remoteActorId) {
+      const row = this.db
+        .prepare(
+          "SELECT record_json FROM following WHERE handle = ? AND remote_actor_id = ?"
+        )
+        .get(handle, remoteActorId);
+      return parseJson(row?.record_json) ?? null;
+    }
+
+    return this.db
+      .prepare(
+        "SELECT record_json FROM following WHERE handle = ? ORDER BY remote_actor_id ASC"
+      )
+      .all(handle)
+      .map((row) => parseJson(row.record_json));
+  }
+
+  async removeFollowing(handle, remoteActorId) {
+    this.ensureActor(handle);
+    this.db
+      .prepare("DELETE FROM following WHERE handle = ? AND remote_actor_id = ?")
+      .run(handle, remoteActorId);
+  }
+
   async upsertInboundObject(handle, inboundObjectRecord) {
     this.ensureActor(handle);
     this.db
@@ -1092,6 +1154,49 @@ export class SqliteStateStore {
       .prepare("SELECT record_json FROM inbound_objects WHERE handle = ? ORDER BY object_id ASC")
       .all(handle)
       .map((row) => parseJson(row.record_json));
+  }
+
+  async pruneSocialData({ before, maxItems }) {
+    const cutoff = Date.parse(before);
+    let inboundObjects = 0;
+    let inboundEngagements = 0;
+    const handles = this.db.prepare("SELECT handle FROM actors").all();
+    const transaction = this.db.transaction(() => {
+      for (const { handle } of handles) {
+        const objects = this.getInboundObjects(handle).sort((left, right) =>
+          (right.publishedAt ?? right.receivedAt ?? "").localeCompare(
+            left.publishedAt ?? left.receivedAt ?? ""
+          )
+        );
+        for (const [index, record] of objects.entries()) {
+          const timestamp = Date.parse(record.publishedAt ?? record.receivedAt ?? "");
+          if (index >= maxItems || (Number.isFinite(timestamp) && timestamp < cutoff)) {
+            this.db
+              .prepare("DELETE FROM inbound_objects WHERE handle = ? AND object_id = ?")
+              .run(handle, record.objectId);
+            inboundObjects += 1;
+          }
+        }
+
+        const engagements = this.getInboundEngagements(handle).sort((left, right) =>
+          (right.receivedAt ?? "").localeCompare(left.receivedAt ?? "")
+        );
+        for (const [index, record] of engagements.entries()) {
+          const timestamp = Date.parse(record.receivedAt ?? "");
+          if (index >= maxItems || (Number.isFinite(timestamp) && timestamp < cutoff)) {
+            this.db
+              .prepare(
+                "DELETE FROM inbound_engagements WHERE handle = ? AND activity_id = ?"
+              )
+              .run(handle, record.activityId);
+            inboundEngagements += 1;
+          }
+        }
+      }
+    });
+    transaction();
+
+    return { inboundObjects, inboundEngagements };
   }
 
   async upsertInboundEngagement(handle, engagementRecord) {
