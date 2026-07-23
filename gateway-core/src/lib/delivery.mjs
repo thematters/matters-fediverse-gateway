@@ -1,4 +1,8 @@
 import { signHttpRequest } from "../security/http-signatures.mjs";
+import {
+  safeFederationFetch,
+  validateFederationUrl,
+} from "./safe-fetch.mjs";
 
 function getDomainFromUri(value) {
   if (!value?.trim()) {
@@ -34,33 +38,43 @@ function buildEvidenceRecordId(now) {
   return `evidence-${now.getTime()}-${Math.random().toString(16).slice(2, 10)}`;
 }
 
-export function createFetchDeliveryClient({ userAgent }) {
+export function createFetchDeliveryClient({ userAgent, fetchImpl = null }) {
   return {
     async deliver({ item, actor }) {
       const body = JSON.stringify(item.activity);
-      const signedHeaders = signHttpRequest({
-        method: "POST",
-        url: item.targetInbox,
-        body,
-        keyId: actor.keyId,
-        privateKeyPem: actor.privateKeyPem,
-      });
-      const response = await fetch(item.targetInbox, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/activity+json",
-          "User-Agent": userAgent,
-          ...signedHeaders,
+      const targetInbox = validateFederationUrl(item.targetInbox).href;
+      const response = await safeFederationFetch(
+        targetInbox,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/activity+json",
+            "User-Agent": userAgent,
+          },
+          body,
         },
-        body,
-      });
+        {
+          buildHeaders: (url) =>
+            signHttpRequest({
+              method: "POST",
+              url,
+              body,
+              keyId: actor.keyId,
+              privateKeyPem: actor.privateKeyPem,
+            }),
+          ...(fetchImpl ? { fetchImpl } : {}),
+          maxRedirects: 0,
+        },
+      );
 
       if (response.ok || response.status === 202) {
+        await response.body?.cancel();
         return {
           status: response.status,
         };
       }
 
+      await response.body?.cancel();
       const error = new Error(`Delivery failed with status ${response.status}`);
       error.status = response.status;
       error.temporary = response.status >= 500 || response.status === 429;
@@ -134,6 +148,56 @@ export function createDeliveryProcessor({ store, deliveryClient, config, clock =
       }
 
       const targetDomain = getDomainFromUri(item.targetActorId) ?? getDomainFromUri(item.targetInbox);
+      const localRelationship = store.getFollowing?.(
+        item.actorHandle,
+        item.targetActorId,
+      );
+      if (localRelationship?.status === "blocked") {
+        const error = new Error(
+          `Delivery blocked by local user for ${item.targetActorId}`,
+        );
+        error.temporary = false;
+        await store.moveOutboundToDeadLetter(item.id, error);
+        await store.recordTrace({
+          timestamp: clock().toISOString(),
+          direction: "outbound",
+          event: "social.remote-actor-blocked-delivery",
+          itemId: item.id,
+          actorHandle: item.actorHandle,
+          remoteActorId: item.targetActorId,
+          targetDomain,
+          reason: localRelationship.reason,
+        });
+        await store.recordAuditEvent?.({
+          timestamp: clock().toISOString(),
+          event: "social.remote-actor-block-enforced",
+          actorHandle: item.actorHandle,
+          remoteActorId: item.targetActorId,
+          targetDomain,
+          reason: localRelationship.reason,
+          itemId: item.id,
+        });
+        await recordEvidence({
+          category: "delivery-dead-letter",
+          actorHandle: item.actorHandle,
+          remoteActorId: item.targetActorId,
+          remoteDomain: targetDomain,
+          queueItemId: item.id,
+          activityId: item.activity?.id ?? null,
+          activityType: item.activity?.type ?? null,
+          objectId:
+            typeof item.activity?.object === "string"
+              ? item.activity.object
+              : item.activity?.object?.id ?? null,
+          reason: localRelationship.reason,
+          snapshot: {
+            disposition: "local-user-block",
+            item: store.getOutboundItem(item.id),
+          },
+        });
+        return store.getOutboundItem(item.id);
+      }
+
       const remoteActorPolicy = store.getRemoteActorPolicy?.(item.targetActorId);
       if (remoteActorPolicy?.outboundAction === "deny") {
         const error = new Error(`Delivery blocked for remote actor ${item.targetActorId}`);

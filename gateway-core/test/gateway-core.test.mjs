@@ -3240,6 +3240,63 @@ test("inbound reconciliation job stays disabled when scheduler bearer token is n
   assert.equal((await response.json()).error, "Inbound reconciliation scheduler token is not configured");
 });
 
+test("scheduled social prune uses bounded defaults and records an audit event", async () => {
+  const { app, store } = await createHarness();
+  const pruneCalls = [];
+  store.pruneSocialData = async (input) => {
+    pruneCalls.push(input);
+    return { inboundObjects: 3, inboundEngagements: 2 };
+  };
+
+  const response = await app.handle(
+    new Request("https://matters.example/jobs/social-prune", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer test-scheduler-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        retentionDays: 14,
+        maxItems: 500,
+      }),
+    }),
+  );
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "pruned");
+  assert.equal(payload.maxItems, 500);
+  assert.deepEqual(payload.removed, {
+    inboundObjects: 3,
+    inboundEngagements: 2,
+  });
+  assert.equal(pruneCalls.length, 1);
+  assert.equal(pruneCalls[0].maxItems, 500);
+  assert.ok(
+    Date.now() - new Date(pruneCalls[0].before).getTime() >=
+      14 * 24 * 60 * 60 * 1000,
+  );
+  assert.equal(store.getAuditLog(5).at(-1).event, "social.retention-pruned");
+  assert.equal(store.getAuditLog(5).at(-1).requestedBy, "scheduler");
+});
+
+test("scheduled social prune rejects requests without its scheduler token", async () => {
+  const { app } = await createHarness();
+
+  const response = await app.handle(
+    new Request("https://matters.example/jobs/social-prune", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: "{}",
+    }),
+  );
+
+  assert.equal(response.status, 401);
+  assert.equal((await response.json()).error, "Unauthorized scheduler request");
+});
+
 test("inbound reconciliation job script validates a bounded public source in dry-run", async () => {
   const tmpDir = path.join(os.tmpdir(), `matters-gateway-inbound-job-${Date.now()}-${Math.random().toString(16).slice(2)}`);
   await mkdir(tmpDir, { recursive: true });
@@ -9011,17 +9068,20 @@ test("dynamic actor profile exposes avatar and sends Update Person when profile 
 });
 
 test("outbound follow persists state, accepts remote response, and can be undone", async () => {
-  const { app, store, deliveries, remoteKeys } = await createHarness();
-  const followResponse = await app.handle(
-    new Request("https://matters.example/users/alice/outbox/follow", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        actorId: "https://remote.example/users/zoe",
-        idempotencyKey: "follow-zoe",
+  const { app, config, store, deliveries, remoteKeys } = await createHarness();
+  config.social = { maxFollowingPerActor: 1 };
+  const follow = () =>
+    app.handle(
+      new Request("https://matters.example/users/alice/outbox/follow", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          actorId: "https://remote.example/users/zoe",
+          idempotencyKey: "follow-zoe",
+        }),
       }),
-    }),
-  );
+    );
+  const followResponse = await follow();
   const followed = await followResponse.json();
   assert.equal(followResponse.status, 202);
   assert.equal(followed.status, "pending");
@@ -9030,6 +9090,10 @@ test("outbound follow persists state, accepts remote response, and can be undone
     "pending",
   );
   assert.equal(deliveries.at(-1).activity.type, "Follow");
+  const duplicateFollow = await follow();
+  assert.equal(duplicateFollow.status, 200);
+  assert.equal((await duplicateFollow.json()).status, "pending");
+  assert.equal(deliveries.length, 1);
 
   const accept = {
     "@context": "https://www.w3.org/ns/activitystreams",
@@ -9114,4 +9178,232 @@ test("outbox create is idempotent and records articles without followers", async
   assert.equal(secondBody.status, "duplicate");
   assert.equal(secondBody.activityId, firstBody.activityId);
   assert.equal(store.getLocalOutboundActivities({ actorHandle: "bob" }).length, 1);
+});
+
+test("local social block removes follower and prevents queued or future delivery", async () => {
+  const { app, store, deliveries } = await createHarness();
+  const remoteActorId = "https://remote.example/users/zoe";
+
+  await store.upsertFollower("alice", {
+    remoteActorId,
+    inbox: "https://remote.example/users/zoe/inbox",
+    sharedInbox: "https://remote.example/inbox",
+    status: "accepted",
+    followedAt: "2026-07-23T00:00:00.000Z",
+  });
+  await store.enqueueOutbound({
+    id: "queued-before-local-block",
+    status: "pending",
+    attempts: 0,
+    actorHandle: "alice",
+    targetActorId: remoteActorId,
+    targetInbox: "https://remote.example/inbox",
+    activity: {
+      id: "https://matters.example/activities/queued-before-local-block",
+      type: "Create",
+      actor: "https://matters.example/users/alice",
+      object: "https://matters.example/articles/queued-before-local-block",
+    },
+    createdAt: "2026-07-23T00:00:00.000Z",
+  });
+
+  const blockResponse = await app.handle(
+    new Request("https://matters.example/admin/social/block", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        actorHandle: "alice",
+        remoteActorId,
+        reason: "local safety test",
+      }),
+    }),
+  );
+  assert.equal(blockResponse.status, 201);
+  const blockPayload = await blockResponse.json();
+  assert.equal(blockPayload.followerRemoved, true);
+  assert.deepEqual(blockPayload.canceledDeliveries, [
+    "queued-before-local-block",
+  ]);
+  assert.equal(store.getFollower("alice", remoteActorId), null);
+  assert.equal(
+    store.getFollowing("alice", remoteActorId).status,
+    "blocked",
+  );
+  assert.equal(
+    store.getOutboundItem("queued-before-local-block").status,
+    "dead-letter",
+  );
+
+  const updateResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/update", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: "https://matters.example/articles/after-local-block",
+          type: "Article",
+          content: "Must not reach the blocked actor",
+        },
+        targetActorIds: [remoteActorId],
+      }),
+    }),
+  );
+  assert.equal(updateResponse.status, 202);
+  assert.equal(deliveries.length, 0);
+
+  await store.enqueueOutbound({
+    id: "queued-after-local-block",
+    status: "pending",
+    attempts: 0,
+    actorHandle: "alice",
+    targetActorId: remoteActorId,
+    targetInbox: "https://remote.example/inbox",
+    activity: {
+      id: "https://matters.example/activities/queued-after-local-block",
+      type: "Create",
+      actor: "https://matters.example/users/alice",
+      object: "https://matters.example/articles/queued-after-local-block",
+    },
+    createdAt: "2026-07-23T00:01:00.000Z",
+  });
+  const deliveryResponse = await app.handle(
+    new Request("https://matters.example/jobs/delivery", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        id: "queued-after-local-block",
+      }),
+    }),
+  );
+  assert.equal(deliveryResponse.status, 200);
+  assert.equal(
+    store.getOutboundItem("queued-after-local-block").status,
+    "dead-letter",
+  );
+  assert.equal(deliveries.length, 0);
+});
+
+test("outbound engagement is idempotent and exposes reversible timeline state", async () => {
+  const { app, store, deliveries } = await createHarness();
+  const remoteActorId = "https://remote.example/users/zoe";
+  const objectId = "https://remote.example/objects/toggle-like-1";
+
+  await store.upsertFollowing("alice", {
+    remoteActorId,
+    status: "accepted",
+    inbox: "https://remote.example/users/zoe/inbox",
+    sharedInbox: "https://remote.example/inbox",
+  });
+  await store.upsertInboundObject("alice", {
+    objectId,
+    activityId: "https://remote.example/activities/toggle-like-1",
+    actorHandle: "alice",
+    remoteActorId,
+    activityType: "Create",
+    objectType: "Note",
+    mapping: "post",
+    content: "A reversible engagement target",
+    summary: "",
+    url: objectId,
+    inReplyTo: null,
+    publishedAt: "2026-07-23T00:00:00.000Z",
+    receivedAt: "2026-07-23T00:00:00.000Z",
+    visibility: "public",
+  });
+
+  const like = () =>
+    app.handle(
+      new Request("https://matters.example/users/alice/outbox/engagement", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "Like",
+          objectId,
+          targetActorId: remoteActorId,
+        }),
+      }),
+    );
+
+  const firstLike = await like();
+  assert.equal(firstLike.status, 202);
+  const firstLikeBody = await firstLike.json();
+  assert.equal(firstLikeBody.active, true);
+  const duplicateLike = await like();
+  assert.equal(duplicateLike.status, 200);
+  assert.equal((await duplicateLike.json()).status, "duplicate");
+  assert.equal(deliveries.length, 1);
+
+  const likedTimeline = await app.handle(
+    new Request(
+      "https://matters.example/admin/social/timeline?actorHandle=alice",
+    ),
+  );
+  const likedTimelineBody = await likedTimeline.json();
+  assert.deepEqual(likedTimelineBody.items[0].viewerEngagement, {
+    liked: true,
+    announced: false,
+    likeActivityId: firstLikeBody.activityId,
+    announceActivityId: null,
+  });
+
+  const unlike = () =>
+    app.handle(
+      new Request("https://matters.example/users/alice/outbox/undo", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          mapping: "like",
+          objectId,
+          targetActorId: remoteActorId,
+        }),
+      }),
+    );
+  const firstUnlike = await unlike();
+  assert.equal(firstUnlike.status, 202);
+  assert.equal((await firstUnlike.json()).active, false);
+  const duplicateUnlike = await unlike();
+  assert.equal(duplicateUnlike.status, 200);
+  assert.equal((await duplicateUnlike.json()).status, "duplicate");
+  assert.equal(deliveries.length, 2);
+
+  const unlikedTimeline = await app.handle(
+    new Request(
+      "https://matters.example/admin/social/timeline?actorHandle=alice",
+    ),
+  );
+  assert.equal(
+    (await unlikedTimeline.json()).items[0].viewerEngagement.liked,
+    false,
+  );
+
+  const relike = await like();
+  assert.equal(relike.status, 202);
+  assert.equal(deliveries.length, 3);
+});
+
+test("social unread count exposes the lightweight server contract", async () => {
+  const { app } = await createHarness();
+
+  const response = await app.handle(
+    new Request(
+      "https://matters.example/admin/social/unread-count?actorHandle=alice",
+    ),
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    actorHandle: "alice",
+    unreadNotifications: 0,
+    unreadNotificationsCount: 0,
+  });
 });
