@@ -127,6 +127,20 @@ export function buildActorDocument({ instance, actor }) {
     },
   };
 
+  if (actor.avatarUrl) {
+    document.icon = {
+      type: "Image",
+      url: actor.avatarUrl,
+    };
+  }
+
+  if (actor.headerUrl) {
+    document.image = {
+      type: "Image",
+      url: actor.headerUrl,
+    };
+  }
+
   if (actor.previousPublicKeyPem && actor.previousKeyId) {
     document.previousPublicKey = {
       id: actor.previousKeyId,
@@ -231,6 +245,46 @@ export function buildRejectActivity({ actor, follow, now, instance }) {
   }
 
   return activity;
+}
+
+export function buildFollowActivity({ actor, remoteActorId, now, instance }) {
+  const baseUrl = activityBaseUrl(instance);
+
+  return {
+    "@context": ACTIVITY_STREAMS,
+    id: `${baseUrl}/activities/${now.getTime()}-follow-${actor.handle}`,
+    type: "Follow",
+    actor: actor.actorUrl,
+    object: remoteActorId,
+    to: [remoteActorId],
+  };
+}
+
+export function buildUndoActivity({ actor, object, targetActorIds = [], now, instance }) {
+  const baseUrl = activityBaseUrl(instance);
+
+  return {
+    "@context": ACTIVITY_STREAMS,
+    id: `${baseUrl}/activities/${now.getTime()}-undo-${actor.handle}`,
+    type: "Undo",
+    actor: actor.actorUrl,
+    to: [...new Set(targetActorIds.filter(Boolean))],
+    object,
+  };
+}
+
+export function buildPersonUpdateActivity({ actor, now, instance }) {
+  const baseUrl = activityBaseUrl(instance);
+
+  return {
+    "@context": ACTIVITY_STREAMS,
+    id: `${baseUrl}/activities/${now.getTime()}-update-person-${actor.handle}`,
+    type: "Update",
+    actor: actor.actorUrl,
+    to: [PUBLIC_AUDIENCE],
+    cc: [actor.followersUrl],
+    object: buildActorDocument({ instance, actor }),
+  };
 }
 
 function normalizeDeleteObject({ objectId, object, actor }) {

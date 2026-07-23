@@ -191,6 +191,11 @@ cat >/etc/matters-gateway/staging.instance.json <<'JSON'
   "remoteDiscovery": {
     "cacheTtlMs": 3600000
   },
+  "social": {
+    "maxFollowingPerActor": 200,
+    "timelineRetentionDays": 30,
+    "timelineMaxItems": 1000
+  },
   "delivery": {
     "maxAttempts": 3,
     "userAgent": "MattersGatewayCore/0.1.0",

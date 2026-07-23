@@ -676,6 +676,7 @@ export class FileStateStore {
         remoteActors: Object.keys(this.state.remoteActors).length,
         mentionResolutions: Object.keys(this.state.mentionResolutions).length,
         followers: countActorCollections(this.state.actors, "followers"),
+        following: countActorCollections(this.state.actors, "following"),
         inboundObjects: countActorCollections(this.state.actors, "inboundObjects"),
         inboundEngagements: countActorCollections(this.state.actors, "inboundEngagements"),
         localConversations: countActorCollections(this.state.actors, "localConversations"),
@@ -711,6 +712,26 @@ export class FileStateStore {
     return Object.values(this.state.actors[handle].followers);
   }
 
+  async upsertFollowing(handle, followingRecord) {
+    this.ensureActor(handle);
+    this.state.actors[handle].following[followingRecord.remoteActorId] = followingRecord;
+    await this.#persist();
+  }
+
+  getFollowing(handle, remoteActorId = null) {
+    this.ensureActor(handle);
+    if (remoteActorId) {
+      return this.state.actors[handle].following[remoteActorId] ?? null;
+    }
+    return Object.values(this.state.actors[handle].following);
+  }
+
+  async removeFollowing(handle, remoteActorId) {
+    this.ensureActor(handle);
+    delete this.state.actors[handle].following[remoteActorId];
+    await this.#persist();
+  }
+
   async upsertInboundObject(handle, inboundObjectRecord) {
     this.ensureActor(handle);
     this.state.actors[handle].inboundObjects[inboundObjectRecord.objectId] = inboundObjectRecord;
@@ -725,6 +746,58 @@ export class FileStateStore {
   getInboundObjects(handle) {
     this.ensureActor(handle);
     return Object.values(this.state.actors[handle].inboundObjects);
+  }
+
+  async pruneSocialData({ before, maxItems }) {
+    const cutoff = Date.parse(before);
+    let inboundObjects = 0;
+    let inboundEngagements = 0;
+
+    for (const handle of Object.keys(this.state.actors)) {
+      this.ensureActor(handle);
+      const objects = Object.values(this.state.actors[handle].inboundObjects)
+        .sort((left, right) =>
+          (right.publishedAt ?? right.receivedAt ?? "").localeCompare(
+            left.publishedAt ?? left.receivedAt ?? ""
+          )
+        );
+      const retainedObjectIds = new Set(
+        objects
+          .filter((record, index) => {
+            const timestamp = Date.parse(record.publishedAt ?? record.receivedAt ?? "");
+            return index < maxItems && (!Number.isFinite(timestamp) || timestamp >= cutoff);
+          })
+          .map((record) => record.objectId)
+      );
+      for (const record of objects) {
+        if (!retainedObjectIds.has(record.objectId)) {
+          delete this.state.actors[handle].inboundObjects[record.objectId];
+          inboundObjects += 1;
+        }
+      }
+
+      const engagements = Object.values(this.state.actors[handle].inboundEngagements)
+        .sort((left, right) =>
+          (right.receivedAt ?? "").localeCompare(left.receivedAt ?? "")
+        );
+      const retainedActivityIds = new Set(
+        engagements
+          .filter((record, index) => {
+            const timestamp = Date.parse(record.receivedAt ?? "");
+            return index < maxItems && (!Number.isFinite(timestamp) || timestamp >= cutoff);
+          })
+          .map((record) => record.activityId)
+      );
+      for (const record of engagements) {
+        if (!retainedActivityIds.has(record.activityId)) {
+          delete this.state.actors[handle].inboundEngagements[record.activityId];
+          inboundEngagements += 1;
+        }
+      }
+    }
+
+    await this.#persist();
+    return { inboundObjects, inboundEngagements };
   }
 
   async upsertInboundEngagement(handle, engagementRecord) {
