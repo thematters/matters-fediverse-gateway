@@ -360,6 +360,9 @@ The receiver uses a bearer-token-only model. It is intended for staging drills b
 - Reverse proxy template: `deploy/Caddyfile.example`
 - Rollout environment template: `deploy/matters-gateway-core.env.example`
 - System service template: `deploy/matters-gateway-core.service.example`
+- Delivery retry wrapper: `deploy/matters-gateway-delivery-job.example`
+- Delivery retry service: `deploy/matters-gateway-delivery.service.example`
+- Delivery retry timer: `deploy/matters-gateway-delivery.timer.example`
 - Deployment topology baseline: `../research/matters-fediverse-compat/03-ops/deployment-topology-baseline.md`
 - Cloudflare Tunnel staging runbook: `../research/matters-fediverse-compat/03-ops/staging-cloudflare-tunnel-runbook.md`
 - AWS gateway-core origin runbook: `../research/matters-fediverse-compat/03-ops/aws-gateway-core-origin-runbook.md`
@@ -384,6 +387,24 @@ npm run check:rollout-artifact
 ```
 
 Use `--strict-paths` with a real staging environment file when the referenced paths should already exist.
+
+The delivery timer calls `POST /jobs/delivery` every five minutes through the
+loopback interface. It uses the existing inbound reconciliation scheduler token,
+which must be configured with
+`inboundReconciliation.schedulerBearerTokenFile`. Install the wrapper as
+`/usr/local/sbin/matters-gateway-delivery-job`, install the service and timer
+without the `.example` suffix under `/etc/systemd/system/`, then enable the
+timer only after `gateway-core` and the scheduler token are ready:
+
+```bash
+systemctl daemon-reload
+systemctl enable --now matters-gateway-delivery.timer
+systemctl list-timers matters-gateway-delivery.timer
+```
+
+The timer starts two minutes after boot and again five minutes after each run.
+Only pending items are processed. A still-running oneshot service is not started
+a second time.
 
 ## Local Smoke Test
 

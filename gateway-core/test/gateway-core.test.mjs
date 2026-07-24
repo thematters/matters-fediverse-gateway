@@ -2093,6 +2093,56 @@ test("delivery job recovers stale processing items before dispatch", async () =>
   assert.equal(recoveryAudit.itemId, "queue-recover-before-job-1");
 });
 
+test("delivery job accepts the scheduler token when operator authentication is enabled", async () => {
+  const { app, config, store } = await createHarness();
+  config.auth = {
+    edgeBearerToken: "edge-secret",
+    operatorBearerToken: "operator-secret",
+  };
+  await store.enqueueOutbound({
+    id: "queue-scheduler-delivery-1",
+    status: "pending",
+    attempts: 0,
+    actorHandle: "alice",
+    targetActorId: "https://remote.example/users/zoe",
+    targetInbox: "https://remote.example/inbox",
+    activity: {
+      id: "https://matters.example/activities/scheduler-delivery-1",
+      type: "Create",
+      object: {
+        id: "https://matters.example/notes/scheduler-delivery-1",
+        type: "Note",
+      },
+    },
+    createdAt: "2026-03-21T00:00:00.000Z",
+  });
+
+  const rejected = await app.handle(
+    new Request("https://matters.example/jobs/delivery", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: "{}",
+    }),
+  );
+  assert.equal(rejected.status, 401);
+
+  const accepted = await app.handle(
+    new Request("https://matters.example/jobs/delivery", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer test-scheduler-token",
+        "content-type": "application/json",
+      },
+      body: "{}",
+    }),
+  );
+  assert.equal(accepted.status, 200);
+  assert.equal((await accepted.json()).processed, 1);
+  assert.equal(store.getOutboundItem("queue-scheduler-delivery-1").status, "delivered");
+});
+
 test("admin runtime storage endpoint exposes sqlite metadata", async () => {
   const harness = await createHarness();
   const { store } = await createSqliteStoreHarness();
@@ -8949,6 +8999,27 @@ test("rollout artifact check script validates required env keys and paths", asyn
   assert.deepEqual(payload.missingKeys, []);
   assert.deepEqual(payload.missingPaths, []);
   assert.equal(payload.checkedPaths.length, 3);
+});
+
+test("delivery retry deployment artifacts are syntactically valid and bounded", async () => {
+  const deployDir = path.resolve("deploy");
+  const wrapperPath = path.join(deployDir, "matters-gateway-delivery-job.example");
+  const servicePath = path.join(deployDir, "matters-gateway-delivery.service.example");
+  const timerPath = path.join(deployDir, "matters-gateway-delivery.timer.example");
+
+  await execFile("bash", ["-n", wrapperPath]);
+  const wrapper = await readFile(wrapperPath, "utf8");
+  const service = await readFile(servicePath, "utf8");
+  const timer = await readFile(timerPath, "utf8");
+
+  assert.match(wrapper, /SCHEDULER_TOKEN_FILE/u);
+  assert.match(wrapper, /--max-time/u);
+  assert.match(wrapper, /\/jobs\/delivery/u);
+  assert.match(service, /Type=oneshot/u);
+  assert.match(service, /NoNewPrivileges=true/u);
+  assert.match(service, /ProtectSystem=strict/u);
+  assert.match(timer, /OnBootSec=2m/u);
+  assert.match(timer, /OnUnitActiveSec=5m/u);
 });
 
 test("operator routes require the configured bearer token", async () => {
