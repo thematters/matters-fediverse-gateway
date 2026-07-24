@@ -201,6 +201,14 @@ cat >/etc/matters-gateway/staging.instance.json <<'JSON'
     "userAgent": "MattersGatewayCore/0.1.0",
     "processingLeaseTimeoutMs": 900000
   },
+  "compatibility": {
+    "noteCompanion": {
+      "enabled": true,
+      "actorAllowlist": ["*"],
+      "receiverDomainAllowlist": ["threads.net"],
+      "maxSummaryChars": 240
+    }
+  },
   "inboundReconciliation": {
     "maxItemsPerRun": 20,
     "schedulerBearerTokenFile": "./secrets/scheduler.token"
@@ -281,10 +289,17 @@ install -o root -g root -m 0644 \
 install -o root -g root -m 0644 \
   /opt/matters-gateway/repo/gateway-core/deploy/matters-gateway-delivery.timer.example \
   /etc/systemd/system/matters-gateway-delivery.timer
+install -o root -g root -m 0644 \
+  /opt/matters-gateway/repo/gateway-core/deploy/matters-gateway-cloudwatch-metrics.service.example \
+  /etc/systemd/system/matters-gateway-cloudwatch-metrics.service
+install -o root -g root -m 0644 \
+  /opt/matters-gateway/repo/gateway-core/deploy/matters-gateway-cloudwatch-metrics.timer.example \
+  /etc/systemd/system/matters-gateway-cloudwatch-metrics.timer
 
 systemctl daemon-reload
 systemctl disable matters-gateway-core.service
 systemctl disable matters-gateway-delivery.timer
+systemctl disable matters-gateway-cloudwatch-metrics.timer
 
 cat >/etc/matters-gateway/README-next-steps.txt <<'TXT'
 Next steps before starting matters-gateway-core:
@@ -297,7 +312,9 @@ Next steps before starting matters-gateway-core:
 7. Store operator.token in the Lambda and matters-server production secret stores.
 8. systemctl enable --now matters-gateway-core.service
 9. systemctl enable --now matters-gateway-delivery.timer
-10. curl -s http://127.0.0.1:8787/healthz
+10. Apply deploy/aws-production-monitoring.sh from an authenticated operator workstation.
+11. systemctl enable --now matters-gateway-cloudwatch-metrics.timer
+12. curl -s http://127.0.0.1:8787/healthz
 TXT
 EOF
 

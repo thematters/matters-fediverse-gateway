@@ -10,12 +10,15 @@ import {
   buildNodeInfo,
   buildNodeInfoDirectory,
   buildNoteCompanionCreateActivity,
+  buildNoteCompanionDeleteActivity,
+  buildNoteCompanionUpdateActivity,
   buildOrderedCollection,
   buildPersonUpdateActivity,
   buildRejectActivity,
   buildUndoActivity,
   buildUpdateActivity,
   buildWebFinger,
+  canonicalizeArticleObjectId,
 } from "./lib/activitypub.mjs";
 import { createDeliveryProcessor, createFetchDeliveryClient } from "./lib/delivery.mjs";
 import { classifyRemoteActorResolutionError, createRemoteActorDirectory, loadRemoteActorDocument } from "./lib/remote-actors.mjs";
@@ -1692,18 +1695,47 @@ function truncateText(value, limit) {
 
 function buildNoteCompanionObject({ config, actor, articleObject, now }) {
   const noteCompanion = config.compatibility?.noteCompanion ?? {};
-  const articleUrl = typeof articleObject.url === "string" && articleObject.url.trim() ? articleObject.url.trim() : articleObject.id;
-  const title = stripHtmlTags(articleObject.name ?? "");
-  const summary = truncateText(stripHtmlTags(articleObject.summary || articleObject.content || title || articleUrl), noteCompanion.maxSummaryChars ?? 240);
+  const canonicalArticleObject = canonicalizeArticleObjectId({
+    object: articleObject,
+    instance: config.instance,
+  });
+  const articleUrl =
+    typeof canonicalArticleObject.url === "string" && canonicalArticleObject.url.trim()
+      ? canonicalArticleObject.url.trim()
+      : canonicalArticleObject.id;
+  const title = stripHtmlTags(canonicalArticleObject.name ?? "");
+  const summary = truncateText(
+    stripHtmlTags(canonicalArticleObject.summary || canonicalArticleObject.content || title || articleUrl),
+    noteCompanion.maxSummaryChars ?? 240,
+  );
   const content = [title, summary && summary !== title ? summary : null, articleUrl].filter(Boolean).join(": ");
 
   return {
-    id: buildNoteCompanionId({ instance: config.instance, articleObject }),
+    id: buildNoteCompanionId({
+      instance: config.instance,
+      articleObject: canonicalArticleObject,
+    }),
     type: "Note",
     content,
     url: articleUrl,
-    published: now.toISOString(),
+    published: canonicalArticleObject.published ?? now.toISOString(),
+    ...(canonicalArticleObject.updated ? { updated: canonicalArticleObject.updated } : {}),
     attributedTo: actor.actorUrl,
+  };
+}
+
+function buildNoteCompanionResponse({ activity, recipients, deliveries }) {
+  const objectId = typeof activity.object === "string" ? activity.object : activity.object.id;
+
+  return {
+    activityId: activity.id,
+    objectId,
+    recipients: recipients.map((entry) => entry.remoteActorId),
+    deliveries: deliveries.map((entry) => ({
+      id: entry.id,
+      status: entry.status,
+      targetActorId: entry.targetActorId,
+    })),
   };
 }
 
@@ -4596,6 +4628,44 @@ export function createGatewayApp({
           activity,
           traceEvent: "update.fanned-out",
         });
+        const noteCompanionRecipients = selectNoteCompanionRecipients({
+          config,
+          actorHandle: handle,
+          object: activity.object,
+          recipients: followers,
+        });
+        let noteCompanion = null;
+        if (noteCompanionRecipients.length) {
+          const noteCompanionObject = buildNoteCompanionObject({
+            config,
+            actor,
+            articleObject: activity.object,
+            now: clock(),
+          });
+          const noteCompanionActivity = buildNoteCompanionUpdateActivity({
+            actor,
+            object: {
+              ...noteCompanionObject,
+              to: [PUBLIC_AUDIENCE],
+              cc: [actor.followersUrl],
+            },
+            now: clock(),
+            instance: config.instance,
+            to: [PUBLIC_AUDIENCE],
+            cc: [actor.followersUrl],
+          });
+          const noteCompanionDeliveries = await fanOutActivity({
+            actorHandle: handle,
+            remoteActors: noteCompanionRecipients,
+            activity: noteCompanionActivity,
+            traceEvent: "note-companion.update-fanned-out",
+          });
+          noteCompanion = buildNoteCompanionResponse({
+            activity: noteCompanionActivity,
+            recipients: noteCompanionRecipients,
+            deliveries: noteCompanionDeliveries,
+          });
+        }
 
         const responseBody = {
           status: "queued",
@@ -4607,6 +4677,7 @@ export function createGatewayApp({
             status: entry.status,
             targetActorId: entry.targetActorId,
           })),
+          noteCompanion,
         };
         await recordIdempotentOutboundResponse(idempotencyKey, responseBody);
         return jsonResponse(responseBody, 202);
@@ -4754,16 +4825,11 @@ export function createGatewayApp({
             activity: noteCompanionActivity,
             traceEvent: "note-companion.fanned-out",
           });
-          noteCompanion = {
-            activityId: noteCompanionActivity.id,
-            objectId: noteCompanionActivity.object.id,
-            recipients: noteCompanionRecipients.map((entry) => entry.remoteActorId),
-            deliveries: noteCompanionDeliveries.map((entry) => ({
-              id: entry.id,
-              status: entry.status,
-              targetActorId: entry.targetActorId,
-            })),
-          };
+          noteCompanion = buildNoteCompanionResponse({
+            activity: noteCompanionActivity,
+            recipients: noteCompanionRecipients,
+            deliveries: noteCompanionDeliveries,
+          });
         }
 
         const responseBody = {
@@ -5483,6 +5549,48 @@ export function createGatewayApp({
           activity,
           traceEvent: "delete.fanned-out",
         });
+        const articleObject =
+          payload.object && typeof payload.object === "object" && !Array.isArray(payload.object)
+            ? payload.object
+            : {
+                id: payload.objectId,
+                type: "Article",
+                url: payload.objectId,
+              };
+        const noteCompanionRecipients = selectNoteCompanionRecipients({
+          config,
+          actorHandle: handle,
+          object: articleObject,
+          recipients: followers,
+        });
+        let noteCompanion = null;
+        if (noteCompanionRecipients.length) {
+          const companionObject = buildNoteCompanionObject({
+            config,
+            actor,
+            articleObject,
+            now: clock(),
+          });
+          const noteCompanionActivity = buildNoteCompanionDeleteActivity({
+            actor,
+            objectId: companionObject.id,
+            now: clock(),
+            instance: config.instance,
+            to: [PUBLIC_AUDIENCE],
+            cc: [actor.followersUrl],
+          });
+          const noteCompanionDeliveries = await fanOutActivity({
+            actorHandle: handle,
+            remoteActors: noteCompanionRecipients,
+            activity: noteCompanionActivity,
+            traceEvent: "note-companion.delete-fanned-out",
+          });
+          noteCompanion = buildNoteCompanionResponse({
+            activity: noteCompanionActivity,
+            recipients: noteCompanionRecipients,
+            deliveries: noteCompanionDeliveries,
+          });
+        }
 
         const responseBody = {
           status: "queued",
@@ -5494,6 +5602,7 @@ export function createGatewayApp({
             status: entry.status,
             targetActorId: entry.targetActorId,
           })),
+          noteCompanion,
         };
         await recordIdempotentOutboundResponse(idempotencyKey, responseBody);
         return jsonResponse(responseBody, 202);
