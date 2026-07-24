@@ -1,0 +1,17 @@
+[Unit]
+Description=Retry pending Matters Fediverse deliveries
+Requires=matters-gateway-core.service
+After=matters-gateway-core.service
+
+[Service]
+Type=oneshot
+User=root
+Environment=GATEWAY_URL=http://127.0.0.1:8787
+Environment=SCHEDULER_TOKEN_FILE=/etc/matters-gateway/secrets/scheduler.token
+Environment=DELIVERY_JOB_MAX_TIME_SECONDS=120
+ExecStart=/usr/local/sbin/matters-gateway-delivery-job
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict

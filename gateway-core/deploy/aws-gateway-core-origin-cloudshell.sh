@@ -202,7 +202,8 @@ cat >/etc/matters-gateway/staging.instance.json <<'JSON'
     "processingLeaseTimeoutMs": 900000
   },
   "inboundReconciliation": {
-    "maxItemsPerRun": 20
+    "maxItemsPerRun": 20,
+    "schedulerBearerTokenFile": "./secrets/scheduler.token"
   },
   "moderation": {
     "domainBlocks": [],
@@ -270,20 +271,33 @@ StandardError=append:/var/log/matters-gateway/gateway-core.err.log
 [Install]
 WantedBy=multi-user.target
 UNIT
+
+install -o root -g root -m 0700 \
+  /opt/matters-gateway/repo/gateway-core/deploy/matters-gateway-delivery-job.example \
+  /usr/local/sbin/matters-gateway-delivery-job
+install -o root -g root -m 0644 \
+  /opt/matters-gateway/repo/gateway-core/deploy/matters-gateway-delivery.service.example \
+  /etc/systemd/system/matters-gateway-delivery.service
+install -o root -g root -m 0644 \
+  /opt/matters-gateway/repo/gateway-core/deploy/matters-gateway-delivery.timer.example \
+  /etc/systemd/system/matters-gateway-delivery.timer
+
 systemctl daemon-reload
 systemctl disable matters-gateway-core.service
+systemctl disable matters-gateway-delivery.timer
 
 cat >/etc/matters-gateway/README-next-steps.txt <<'TXT'
 Next steps before starting matters-gateway-core:
 1. Provision /etc/matters-gateway/secrets/mashbeanmatters-public-key.pem.
 2. Provision /etc/matters-gateway/secrets/mashbeanmatters-private-key.pem.
-3. Provision independent random values in /etc/matters-gateway/secrets/edge-origin.token and operator.token.
+3. Provision independent random values in /etc/matters-gateway/secrets/edge-origin.token, operator.token, and scheduler.token.
 4. chown root:matters-gateway /etc/matters-gateway/secrets/*
 5. chmod 640 /etc/matters-gateway/secrets/*
 6. Store edge-origin.token as the Cloudflare Worker GATEWAY_ORIGIN_BEARER_TOKEN secret.
 7. Store operator.token in the Lambda and matters-server production secret stores.
 8. systemctl enable --now matters-gateway-core.service
-9. curl -s http://127.0.0.1:8787/healthz
+9. systemctl enable --now matters-gateway-delivery.timer
+10. curl -s http://127.0.0.1:8787/healthz
 TXT
 EOF
 

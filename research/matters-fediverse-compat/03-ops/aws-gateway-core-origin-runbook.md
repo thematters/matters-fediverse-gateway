@@ -66,6 +66,7 @@ Cloudflare Worker canonical pilot route:
 - Tunnel ID: `3ae25e40-ba43-4d2b-b565-e66744b47284`
 - Origin hostname: `gateway-core-origin.matters.town`
 - `matters-gateway-core.service`: enabled / active
+- `matters-gateway-delivery.timer`: enable after the scheduler token is provisioned
 - Worker origin: `GATEWAY_CORE_ORIGIN=https://gateway-core-origin.matters.town`
 - Worker pilot allowlist: `CANONICAL_PILOT_HANDLES=mashbeanmatters`
 
@@ -139,6 +140,37 @@ The script creates:
 - a disabled-by-default operator checklist for real key and config provisioning
 
 The script intentionally does not create production actor key material. The key owner must provision the final private key on the VM before follow tests.
+
+## Outbound Delivery Retry
+
+Transient delivery failures remain in SQLite with `status=pending`. Install the
+version-controlled delivery wrapper, service, and timer from `gateway-core/deploy/`
+so the queue does not depend on a manual operator call:
+
+```bash
+install -o root -g root -m 0700 \
+  gateway-core/deploy/matters-gateway-delivery-job.example \
+  /usr/local/sbin/matters-gateway-delivery-job
+install -o root -g root -m 0644 \
+  gateway-core/deploy/matters-gateway-delivery.service.example \
+  /etc/systemd/system/matters-gateway-delivery.service
+install -o root -g root -m 0644 \
+  gateway-core/deploy/matters-gateway-delivery.timer.example \
+  /etc/systemd/system/matters-gateway-delivery.timer
+systemctl daemon-reload
+systemctl enable --now matters-gateway-delivery.timer
+```
+
+The configured `inboundReconciliation.schedulerBearerTokenFile` must point to
+the same readable token file declared by `SCHEDULER_TOKEN_FILE` in the service.
+The route accepts this scheduler token without granting access to unrelated
+operator routes. Verify the first run with:
+
+```bash
+systemctl start matters-gateway-delivery.service
+systemctl status matters-gateway-delivery.service
+systemctl list-timers matters-gateway-delivery.timer
+```
 
 ## Cloudflare Cutover
 

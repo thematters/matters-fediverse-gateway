@@ -54,6 +54,7 @@ const DISCOVERY_RESPONSE_HEADERS = {
 };
 const OUTBOX_MUTATION_PATTERN = /^\/users\/[^/]+\/outbox\/(create|update|delete|like|announce|engagement|follow|undo)$/u;
 const SCHEDULER_JOB_PATHS = new Set([
+  "/jobs/delivery",
   "/jobs/inbound-reconciliation",
   "/jobs/social-prune",
 ]);

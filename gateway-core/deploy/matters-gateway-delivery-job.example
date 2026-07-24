@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+gateway_url="${GATEWAY_URL:-http://127.0.0.1:8787}"
+scheduler_token_file="${SCHEDULER_TOKEN_FILE:-/etc/matters-gateway/secrets/scheduler.token}"
+max_time_seconds="${DELIVERY_JOB_MAX_TIME_SECONDS:-120}"
+
+if [[ ! -r "$scheduler_token_file" ]]; then
+  echo "Scheduler token file is not readable: $scheduler_token_file" >&2
+  exit 1
+fi
+
+scheduler_token="$(<"$scheduler_token_file")"
+if [[ -z "$scheduler_token" ]]; then
+  echo "Scheduler token file is empty: $scheduler_token_file" >&2
+  exit 1
+fi
+
+curl --config <(printf 'header = "Authorization: Bearer %s"\n' "$scheduler_token") \
+  --fail-with-body \
+  --silent \
+  --show-error \
+  --max-time "$max_time_seconds" \
+  --json '{}' \
+  "${gateway_url%/}/jobs/delivery"
