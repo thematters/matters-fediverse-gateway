@@ -127,10 +127,10 @@ See [`../docs/ipns-gateway-cloudflare-plan.md`](../docs/ipns-gateway-cloudflare-
 
 ### Note Companion Adapter
 
-`compatibility.noteCompanion` can emit a short `Create(Note)` companion for a
-primary `Create(Article)`. It is intended for bounded receiver compatibility
-testing, currently Threads-visible previews, while preserving `Article` as the
-canonical long-form object.
+`compatibility.noteCompanion` emits a short `Note` companion for the lifecycle
+of a primary `Article`. It is intended for receiver compatibility, currently
+Threads-visible previews, while preserving `Article` as the canonical long-form
+object.
 
 It is disabled by default and requires both an actor allowlist and a receiver
 domain allowlist:
@@ -152,13 +152,13 @@ Use `"actorAllowlist": ["*"]` only when the compatibility adapter is approved
 for every dynamic author. The receiver domain allowlist remains mandatory, so a
 wildcard actor scope can still be restricted to `threads.net`.
 
-When enabled, `POST /users/<handle>/outbox/create` still sends the primary
-`Article` to all selected recipients. If the object is an `Article`, the actor is
-allowlisted, and a recipient domain matches, the gateway also sends one
-companion `Note` only to those matched recipients. The response includes a
-`noteCompanion` block with the companion activity id, object id, recipients, and
-delivery rows. Update/Delete companion handling is intentionally not automatic
-in this first slice.
+When enabled, Create, Update, and Delete requests still send the primary
+`Article` activity to all selected recipients. If the object is an `Article`,
+the actor is allowlisted, and a recipient domain matches, the gateway also sends
+the corresponding companion `Note` activity only to those matched recipients.
+All three actions preserve one stable companion object id. Delete uses a
+`Tombstone` with `formerType: Note`. Each response includes a `noteCompanion`
+block with the companion activity id, object id, recipients, and delivery rows.
 
 ## Tests
 
@@ -363,6 +363,9 @@ The receiver uses a bearer-token-only model. It is intended for staging drills b
 - Delivery retry wrapper: `deploy/matters-gateway-delivery-job.example`
 - Delivery retry service: `deploy/matters-gateway-delivery.service.example`
 - Delivery retry timer: `deploy/matters-gateway-delivery.timer.example`
+- CloudWatch metrics service: `deploy/matters-gateway-cloudwatch-metrics.service.example`
+- CloudWatch metrics timer: `deploy/matters-gateway-cloudwatch-metrics.timer.example`
+- Production alarms: `deploy/aws-production-monitoring.sh`
 - Deployment topology baseline: `../research/matters-fediverse-compat/03-ops/deployment-topology-baseline.md`
 - Cloudflare Tunnel staging runbook: `../research/matters-fediverse-compat/03-ops/staging-cloudflare-tunnel-runbook.md`
 - AWS gateway-core origin runbook: `../research/matters-fediverse-compat/03-ops/aws-gateway-core-origin-runbook.md`
@@ -401,6 +404,15 @@ systemctl daemon-reload
 systemctl enable --now matters-gateway-delivery.timer
 systemctl list-timers matters-gateway-delivery.timer
 ```
+
+The production metrics timer publishes a five-minute heartbeat plus bounded
+delivery gauges to the `Matters/FediverseGateway` CloudWatch namespace. Apply
+`deploy/aws-production-monitoring.sh` once from an authenticated operator
+workstation to grant the instance namespace-scoped `PutMetricData` permission
+and create alarms for heartbeat loss, gateway dead letters, oldest pending
+delivery age, SQS age and DLQ depth, Lambda errors and throttles, and EC2 status
+checks. The script requires explicit `INSTANCE_ID`, `INSTANCE_ROLE_NAME`, and
+`SNS_TOPIC_ARN` values.
 
 The timer starts two minutes after boot and again five minutes after each run.
 Only pending items are processed. A still-running oneshot service is not started

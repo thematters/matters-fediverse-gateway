@@ -4080,7 +4080,7 @@ test("outbox Create canonicalizes same-domain Article ids behind public Activity
   ]);
 });
 
-test("outbox Create supports explicit and wildcard actor allowlists for receiver-scoped Note companions", async () => {
+test("receiver-scoped Note companions follow Article Create, Update, and Delete for explicit and wildcard actors", async () => {
   const { app, config, store, deliveries } = await createHarness();
   config.instance.activityBaseUrl = "https://matters.example/ap";
   config.compatibility = {
@@ -4172,6 +4172,81 @@ test("outbox Create supports explicit and wildcard actor allowlists for receiver
   assert.deepEqual(wildcardPayload.noteCompanion.recipients, ["https://threads.net/ap/users/123/"]);
   assert.equal(deliveries.length, 3);
   assert.equal(deliveries[2].activity.object.type, "Note");
+
+  const companionObjectId = wildcardPayload.noteCompanion.objectId;
+  deliveries.length = 0;
+  const updateResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/update", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        object: {
+          id: "https://matters.example/1228009-wildcard-article/",
+          type: "Article",
+          name: "Threads Wildcard Preview Updated",
+          summary: "Updated companion summary",
+          url: "https://matters.example/a/wildcard-preview",
+          content: "<p>Updated wildcard body</p>",
+          updated: "2026-03-22T00:00:00.000Z",
+        },
+      }),
+    }),
+  );
+  assert.equal(updateResponse.status, 202);
+  const updatePayload = await updateResponse.json();
+  assert.equal(updatePayload.noteCompanion.objectId, companionObjectId);
+  assert.deepEqual(updatePayload.noteCompanion.recipients, ["https://threads.net/ap/users/123/"]);
+  assert.equal(deliveries.length, 3);
+  assert.equal(deliveries[0].activity.object.type, "Article");
+  assert.equal(deliveries[1].activity.object.type, "Article");
+  assert.equal(deliveries[2].targetActorId, "https://threads.net/ap/users/123/");
+  assert.equal(deliveries[2].activity.type, "Update");
+  assert.equal(deliveries[2].activity.object.type, "Note");
+  assert.equal(deliveries[2].activity.object.id, companionObjectId);
+  assert.match(deliveries[2].activity.object.content, /Threads Wildcard Preview Updated/);
+  assert.equal(deliveries[2].activity.object.updated, "2026-03-22T00:00:00.000Z");
+
+  deliveries.length = 0;
+  const deleteResponse = await app.handle(
+    new Request("https://matters.example/users/alice/outbox/delete", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        objectId: "https://matters.example/a/wildcard-preview",
+        object: {
+          id: "https://matters.example/1228009-wildcard-article/",
+          type: "Article",
+          name: "Threads Wildcard Preview Updated",
+          url: "https://matters.example/a/wildcard-preview",
+        },
+      }),
+    }),
+  );
+  assert.equal(deleteResponse.status, 202);
+  const deletePayload = await deleteResponse.json();
+  assert.equal(deletePayload.noteCompanion.objectId, companionObjectId);
+  assert.deepEqual(deletePayload.noteCompanion.recipients, ["https://threads.net/ap/users/123/"]);
+  assert.equal(deliveries.length, 3);
+  assert.equal(deliveries[0].activity.type, "Delete");
+  assert.equal(deliveries[1].activity.type, "Delete");
+  assert.equal(deliveries[2].targetActorId, "https://threads.net/ap/users/123/");
+  assert.equal(deliveries[2].activity.type, "Delete");
+  assert.deepEqual(
+    {
+      id: deliveries[2].activity.object.id,
+      type: deliveries[2].activity.object.type,
+      formerType: deliveries[2].activity.object.formerType,
+    },
+    {
+      id: companionObjectId,
+      type: "Tombstone",
+      formerType: "Note",
+    },
+  );
 });
 
 test("outbox Create reply fans out to followers, explicit targets, and mention recipients", async () => {
@@ -9019,6 +9094,30 @@ test("delivery retry deployment artifacts are syntactically valid and bounded", 
   assert.match(service, /NoNewPrivileges=true/u);
   assert.match(service, /ProtectSystem=strict/u);
   assert.match(timer, /OnBootSec=2m/u);
+  assert.match(timer, /OnUnitActiveSec=5m/u);
+});
+
+test("production monitoring deployment artifacts publish bounded metrics and alarms", async () => {
+  const deployDir = path.resolve("deploy");
+  const monitoringScriptPath = path.join(deployDir, "aws-production-monitoring.sh");
+  const servicePath = path.join(deployDir, "matters-gateway-cloudwatch-metrics.service.example");
+  const timerPath = path.join(deployDir, "matters-gateway-cloudwatch-metrics.timer.example");
+
+  await execFile("bash", ["-n", monitoringScriptPath]);
+  const monitoringScript = await readFile(monitoringScriptPath, "utf8");
+  const service = await readFile(servicePath, "utf8");
+  const timer = await readFile(timerPath, "utf8");
+
+  assert.match(monitoringScript, /cloudwatch:PutMetricData/u);
+  assert.match(monitoringScript, /prod-fediverse/u);
+  assert.match(monitoringScript, /ApproximateAgeOfOldestMessage/u);
+  assert.match(monitoringScript, /ApproximateNumberOfMessagesVisible/u);
+  assert.match(monitoringScript, /StatusCheckFailed/u);
+  assert.match(monitoringScript, /--alarm-actions "\$SNS_TOPIC_ARN"/u);
+  assert.match(service, /publish-cloudwatch-metrics\.mjs/u);
+  assert.match(service, /NoNewPrivileges=true/u);
+  assert.match(service, /ProtectSystem=strict/u);
+  assert.match(timer, /OnBootSec=3m/u);
   assert.match(timer, /OnUnitActiveSec=5m/u);
 });
 

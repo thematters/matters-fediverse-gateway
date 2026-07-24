@@ -43,7 +43,7 @@ function encodeArticlePathToken(value) {
   }
 }
 
-function canonicalizeArticleObjectId({ object, instance }) {
+export function canonicalizeArticleObjectId({ object, instance }) {
   if (!object || typeof object !== "object" || Array.isArray(object) || object.type !== "Article") {
     return object;
   }
@@ -398,6 +398,51 @@ export function buildNoteCompanionCreateActivity({ actor, object, now, instance,
       attributedTo: object.attributedTo ?? actor.actorUrl,
       to: Array.isArray(object.to) && object.to.length ? object.to : resolvedTo,
       cc: Array.isArray(object.cc) && object.cc.length ? object.cc : resolvedCc,
+    },
+  };
+}
+
+export function buildNoteCompanionUpdateActivity({ actor, object, now, instance, to = null, cc = null }) {
+  const baseUrl = activityBaseUrl(instance);
+  const resolvedTo = Array.isArray(to) && to.length ? [...new Set(to)] : [PUBLIC_AUDIENCE];
+  const resolvedCc = Array.isArray(cc) && cc.length ? [...new Set(cc)] : [actor.followersUrl];
+
+  return {
+    "@context": ACTIVITY_STREAMS,
+    id: `${baseUrl}/activities/${now.getTime()}-update-note-companion-${actor.handle}`,
+    type: "Update",
+    actor: actor.actorUrl,
+    to: resolvedTo,
+    cc: resolvedCc,
+    object: {
+      ...object,
+      type: "Note",
+      attributedTo: object.attributedTo ?? actor.actorUrl,
+      to: Array.isArray(object.to) && object.to.length ? object.to : resolvedTo,
+      cc: Array.isArray(object.cc) && object.cc.length ? object.cc : resolvedCc,
+      updated: object.updated ?? now.toISOString(),
+    },
+  };
+}
+
+export function buildNoteCompanionDeleteActivity({ actor, objectId, now, instance, to = null, cc = null }) {
+  const baseUrl = activityBaseUrl(instance);
+  const resolvedTo = Array.isArray(to) && to.length ? [...new Set(to)] : [PUBLIC_AUDIENCE];
+  const resolvedCc = Array.isArray(cc) && cc.length ? [...new Set(cc)] : [actor.followersUrl];
+
+  return {
+    "@context": ACTIVITY_STREAMS,
+    id: `${baseUrl}/activities/${now.getTime()}-delete-note-companion-${actor.handle}`,
+    type: "Delete",
+    actor: actor.actorUrl,
+    to: resolvedTo,
+    cc: resolvedCc,
+    object: {
+      id: objectId,
+      type: "Tombstone",
+      formerType: "Note",
+      attributedTo: actor.actorUrl,
+      deleted: now.toISOString(),
     },
   };
 }
