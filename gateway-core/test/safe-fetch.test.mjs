@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   createSafeLookup,
+  isBlockedNetworkAddress,
   readLimitedJson,
   safeFederationFetch,
   validateFederationUrl,
@@ -35,6 +36,34 @@ test("federation URL policy rejects unsafe schemes, credentials, and networks", 
     validateFederationUrl("https://[2606:4700:4700::1111]/actor").hostname,
     "[2606:4700:4700::1111]",
   );
+});
+
+test("network policy keeps IPv4 and IPv6 block lists isolated", () => {
+  assert.equal(isBlockedNetworkAddress("93.184.216.34"), false);
+  assert.equal(isBlockedNetworkAddress("2606:4700:4700::1111"), false);
+  assert.equal(isBlockedNetworkAddress("10.0.0.8"), true);
+  assert.equal(isBlockedNetworkAddress("fc00::1"), true);
+  assert.equal(isBlockedNetworkAddress("::ffff:127.0.0.1"), true);
+});
+
+test("safe DNS lookup accepts publicly routable IPv4 answers", async () => {
+  const lookup = createSafeLookup({
+    lookup(_hostname, _options, callback) {
+      callback(null, [{ address: "93.184.216.34", family: 4 }]);
+    },
+  });
+
+  const records = await new Promise((resolve, reject) => {
+    lookup("remote.example", { all: true }, (error, result) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(result);
+    });
+  });
+
+  assert.deepEqual(records, [{ address: "93.184.216.34", family: 4 }]);
 });
 
 test("safe DNS lookup rejects a hostname when any answer is private", async () => {

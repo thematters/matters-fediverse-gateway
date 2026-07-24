@@ -7,7 +7,8 @@ const DEFAULT_MAX_REDIRECTS = 3;
 const DEFAULT_MAX_RESPONSE_BYTES = 1024 * 1024;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
-const blockedAddresses = new BlockList();
+const blockedIpv4Addresses = new BlockList();
+const blockedIpv6Addresses = new BlockList();
 
 for (const [network, prefix] of [
   ["0.0.0.0", 8],
@@ -26,7 +27,7 @@ for (const [network, prefix] of [
   ["224.0.0.0", 4],
   ["240.0.0.0", 4],
 ]) {
-  blockedAddresses.addSubnet(network, prefix, "ipv4");
+  blockedIpv4Addresses.addSubnet(network, prefix, "ipv4");
 }
 
 for (const [network, prefix] of [
@@ -47,7 +48,7 @@ for (const [network, prefix] of [
   ["fe80::", 10],
   ["ff00::", 8],
 ]) {
-  blockedAddresses.addSubnet(network, prefix, "ipv6");
+  blockedIpv6Addresses.addSubnet(network, prefix, "ipv6");
 }
 
 export class FederationUrlPolicyError extends Error {
@@ -71,10 +72,10 @@ export function isBlockedNetworkAddress(address) {
   const normalized = normalizeHostname(address);
   const family = isIP(normalized);
   if (family === 4) {
-    return blockedAddresses.check(normalized, "ipv4");
+    return blockedIpv4Addresses.check(normalized, "ipv4");
   }
   if (family === 6) {
-    return blockedAddresses.check(normalized, "ipv6");
+    return blockedIpv6Addresses.check(normalized, "ipv6");
   }
   return true;
 }
